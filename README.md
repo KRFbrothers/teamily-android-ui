@@ -1,6 +1,6 @@
 # Teamily AI — Android App UI Design
 
-A **UI design reference** for the Teamily AI Android app: 14 screens, Material 3,
+A **UI design reference** for the Teamily AI Android app: 17 screens, Material 3,
 day + night themes, in a single self-contained HTML showcase.
 
 > **This repository contains design only.** There is no application code here —
@@ -13,7 +13,7 @@ day + night themes, in a single self-contained HTML showcase.
 
 ```
 design/
-  index.html          the whole showcase — 14 screens, day + night, one file
+  index.html          the whole showcase — 17 screens, day + night, one file
   images/             10 brand assets (logo, wordmark, agent + user avatars)
   fonts/              Lato 400 / 700 / 900 (woff2, self-hosted)
 DESIGN_SPEC.md        the written specification the showcase implements
@@ -42,7 +42,7 @@ start design\index.html
 Or just double-click the file.
 
 **Switching screens.** On a wide window (≥1081 px) a numbered rail on the left
-lists all 14 screens — click any of them. On a narrow window the page becomes a
+lists all 17 screens — click any of them. On a narrow window the page becomes a
 single phone and you navigate with the app's own bottom navigation and in-app
 buttons, exactly as the real app would.
 
@@ -54,28 +54,31 @@ buttons, exactly as the real app would.
 
 ---
 
-## The 14 screens
+## The 17 screens
 
 | # | Screen | Purpose |
 |---|---|---|
-| 01 | Home / Chats | The default landing screen. A single inbox where agent threads, 1-to-1 chats and group chats coexist. |
-| 02 | Chat | A single agent (or person/group) thread with inline artifacts. |
-| 03 | Agents | Manage the user's agent roster. |
-| 04 | Discover | Find and install new agents. |
-| 05 | Profile | Identity, quick actions and the entry point to all settings. |
-| 06 | Settings | Every setting, grouped. |
-| 07 | Appearance / Theme | The only place all three theme modes are selectable, plus a live preview. |
-| 08 | Edit profile | Edit display name, photo, handle and bio. |
-| 09 | Notifications | Push/email preferences and quiet hours. |
-| 10 | Privacy & security | App lock, 2FA, privacy toggles, blocked users, data controls. |
-| 11 | Chat preferences | Composer and thread behaviour. |
-| 12 | Storage | Show usage and free space. |
-| 13 | Language | App language and agent reply language. |
-| 14 | About | Version, legal, support. |
+| 01 | Home / Chats | The default landing screen. Avatar opens Profile, the Teamily lockup sits centred, the green plus opens Quick Actions. A featured personal-agent card sits above collapsible **Pinned** and **Chats** groups. |
+| 02 | Chat | A single agent thread with a rich-media artifact card, suggestion chips and a New task bar. |
+| 03 | Agents | Three tabs: **Agents** (roster), **Agent Teams**, **Automations**. |
+| 04 | Profile | Identity, a 3-up stats row, and **Posts / Favorites / Likes** tabs. |
+| 05 | Settings | The account drawer: plan, credits, connectors, support, appearance, sign out. |
+| 06 | Memory | Two views of the same store — **Graph** and **List**. |
+| 07 | Artifacts | Everything the agents have produced, with search and list/grid toggles. |
+| 08 | Document view | A rendered `README.md` — token table, type scale, accessibility rules. |
+| 09 | Create task | Prompt composition: compiled prompt, Intent, Schedule, Team, Scope. |
+| 10 | Appearance / Theme | The only place all three theme modes are selectable, plus a live preview. |
+| 11 | Edit profile | Edit display name, photo, handle and bio. |
+| 12 | Notifications | Push/email preferences and quiet hours. |
+| 13 | Privacy & security | App lock, 2FA, privacy toggles, blocked users, data controls. |
+| 14 | Chat preferences | Composer and thread behaviour. |
+| 15 | Storage | Show usage and free space. |
+| 16 | Language | App language and agent reply language. |
+| 17 | About | Version, legal, support. |
 
-**Bottom navigation** has **4 destinations** — Chats, Agents, Discover, Profile.
-Screens 06–14 are sub-screens reached from Profile or Settings and carry no
-bottom bar.
+**Bottom navigation** has **4 destinations** — **Chats**, **Agents**, **Memory**,
+**Artifacts**. Profile and Settings open from the header instead of the nav, so
+they carry no bottom bar; neither do the detail screens.
 
 ---
 
@@ -120,22 +123,22 @@ Material 3 → Compose mapping are in **`DESIGN_SPEC.md`**.
 ## Verification
 
 The committed `design/index.html` was rendered in headless Chromium and measured
-across **14 screens × 2 themes × 3 widths = 84 combinations**:
+across **17 screens × 2 themes × 3 widths = 102 combinations**:
 
 | Check | Result |
 |---|---|
-| Combinations measured | **84 / 84** |
+| Combinations measured | **102 / 102** |
 | Horizontal overflow (document + screen) | **0** |
 | Elements spilling outside the phone frame | **0** |
 | Touch targets below 48 px | **0** |
 | Console errors / page errors / failed requests | **0 / 0 / 0** |
 | `aria-current="page"` per nav screen | **exactly 1** |
 | Mint used as a text colour | **0** |
-| Theme actually applied per combination | **84 / 84** |
+| Theme actually applied per combination | **102 / 102** |
 
 A real-interaction pass at 390 px also confirmed the phone UI navigates by
-clicking: Home → Agents → Discover → Profile → Settings → Appearance, and that
-the Appearance cards and the app-bar toggle both flip the theme.
+clicking: Home → Agents → Memory → Artifacts → Profile → Settings → Appearance,
+and that the Appearance cards and the app-bar toggle both flip the theme.
 
 **Not verified:** rendering on a physical Android device or in a Compose
 runtime. The checks above are of the HTML design reference, not of the app.
@@ -144,17 +147,20 @@ runtime. The checks above are of the HTML design reference, not of the app.
 
 ## Source
 
-The design was taken from the published Teamily AI design pages and the written
-specification:
+The design was taken from the published Teamily AI design pages, the written
+specification, and a screen recording of the running app:
 
 - https://static.teamily.ai/sites/a92f0e27-0c1b-40b9-a4fc-6c4aba860bbf/webpages/teamily-android-app_v2/index.html
 - https://static.teamily.ai/sites/a92f0e27-0c1b-40b9-a4fc-6c4aba860bbf/webpages/teamily-android-app/index.html
 - https://static.teamily.ai/sites/b99346af-156c-4cf3-834e-a0fd7c9da731/documents/teamily-design/TEAMILY_ANDROID_UI_DESIGN.md
+- https://imserver.teamily.ai/im_api/object/7220810134307660/msg_video_1793809573097153452240.mp4
 
-`design/index.html` is a byte-identical copy of the `_v2` page, and every image
-and font is byte-identical to the asset it was fetched from. Nothing was added,
-redrawn or invented.
+Screens 01–05 and 10–17 come from the `_v2` mockup. Screens 06–09 (Memory,
+Artifacts, Document view, Create task) and the Agent Teams / Automations tabs
+were added from the screen recording, which shows them in the running app but
+which the mockup does not cover. Every label, chip and row in those screens is
+taken from what the recording literally shows.
 
 The earlier `teamily-android-app` page is a **subset** of `_v2` — it contains
-only 3 of the 14 screens (Home, Chat, Agents). `_v2` is the complete set, so it
-is the one shipped here.
+only 3 of the screens (Home, Chat, Agents). `_v2` is the complete set, so it is
+the one shipped here.

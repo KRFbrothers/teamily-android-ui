@@ -1,6 +1,6 @@
 # Teamily AI — Android App UI Design Specification
 
-**Version:** 2.0 · **Platform:** Android (Jetpack Compose, Material 3) · **Screens:** 14 · **Base width:** 390 px
+**Version:** 3.0 · **Platform:** Android (Jetpack Compose, Material 3) · **Screens:** 17 · **Base width:** 390 px
 **Source of truth:** `teamily-android-app_v2` mockup — brand tokens read from Teamily's production CSS, not approximated.
 **Audience:** Android developer implementing this design.
 
@@ -121,7 +121,7 @@ In Compose, prefer `Modifier.shadow()` with these exact values over M3 `elevatio
 - **Touch target:** every tappable icon sits inside a **48 × 48 px** hit area minimum — the visual glyph may be 22 px, the target is 48 px.
 - **Accessibility:** every icon button carries `contentDescription`. Decorative icons use `null`. In the mockup 64 explicit `aria-label`s cover the interactive glyphs.
 
-**The 46 icons:** agents, attach, back, battery, bell, bolt, camera, chatpref, chats, check, chevron, clock, db, discover, download, edit, file, filetext, globe, help, image, info, key, lock, logout, mail, menu, mic, moon, more, palette, plus, profile, search, send, settings, shield, signal, spark, star, sun, trash, type, userplus, video, wifi.
+**The 46 icons:** agents, attach, back, battery, bell, bolt, camera, chatpref, chats, check, chevron, clock, db, download, edit, file, filetext, globe, help, image, info, key, lock, logout, mail, memory, menu, mic, moon, more, palette, plus, profile, search, send, settings, shield, signal, spark, star, sun, trash, type, userplus, video, wifi. The showcase additionally ships artifacts, filter, copy, share, bookmark, thumbup, thumbdown, external, grid, list, graph, play, pencil, cube, eye, microscope, target, music, 3d, doc, slides, sheet, link, paperclip, photos, videos, sparkle, close, checkcircle, book, gift, card, chart, broadcast, puzzle, lifebuoy, people, personplus, laptop, videoplus, chevdown, arrowur, minus, reset, clock2, bell2, newspaper, bowl, mountains, globe2, download2, mic2, smile, keyboard, pin, chatbubble, at, person, layers, sliders, hourglass, bug, shield2, monitor, film, cloud, box, wave and caret for the screens added from the recording.
 
 Ship these as vector drawables; do not add `material-icons-extended` (it adds ~4 MB for the handful not already needed).
 
@@ -199,7 +199,7 @@ Ship these as vector drawables; do not add `material-icons-extended` (it adds ~4
 
 ---
 
-## 3. The 14 screens
+## 3. The 17 screens
 
 Grouped as the mockup groups them: **Main** (01–05, all carry the bottom nav) and **Settings** (06–14, all carry a detail bar with a back arrow).
 
@@ -231,7 +231,7 @@ Grouped as the mockup groups them: **Main** (01–05, all carry the bottom nav) 
 │ └──────────────────────────────────┘ │
 │ … 5 more rows …                        │
 ├──────────────────────────────────────┤
-│  [Chats]  Agents  Discover  Profile   │  ← bottom nav, 80 px
+│  [Chats]  Agents  Memory  Profile   │  ← bottom nav, 80 px
 └──────────────────────────────────────┘
 ```
 
@@ -336,7 +336,7 @@ Grouped as the mockup groups them: **Main** (01–05, all carry the bottom nav) 
 │ │      + Create a new agent       │ │
 │ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │
 ├──────────────────────────────────────┤
-│  Chats  [Agents]  Discover  Profile   │
+│  Chats  [Agents]  Memory  Profile   │
 └──────────────────────────────────────┘
 ```
 
@@ -351,125 +351,283 @@ Grouped as the mockup groups them: **Main** (01–05, all carry the bottom nav) 
 
 ---
 
-### 3.04 — Discover
+### 3.04 — Profile
 
-**Purpose:** Find and install new agents.
+**Purpose:** Identity, a stats row, and the user's own content tabs.
 
 **Layout structure**
 ```
 ┌──────────────────────────────────────┐
-│ Discover                              │
+│ [←]        Teamily AI        [⚙]     │
+├──────────────────────────────────────┤
+│ [av]  Alex Rivera          [↪] [✎]   │
+│       @alexrivera                    │
+│                                      │
+│   128          2.4k         316      │
+│ Following   Followers   Likes & Saves│
+├──────────────────────────────────────┤
+│  [Posts]   Favorites   Likes         │
+├──────────────────────────────────────┤
+│  No posts yet. Share an artifact to  │
+│  start your feed.                    │
+│                                      │
+│  YOUR AGENTS                     4   │
+│  [av] Webpage Developer      Working │
+│  [av] Slides Assistant       Working │
+│  [av] Market Research        Idle    │
+│  [av] Accounting Assistant   Idle    │
+│                                      │
+│  ACCOUNT                             │
+│  [○] Edit profile                   ›│
+│  [○] Privacy & security             ›│
+│  [○] All settings                   ›│
+└──────────────────────────────────────┘
+```
+
+**Components**
+- **Profile head:** avatar 64 px `radius-3xl` 22, name `display` 900, handle `row subtitle` `ink-3`, two 48 px icon buttons (share, edit).
+- **Stats row:** three centred columns, value `900` 16 px tabular-nums, label `caption` `ink-3`. Labels are **Following / Followers / Likes & Saves**.
+- **Tabs:** three text tabs, 48 px tall, active tab gets a 3 px `primary` underline (mint in night).
+- **Empty state:** dashed 1 px `line` box, `radius-2xl` 18, centred `ink-3` copy.
+- **Agent rows:** 72 px, avatar with presence dot, name + status on the right.
+- **Account rows:** 60 px, 38 px icon tile, chevron.
+
+**States:** populated · empty (per tab, as shown) · loading skeleton rows · error banner.
+**Navigation:** back → **01**; edit → **11**; settings → **05**; privacy → **13**; agent row → **02**. No bottom nav.
+
+---
+
+### 3.05 — Settings (account drawer)
+
+**Purpose:** The account drawer — plan, credits, connectors, support and appearance.
+
+**Layout structure**
+```
+┌──────────────────────────────────────┐
+│ [←]        Teamily AI        [✕]     │
+├──────────────────────────────────────┤
+│ [av] Alex Rivera              [✎]    │
+│      alex@teamily.ai                 │
+│ ┌──────────────────────────────────┐ │
+│ │ Teamily Plus            [Upgrade]│ │
+│ │ Credits      1,240 / 2,000  ██████│ │
+│ │ Storage      3.2 / 15 GB    ██░░░░│ │
+│ │ [Create to Earn]                 │ │
+│ └──────────────────────────────────┘ │
+│ [○] Credit Center                    │
+│ [○] Invite & Earn                    │
+│ [○] Plan & Billing                   │
+│ [○] Usage                            │
+│ CONNECT                              │
+│ [○] Channels                         │
+│ [○] App Connectors                   │
+│ SUPPORT                              │
+│ [○] Onboarding Guide                 │
+│ [○] Help & Feedback                  │
+│ [○] All Settings                     │
+│ APPEARANCE                           │
+│ [○] Dark mode                  Night │
+│ [○] Sign Out                         │
+└──────────────────────────────────────┘
+```
+
+**Components**
+- **Drawer head:** avatar 44 px `radius-xl` 14, name 15/700, email `caption` `ink-3` truncated with ellipsis, 48 px edit button.
+- **Plan box:** `surface-2` card `radius-2xl` 18, plan name 900, 48 px Upgrade pill on `primary-grad`.
+- **Progress bars:** label row 11/700 `ink-2` with a tabular-nums value on the right, then a 7 px `radius-full` track; fill is `primary` in day and `mint` in night.
+- **Drawer rows:** 52 px, 20 px icon, 14.5/700 label, `radius-lg` 14, hover `surface-2`, active `primary-soft`.
+- **Sign Out:** danger colour `#e06a5a`, opens a confirm sheet.
+
+**States:** populated · loading (bars at 0) · error banner · sign-out confirm sheet.
+**Navigation:** back/close → **01**; edit → **11**; Usage → **15**; All Settings → **10**. No bottom nav.
+
+---
+
+### 3.06 — Memory
+
+**Purpose:** Two views of the same memory store — a graph and a list.
+
+**Layout structure**
+```
+┌──────────────────────────────────────┐
+│        Teamily AI      [⌕] [☾] [≡]   │
+├──────────────────────────────────────┤
+│   [Graph]        List                │
+├──────────────────────────────────────┤
+│ [⌕ Search memory]                    │
+│ ┌──────────────────────────────────┐ │
+│ │        (Tokens)                  │ │
+│ │   (Design)──────(Brand)          │ │
+│ │        ╲  (Teamily)  ╱           │ │
+│ │   (People)──────(Projects)       │ │
+│ │                        [+][−][↺] │ │
+│ └──────────────────────────────────┘ │
+├──────────────────────────────────────┤
+│  Chats  Agents  [Memory]  Artifacts  │
+└──────────────────────────────────────┘
+```
+
+**List view**
+```
+│ ▾ DESIGN                          3  │
+│ [✦] Brand tokens            [NEW]    │
+│      Primary #087c45, gradient…      │
+│      ◷ 2h ago                        │
+│ [▤] Type scale                       │
+│      Lato 400/700/900. Display 28/34…│
+│ [▦] Corner radius       [CONFLICT]   │
+│      Cards 20px, sheets 26px…        │
+│ ▾ PEOPLE                          2  │
+│ [○] Alex Rivera                      │
+│ [○] Full-Stack Delivery Guild        │
+```
+
+**Components**
+- **Tabs:** Graph / List, same 48 px text-tab pattern as Profile.
+- **Graph:** `surface-2` panel `radius-2xl` 20, SVG nodes — centre node 26 px `primary` with white label, satellite nodes 17 px `surface-3` with `ink-2` labels, 1.2 px `line` edges. Zoom control is a floating pill of three 48 px buttons.
+- **List groups:** `surface-2` card, 48 px group header with chevron + count, then rows separated by a 1 px `line-soft` top border.
+- **Memory row:** 32 px icon tile, title 12.5/700, 2-line clamped snippet `ink-3`, meta line with a clock icon and relative time.
+- **Badges:** `NEW` in `primary-soft`/`primary-ink`; `CONFLICT` in `rgba(194,98,10,.16)`/`#8a4a06`.
+
+**States:** populated · empty ("Nothing remembered yet") · loading skeleton · error banner.
+**Navigation:** nav → 01/03/07; row → memory detail. Bottom nav present.
+
+---
+
+### 3.07 — Artifacts
+
+**Purpose:** Everything the agents have produced, in one place.
+
+**Layout structure**
+```
+┌──────────────────────────────────────┐
+│        Teamily AI      [☰] [▦] [≡]   │
+├──────────────────────────────────────┤
+│ [⌕ Search artifacts]                 │
+│ RECENT                            6  │
+│ [■] Teamily Design System      [⚑]   │
+│      [MD] [v1]                       │
+│      Webpage Developer · 7m          │
+│ [■] meetup-landing              [⚑]  │
+│      [Web] [v2]                      │
+│      Webpage Developer · 2h          │
+│ [■] Q3 review deck              [⚑]  │
+│      [Slides] [12]                   │
+│      Slides Assistant · Yesterday    │
+│ [■] Invoice ledger              [⚑]  │
+│      [Sheet] [v4]                    │
+│      Accounting Assistant · 3d       │
+│ [■] Hero illustration           [⚑]  │
+│      [Image] [2K]                    │
+│ [■] Launch teaser               [⚑]  │
+│      [Video] [8s]                    │
+├──────────────────────────────────────┤
+│  Chats  Agents  Memory  [Artifacts]  │
+└──────────────────────────────────────┘
+```
+
+**Components**
+- **App bar:** list and grid toggles (48 px each) plus the overflow menu.
+- **Artifact row:** 72 px minimum, 42 px `radius-xl` 12 type tile with a white glyph on a per-type gradient, name 14/700 truncated, type + version chips (`surface-3`, 9.5/700), owner and age `caption` `ink-3`, 48 px bookmark button.
+- **Type tile gradients:** doc/web `#0b8249→#087c45` and `#0b8249→#06512f`; slides `#c2620a→#8a4a06`; sheet `#2f6f8f→#1d4a61`; image `#6b4fa8→#43306e`; video `#8a3a5a→#5c2439`.
+
+**States:** populated · empty ("No artifacts yet") · loading skeleton · error banner.
+**Navigation:** nav → 01/03/06; doc row → **08**. Bottom nav present.
+
+---
+
+### 3.08 — Document view
+
+**Purpose:** A rendered markdown artifact, opened from a chat card or the artifact list.
+
+**Layout structure**
+```
+┌──────────────────────────────────────┐
+│ [←] [▤] README.md   [⤓] [↪] [⋯]      │
+│          MD v1 · 7m                  │
+├──────────────────────────────────────┤
+│ Teamily Design System                │
+│ Brand tokens, type scale and…        │
+│ Colour tokens                        │
+│ ┌─────────┬───────────┬───────────┐  │
+│ │ TOKEN   │ DAY       │ NIGHT     │  │
+│ ├─────────┼───────────┼───────────┤  │
+│ │ primary │ #087c45   │ #42d982   │  │
+│ │ canvas  │ #eef2ef   │ #141816   │  │
+│ │ ink     │ #182b23   │ #eef2ef   │  │
+│ └─────────┴───────────┴───────────┘  │
+│ Typography                           │
+│ • Lato 400 — body and snippets       │
+│ • Lato 700 — titles, buttons         │
+│ • Lato 900 — display, numerals       │
+│ Accessibility                        │
+│ • Every touch target is at least 48px│
+│ • Mint #42d982 is fill only — never… │
+└──────────────────────────────────────┘
+```
+
+**Components**
+- **Detail bar:** back, a 38 px doc tile, filename 15/700, version + age `caption`, then 48 px download, share and overflow buttons.
+- **Body:** 12.5/1.6 `ink-2`, headings 15/900 `ink`, inline `code` on `surface-3` `radius-sm` 5.
+- **Table:** full width, 1 px `line` borders, header row `surface-2` 10/900 uppercase, cells 11 px with `overflow-wrap:anywhere` so a long token never overflows.
+
+**States:** populated · loading skeleton · error ("Couldn't load this document").
+**Navigation:** back → **02** (or **07** when opened from the artifact list). No bottom nav.
+
+---
+
+### 3.09 — Create task
+
+**Purpose:** Compose a prompt for a team, with the compiled result shown live.
+
+**Layout structure**
+```
+┌──────────────────────────────────────┐
+│ [✕] Create task              [↺]     │
+│       Compose a prompt for your team │
 ├──────────────────────────────────────┤
 │ ┌──────────────────────────────────┐ │
-│ │ FEATURED AGENT                    │ │
-│ │ Webpage Developer                 │ │
-│ │ Prompt a full landing page and get│ │
-│ │ a published link in under two min.│ │
-│ │            [Start a chat]         │ │
+│ │ COMPILED PROMPT          [✦ AUTO]│ │
+│ │ Build the Teamily design system… │ │
+│ │ ──────────────────────────────── │ │
+│ │ Every day at 09:00 · Full-Stack… │ │
 │ └──────────────────────────────────┘ │
-│ Trending in community                 │
-│ [av] Slides Assistant     Productivity│
-│      Deck in 5 prompts · 2.1k users   │
-│ [av] Market Research      Research    │
-│      Cited briefs · 1.4k users        │
-│ [av] Accounting Assistant Finance     │
-│      Invoice triage · 980 users       │
-│ [av] Design Critic        Design      │
-│      M3 + a11y review · 760 users     │
-│ From people you follow                │
-│ [av] Alice Chen        12 minutes ago │
-│      shared Webpage Developer with…   │
-│      · 3 replies                       │
-├──────────────────────────────────────┤
-│  Chats  Agents  [Discover]  Profile   │
+│ ┌──────────────────────────────────┐ │
+│ │ INTENT  what should happen       │ │
+│ │ [✦ Build] [◎ Research] [◉ Review]│ │
+│ │ [+ Add]                          │ │
+│ └──────────────────────────────────┘ │
+│ ┌──────────────────────────────────┐ │
+│ │ SCHEDULE  when it runs           │ │
+│ │ [◷ Daily 09:00] [▶ Once] [⌛ Week]│ │
+│ │ Runs in your timezone…           │ │
+│ └──────────────────────────────────┘ │
+│ ┌──────────────────────────────────┐ │
+│ │ TEAM  who does the work          │ │
+│ │ [○ Full-Stack Delivery Guild]    │ │
+│ │ [○ AI Feature Build Room]        │ │
+│ └──────────────────────────────────┘ │
+│ ┌──────────────────────────────────┐ │
+│ │ SCOPE  what to include           │ │
+│ │ [◎ Design tokens] [▤ Type scale] │ │
+│ │ [⛨ Accessibility] [+ Add]        │ │
+│ └──────────────────────────────────┘ │
+│ [        ✦ Generate Prompt        ]  │
 └──────────────────────────────────────┘
 ```
 
 **Components**
-- **Featured card:** hero, `radius-4xl` 32, gradient background (`primary-grad` at low opacity over `surface`), 16 px padding, overline "FEATURED AGENT" (badge style, `primary-ink`), name (screen title), body, primary CTA "Start a chat" with `elev-3` glow.
-- **Trending row:** avatar 44 px, name row-title, category chip right-aligned, second line `body` `ink-3` = installs + description.
-- **Social row:** avatar + name + relative time (`caption`), then the action sentence, then a `· 3 replies` meta.
-- **Section headers:** "Trending in community", "From people you follow" — section style, `ink-3`.
+- **Compiled prompt card:** `surface-2` `radius-2xl` 18. Header row: label 10.5/900 uppercase + an `AUTO` pill (1 px `primary` border, `primary-ink` text, 11 px spark icon). Title 13.5/700 `ink`, a 1 px dashed `line` divider, then the body 12.5/1.5 `primary-ink`.
+- **Task card:** `surface-2` `radius-2xl` 18, header row with the label 10.5/900 uppercase and a hint `ink-3`, then a wrapping chip row.
+- **Chips:** 48 px minimum, `radius-full`, 13.5/700. Selected = `primary-soft` fill with `primary-ink` text (day: `#ddf3e5` / `#066a3b`). Unselected = `surface-3` with a 1 px `line` border. Add = dashed `primary` border, transparent fill.
+- **Hint line:** 11/1.4 `ink-3`.
+- **Generate Prompt:** full-width primary button, 16 px spark icon.
 
-**States:** populated · empty (only the featured card + "Nothing trending yet") · loading rows · error banner.
-**Navigation:** featured CTA → **02**; row → agent detail; nav → 01/03/05.
-
----
-
-### 3.05 — Profile
-
-**Purpose:** Identity, quick actions and the entry point to all settings.
-
-**Layout structure**
-```
-┌──────────────────────────────────────┐
-│  [avatar 80]                          │
-│  Fareed Khan          ← display 900/21│
-│  fareed.khan@gmail.com                │
-│  [Teamily Pro]  Member since Mar 2024 │
-│           [Edit profile]              │
-├──────────────────────────────────────┤
-│ Chats  Agents  Artifacts              │  ← 3-up stat cards
-│  128     4       37                   │
-├──────────────────────────────────────┤
-│ Quick actions                         │
-│  Add an agent                4 active │
-│  Appearance                Night mode │
-│  Storage              3.2 GB of 15 GB │
-│  Notifications              5 of 7 on │
-├──────────────────────────────────────┤
-│ Account                               │
-│  Personal information  Name, email, avatar │
-│  Privacy & security    Passcode, blocked…  │
-│  Subscription          Pro · renews 12 Nov │
-│  All settings                       ›  │
-│  Sign out                              │
-├──────────────────────────────────────┤
-│  Chats  Agents  Discover  [Profile]   │
-└──────────────────────────────────────┘
-```
-
-**Components**
-- **Header block:** avatar 80 px (tap → photo picker), display name, email (`body`, `ink-2`), a **Pro pill** (`primary-soft` fill, `primary-ink` label, `radius-pill`) and "Member since Mar 2024" (`caption`), then an outlined **Edit profile** button.
-- **3-up stat cards:** equal width, `surface` `radius-lg` `elev-1`, value in row-title 700, label in `caption` `ink-3`.
-- **Settings rows (72 px):** leading 38 px icon tile, title row-title, optional trailing value (`body`, `ink-3`) or chevron, hairline separator inset to the text start.
-- **Sign out row:** title in `danger`, no chevron.
-- **Confirmation dialog (shown in-memory in the mockup):** title "Sign out of Teamily AI?", body "Your chats and artifacts stay on your account. You'll need to sign in again on this phone.", actions **Sign out** (`danger` filled) / **Cancel** (text).
-- **Bottom nav:** active = Profile.
-
-**States:** populated · loading (avatar+name skeleton) · error (profile fetch failed → retry card).
-**Navigation:** Edit profile → 08; Appearance → 07; Storage → 12; Notifications → 09; Personal information → 08; Privacy & security → 10; Subscription → billing (out of scope); All settings → 06; Sign out → dialog → auth.
+**States:** default · chip selected/unselected · generating (button shows a spinner) · error banner.
+**Navigation:** close → **02**; reset clears the chips. No bottom nav.
 
 ---
-
-### 3.06 — Settings
-
-**Purpose:** Every setting, grouped.
-
-**Structure & groups (top → bottom)**
-| Group | Rows | Trailing value |
-|---|---|---|
-| **Account** | Fareed Khan (name + email) · Subscription | Pro plan · 15 GB storage / Renews 12 Nov |
-| **Look & feel** | Appearance · Text size · Language | Night / Default / English (US) |
-| **Messages** | Notifications · Chat preferences | 5 of 7 on / Send with Enter, typing indicators |
-| **Privacy & security** | App lock, blocked users, data | — |
-| **Data** | Storage · Media auto-download | 3.2 GB used of 15 GB / Wi-Fi only |
-| **Support** | Help centre · About Teamily AI | — / Version, terms, licenses |
-| — | **Sign out** | (danger) |
-
-**Components**
-- **Detail bar (60 px):** back arrow + "Settings" (screen title). No right action.
-- **Group label:** uppercase section style, `ink-3`, 16 px left inset, 8 px above / 6 px below.
-- **Group container:** `surface` fill, `radius-xl` 20, `elev-1`, rows separated by `line-soft` hairlines inset to the text start.
-- **Row height:** 60 px when title-only, 72 px when it has a subtitle. Icon tile 38 px.
-- **Footer:** centered `caption` `ink-3` — "Teamily AI 1.8.2 (build 1820) · Made with Lato".
-
-**States:** static (no loading/empty needed — reads local + cached prefs) · error per row (value shows "—" and row is tappable to retry).
-**Navigation:** each row → its screen (07–13); Sign out → dialog.
-
----
-
-### 3.07 — Appearance / Theme
+### 3.10 — Appearance / Theme
 
 **Purpose:** The only place all three theme modes are selectable, plus a live preview.
 
@@ -511,7 +669,7 @@ Appearance
 
 ---
 
-### 3.08 — Edit profile
+### 3.11 — Edit profile
 
 **Purpose:** Edit display name, photo, handle and bio.
 
@@ -530,7 +688,7 @@ Appearance
 
 ---
 
-### 3.09 — Notifications
+### 3.12 — Notifications
 
 **Purpose:** Push/email preferences and quiet hours.
 
@@ -558,7 +716,7 @@ Appearance
 
 ---
 
-### 3.10 — Privacy & security
+### 3.13 — Privacy & security
 
 **Purpose:** App lock, 2FA, privacy toggles, blocked users, data controls.
 
@@ -587,7 +745,7 @@ Appearance
 
 ---
 
-### 3.11 — Chat preferences
+### 3.14 — Chat preferences
 
 **Purpose:** Composer and thread behaviour.
 
@@ -609,7 +767,7 @@ Appearance
 
 ---
 
-### 3.12 — Storage
+### 3.15 — Storage
 
 **Purpose:** Show usage and free space.
 
@@ -646,7 +804,7 @@ Storage
 
 ---
 
-### 3.13 — Language
+### 3.16 — Language
 
 **Purpose:** App language and agent reply language.
 
@@ -667,7 +825,7 @@ Storage
 
 ---
 
-### 3.14 — About
+### 3.17 — About
 
 **Purpose:** Version, legal, support.
 
@@ -698,57 +856,71 @@ About
 
 ### 4.1 Bottom navigation
 
-- **4 destinations:** **Chats** (icon `chats`) · **Agents** (`agents`) · **Discover** (`discover`) · **Profile** (`profile`).
+- **4 destinations:** **Chats** (icon `chats`) · **Agents** (`agents`) · **Memory** (`memory`) · **Artifacts** (`artifacts`).
+- **Profile and Settings are not nav destinations.** They open from the Home header (avatar → Profile, overflow → Settings), so they carry no bottom bar.
 - **Bar height:** 80 px + system inset. Background `nav-bg` with a backdrop blur; top hairline `line-soft`.
 - **Item:** icon 26 px over label (`chip label` style 12 px/700). **Each item's hit target ≥ 48 px** — the mockup gives each a full-width quarter of the bar, so ~97 px wide × 80 px tall at 390 px.
 - **Active indicator:** an M3 **58 × 30 px pill** in `primary-soft` behind the icon; icon and label switch to `primary-ink`.
-- **Present on:** screens **01, 03, 04, 05** only — **4 of 14**, verified by counting `navbar` blocks in the mockup.
-- **Not present on:** screens 02 and 06–14 — those use a back-arrow detail bar. Screen 02 has its own thread top bar with back.
-- **⚠ Mockup-copy discrepancy:** the mockup's own design-system caption says the nav is *"present on all 5 main screens"*. It is not — screen 02 (Chat) has no bottom nav. **Build 4 screens**, not 5. This is the only place where the mockup's prose and its markup disagree.
+- **Present on:** screens **01, 03, 06, 07** only — **4 of 17**, verified by counting `navbar` blocks in the showcase.
+- **Not present on:** screens 02, 04, 05 and 08–17 — those use a back-arrow detail bar. Screen 02 has its own thread top bar with back.
+- **⚠ Mockup-copy discrepancy:** the `_v2` mockup's own caption says the nav is *"present on all 5 main screens"* and lists Memory as a destination. The running app recorded in the source video shows **4 destinations — Chats, Agents, Memory, Artifacts** — with Profile reached from the header. **Build 4 screens**, and build the four the app actually has.
 
 ### 4.2 Screen-to-screen flow
 
 ```
                         ┌──────────────────────┐
                         │  01 Home / Chats     │
-                        └───┬──────────────┬───┘
-              tap chat row  │              │ bottom nav
-                            ▼              │
-                        ┌────────────┐     │
-                        │  02 Chat   │     │
-                        └────────────┘     │
-                                           │
-   ┌───────────────────────────────────────┴─────────────┐
-   │                                                     │
-   ▼                       ▼                             ▼
-┌──────────┐         ┌───────────┐               ┌──────────────┐
-│ 03 Agents│         │04 Discover│               │ 05 Profile   │
-└──────────┘         └───────────┘               └──┬───┬───┬───┘
-                                                    │   │   │
-                             ┌──────────────────────┘   │   └──────────────┐
-                             ▼                          ▼                  ▼
-                        ┌─────────┐              ┌────────────┐    ┌──────────────┐
-                        │08 Edit  │              │07 Appear-  │    │10 Privacy &  │
-                        │ profile │              │   ance     │    │   security   │
-                        └─────────┘              └────────────┘    └──────────────┘
-                             ▲                          ▲                  ▲
-                             │                          │                  │
-                        ┌────┴──────────────────────────┴──────────────────┴───┐
-                        │                    06 Settings                        │
-                        └──┬──────────┬──────────┬──────────┬──────────┬────────┘
-                           ▼          ▼          ▼          ▼          ▼
-                      ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
-                      │09 Noti-│ │11 Chat │ │12 Stor-│ │13 Lang-│ │14 About│
-                      │fication│ │  prefs │ │  age   │ │  uage  │ │        │
-                      └────────┘ └────────┘ └────────┘ └────────┘ └────────┘
+                        └──┬────────────┬──────┘
+              tap chat row │            │ bottom nav
+                           ▼            │
+                        ┌────────────┐  │
+                        │  02 Chat   │  │
+                        └────────────┘  │
+                                        │
+   ┌────────────────────────────────────┴──────────────┐
+   │                                                   │
+   ▼                    ▼                    ▼         ▼
+┌──────────┐      ┌───────────┐      ┌───────────┐ ┌───────────┐
+│ 03 Agents│      │ 06 Memory │      │07 Artifacts│ │ 04 Profile│
+└────┬─────┘      └───────────┘      └─────┬─────┘ └──┬──┬──┬──┘
+     │                                     │          │  │  │
+     │ tabs: Agents / Agent Teams /        │ doc row  │  │  └──────┐
+     │       Automations                   ▼          │  │         │
+     │                                ┌─────────┐     │  │         │
+     │                                │08 Doc   │     │  │         │
+     │                                │  view   │     │  │         │
+     │                                └─────────┘     │  │         │
+     │                                                │  │         │
+     │  ┌─────────────────────────────────────────────┘  │         │
+     │  │                                                │         │
+     │  ▼                                                ▼         ▼
+     │ ┌──────────────┐                          ┌────────────┐ ┌──────────┐
+     │ │05 Settings   │                          │11 Edit     │ │13 Privacy│
+     │ │  (drawer)    │                          │   profile  │ │& security│
+     │ └──┬───┬───┬───┘                          └────────────┘ └──────────┘
+     │    │   │   │
+     │    │   │   └──────────────┐
+     │    │   └───────┐          │
+     │    ▼           ▼          ▼
+     │ ┌────────┐ ┌────────┐ ┌──────────┐
+     │ │15 Stor-│ │10 Appear│ │12 Noti-  │
+     │ │  age   │ │  ance   │ │fications │
+     │ └────────┘ └────────┘ └──────────┘
+     │
+     ▼
+┌──────────────┐
+│09 Create task│
+└──────────────┘
+
+  Also reachable from 05 Settings: 14 Chat preferences · 16 Language · 17 About
 ```
 
 **Rules**
-1. **Only 4 screens carry the bottom nav.** Everything else is pushed with a back arrow.
+1. **Only 4 screens carry the bottom nav** (01, 03, 06, 07). Everything else is pushed with a back arrow.
 2. **Every detail screen has a working back arrow** — Android back gesture must do the same thing.
-3. **Profile is the only route to Settings.** There is no settings icon in the Home app bar (it has search + overflow only).
-4. **Theme can be changed from two places** (07 and the app bar sun/moon on main screens) — they must share one resolver.
-5. **Deep-link rule:** a notification or link into any of 06–14 must synthesise a back stack of `01 → 05 → 06 → target` so back behaves sanely.
+3. **Profile and Settings both open from the Home header** — the avatar opens Profile, the overflow menu opens Settings. Neither is a nav destination.
+4. **Theme can be changed from two places** (10 and the app bar sun/moon on main screens) — they must share one resolver.
+5. **Deep-link rule:** a notification or link into any of 10–17 must synthesise a back stack of `01 → 04 → 05 → target` so back behaves sanely.
 
 ### 4.3 Transitions
 
@@ -1010,7 +1182,7 @@ Every glyph the design needs, with its canonical role. Names are the mockup's ow
 | `ic_chev` | Row disclosure chevron | `ic_settings` | Settings entry |
 | `ic_clock` | Relative time, quiet hours | `ic_shield` | Privacy & security |
 | `ic_db` | Storage row | `ic_signal` | Status bar signal |
-| `ic_discover` | Discover nav | `ic_spark` | Agent spark badge, empty state |
+| `ic_memory` | Memory nav | `ic_spark` | Agent spark badge, empty state |
 | `ic_download` | Download my data | `ic_star` | Rating, featured |
 | `ic_edit` | Edit profile | `ic_sun` | Day-mode toggle |
 | `ic_file` | Artifact / file row | `ic_trash` | Clear history, delete |
@@ -1046,10 +1218,10 @@ TYPE   Lato 400 / 700 / 900.  21 display · 17 title · 15 row · 14.5 body
 RADIUS 5 · 11 · 14 · 16 · 20 · 26 · 28 · 32 · 999
 SPACE  base 4 — gutter 16, row 72, nav 80, chip 58×30, switch 56×48
 TOUCH  ≥ 48 dp everywhere
-NAV    Chats · Agents · Discover · Profile  (on screens 01, 03, 04, 05 only)
+NAV    Chats · Agents · Memory · Profile  (on screens 01, 03, 04, 05 only)
 STATES every screen needs: default · empty · loading · error
 ```
 
 ---
 
-*End of specification — 14 screens, 33 semantic tokens, 9 type roles, verified contrast.*
+*End of specification — 17 screens, 33 semantic tokens, 9 type roles, verified contrast.*

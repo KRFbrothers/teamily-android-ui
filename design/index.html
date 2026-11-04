@@ -498,49 +498,6 @@ h1 .accent{color:var(--primary)}
 }
 [data-theme="light"] .newagent .plus{background:#ddf3e5;color:#066a3b}
 
-/* ================= DISCOVER ================= */
-.discover-feature{
-  margin:0 12px 16px;border-radius:22px;overflow:hidden;position:relative;
-  background:linear-gradient(150deg,#0b8249 0%,#087c45 45%,#06512f 100%);
-  color:#eafff2;padding:18px;min-height:176px;display:flex;flex-direction:column;justify-content:space-between;
-}
-.discover-feature::after{
-  content:"";position:absolute;right:-40px;top:-50px;width:200px;height:200px;border-radius:50%;
-  background:radial-gradient(circle,rgba(66,217,130,.55),transparent 65%);
-}
-.df-top{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
-.df-top img{width:40px;height:40px;border-radius:13px;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
-.df-kicker{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
-.df-title{font-size:19px;font-weight:900;letter-spacing:-.01em;line-height:1.2;margin-top:2px}
-.df-sub{font-size:12.5px;line-height:1.45;margin:12px 0 0;max-width:30ch;position:relative;z-index:1}
-.df-cta{
-  position:relative;z-index:1;align-self:flex-start;margin-top:12px;min-height:48px;padding:0 18px;
-  border-radius:999px;border:0;background:#eafff2;color:#06512f;font-size:13.5px;font-weight:900;
-  display:inline-flex;align-items:center;gap:7px;cursor:pointer;
-}
-.df-cta .ic{width:16px;height:16px}
-.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px 14px}
-.dcard{
-  text-align:left;font:inherit;color:inherit;cursor:pointer;border-radius:18px;
-  border:1px solid var(--line-soft);background:var(--surface);padding:13px;
-  display:flex;flex-direction:column;gap:8px;min-height:136px;
-}
-.dcard:hover{background:var(--surface-2)}
-.dcard .ava{width:40px;height:40px;border-radius:13px}
-.dcard .nm{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.25}
-.dcard .ds{font-size:11.5px;line-height:1.4;color:var(--ink-3)}
-.dcard .tag{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-ink);margin-top:auto}
-.socialrow{
-  display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:16px;width:100%;
-  border:0;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:64px;
-}
-.socialrow:hover{background:var(--surface-2)}
-.socialrow .ava{width:38px;height:38px;border-radius:12px}
-.sr-body{min-width:0;flex:1 1 auto}
-.sr-t{font-size:13.5px;color:var(--ink-2);line-height:1.35}
-.sr-t b{color:var(--ink);font-weight:700}
-.sr-s{font-size:11.5px;color:var(--ink-3);margin-top:2px}
-
 /* ================= PROFILE ================= */
 .phero{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 20px 16px;text-align:center}
 .pava{
@@ -789,6 +746,240 @@ footer b{color:var(--page-ink)}
 }
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+/* ================= VIDEO-DERIVED COMPONENTS ================= */
+/* text tabs with underline */
+.tabs{display:flex;gap:4px;padding:0 12px;border-bottom:1px solid var(--line-soft);flex:none}
+.tabbtn{flex:1 1 0;min-height:48px;border:0;background:transparent;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink-3);cursor:pointer;position:relative;padding:0 4px;white-space:nowrap}
+.tabbtn[aria-selected="true"]{color:var(--ink)}
+.tabbtn[aria-selected="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--primary)}
+[data-theme="dark"] .tabbtn[aria-selected="true"]::after{background:var(--mint)}
+.tabbtn:focus-visible{outline:2px solid var(--primary);outline-offset:-4px}
+/* filter + search row */
+.filterrow{display:flex;align-items:center;gap:10px;padding:4px 16px 12px}
+.filterbtn{width:48px;height:48px;flex:none;border-radius:50%;border:0;background:var(--surface-2);color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.filterbtn .ic{width:21px;height:21px}
+.filterrow .searchfield{flex:1 1 auto;min-width:0}
+/* featured chat card */
+.featcard{display:flex;align-items:center;gap:13px;width:calc(100% - 24px);margin:0 12px 12px;padding:13px;border-radius:20px;border:0;text-align:left;font:inherit;color:#eafff2;cursor:pointer;background:linear-gradient(150deg,#0b8249,#087c45 55%,#06512f)}
+.featcard .ava{width:50px;height:50px;border-radius:17px;background:rgba(255,255,255,.14)}
+.featcard .rowbody{min-width:0;flex:1 1 auto}
+.featcard .rownm{color:#eafff2}
+.featcard .rowsnip{color:rgba(234,255,242,.82)}
+.featcard .rowtime{color:rgba(234,255,242,.72)}
+/* section header with icon + chevron */
+.sechead{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:4px 20px;border:0;background:transparent;font:inherit;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);cursor:pointer}
+.sechead .ic{width:15px;height:15px}
+.sechead .cnt{margin-left:auto;font-variant-numeric:tabular-nums}
+.sechead .chev{width:15px;height:15px;transition:transform .18s ease}
+.sechead[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+/* left drawer */
+.drawer{position:absolute;inset:0;z-index:22;display:none;background:rgba(0,0,0,.5)}
+.drawer.on{display:block}
+.drawerbox{position:absolute;left:0;top:0;bottom:0;width:78%;max-width:300px;background:var(--surface);border-radius:0 26px 26px 0;padding:16px 12px calc(16px + env(safe-area-inset-bottom,0px));overflow-y:auto;box-shadow:12px 0 40px rgba(0,0,0,.4)}
+.drawerbox h4{margin:0 0 10px;padding:0 8px;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.drow{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:6px 10px;border:0;border-radius:14px;background:transparent;font:inherit;font-size:14.5px;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}
+.drow .ic{width:20px;height:20px;color:var(--ink-2)}
+.drow:hover{background:var(--surface-2)}
+.drow.is-on{background:var(--primary-soft);color:var(--primary-ink)}
+.drow.is-on .ic{color:var(--primary-ink)}
+[data-theme="light"] .drow.is-on{background:#ddf3e5;color:#066a3b}
+/* settings drawer specifics */
+.sdhead{display:flex;align-items:center;gap:10px;padding:2px 6px 12px}
+.sdhead .ava{width:44px;height:44px;border-radius:14px}
+.sdhead .nm{font-size:15px;font-weight:700;color:var(--ink);line-height:1.2}
+.sdhead .em{font-size:11.5px;color:var(--ink-3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.planbox{margin:0 4px 12px;padding:12px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft)}
+.planbox .pt{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.planbox .pt b{font-size:14px;font-weight:900;color:var(--ink)}
+.planbox .up{min-height:48px;padding:0 14px;border-radius:999px;border:0;background:var(--primary-grad);color:var(--on-primary);font:inherit;font-size:12px;font-weight:900;cursor:pointer}
+.pbar{margin-bottom:9px}
+.pbar .pl{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:4px}
+.pbar .pl span:last-child{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.pbar .track{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.pbar .track i{display:block;height:100%;border-radius:999px;background:var(--primary)}
+[data-theme="dark"] .pbar .track i{background:var(--mint)}
+.minipill{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--primary-ink);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:6px}
+[data-theme="light"] .minipill{color:#066a3b}
+.minipill .ic{width:13px;height:13px}
+.codechip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:999px;background:var(--surface-3);color:var(--ink);font:inherit;font-size:11.5px;font-weight:900;letter-spacing:.06em;margin-top:6px}
+.codechip .ic{width:13px;height:13px;color:var(--ink-3)}
+/* dropdown menu */
+.menupop{position:absolute;top:64px;right:12px;z-index:24;width:236px;padding:6px;border-radius:18px;background:var(--surface);border:1px solid var(--line);box-shadow:0 18px 40px -14px rgba(0,0,0,.55);display:none}
+.menupop.on{display:block}
+.mrow{display:flex;align-items:center;gap:11px;width:100%;min-height:48px;padding:6px 10px;border:0;border-radius:12px;background:transparent;font:inherit;font-size:13.5px;font-weight:700;color:var(--ink);text-align:left;cursor:pointer}
+.mrow .ic{width:19px;height:19px;color:var(--ink-2)}
+.mrow:hover{background:var(--surface-2)}
+/* quick actions sheet sections */
+.sheetsec{margin:0 0 12px;padding:12px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft)}
+.sheetsec .sh{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sheetsec .sh .ic{width:15px;height:15px;color:var(--primary-ink)}
+[data-theme="light"] .sheetsec .sh .ic{color:#066a3b}
+.sheetsec .sh b{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.sheetsec .sh .more{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--primary-ink);background:transparent;border:0;cursor:pointer;min-height:32px;padding:0 4px}
+[data-theme="light"] .sheetsec .sh .more{color:#066a3b}
+.tilegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 2px;border:0;border-radius:14px;background:transparent;font:inherit;cursor:pointer;min-height:76px;position:relative}
+.tile:hover{background:var(--surface-3)}
+.tile .tb{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--surface-3);color:var(--ink)}
+.tile .tb .ic{width:21px;height:21px}
+.tile .tl{font-size:10.5px;font-weight:700;color:var(--ink-2);line-height:1.1;text-align:center}
+.tile .pro{position:absolute;top:0;right:2px;font-size:8px;font-weight:900;letter-spacing:.06em;background:#c2620a;color:#fff;border-radius:999px;padding:2px 5px}
+.tile.wide{grid-column:span 2;flex-direction:row;align-items:center;gap:10px;padding:10px;background:var(--surface);border:1px solid var(--line-soft);min-height:64px;text-align:left}
+.tile.wide .tb{width:36px;height:36px;flex:none}
+.tile.wide .tw{min-width:0}
+.tile.wide .tw b{display:block;font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.2}
+.tile.wide .tw span{display:block;font-size:10.5px;color:var(--ink-3);margin-top:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* team cards */
+.teamcard{margin:0 12px 12px;padding:14px;border-radius:20px;background:var(--surface-2);border:1px solid var(--line-soft)}
+.teamcard .tt{display:flex;align-items:flex-start;gap:10px}
+.teamcard .tt b{flex:1 1 auto;min-width:0;font-size:15px;font-weight:700;color:var(--ink);line-height:1.25}
+.teamcard .create{flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.teamcard .td{font-size:12px;line-height:1.4;color:var(--ink-2);margin-top:5px}
+.teamcard .tf{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.avgroup{display:flex;align-items:center}
+.avgroup .ava{width:26px;height:26px;border-radius:9px;border:2px solid var(--surface-2);margin-left:-7px}
+.avgroup .ava:first-child{margin-left:0}
+.avgroup .more{width:26px;height:26px;border-radius:9px;background:var(--surface-3);color:var(--ink-2);font-size:9.5px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;border:2px solid var(--surface-2);margin-left:-7px}
+.memcount{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--ink-3)}
+.memcount .ic{width:13px;height:13px}
+.tagchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.tagchips span{font-size:10.5px;font-weight:700;color:var(--ink-2);background:var(--surface-3);border-radius:999px;padding:3px 8px}
+/* automation cards */
+.autocard{display:flex;align-items:flex-start;gap:12px;width:calc(100% - 24px);margin:0 12px 10px;padding:13px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.autocard .ab{width:40px;height:40px;border-radius:50%;flex:none;background:var(--surface-3);color:var(--primary-ink);display:inline-flex;align-items:center;justify-content:center}
+[data-theme="light"] .autocard .ab{color:#066a3b}
+.autocard .ab .ic{width:19px;height:19px}
+.autocard .at{min-width:0;flex:1 1 auto}
+.autocard .at b{display:block;font-size:14px;font-weight:700;color:var(--ink);line-height:1.25}
+.autocard .at span{display:block;font-size:11.5px;line-height:1.4;color:var(--ink-3);margin-top:3px}
+/* create task */
+.taskcard{margin:0 12px 10px;padding:13px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft)}
+.taskcard .tk{display:flex;align-items:baseline;gap:8px;margin-bottom:9px}
+.taskcard .tk b{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.taskcard .tk span{font-size:10.5px;color:var(--ink-3)}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap}
+.bigchip{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 14px;border-radius:999px;background:var(--surface-3);border:1px solid var(--line);color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+.bigchip .ic{width:16px;height:16px;color:var(--ink-2)}
+.bigchip .ic.end{color:var(--ink-3)}
+.bigchip.dash{border-style:dashed;border-color:var(--primary);color:var(--primary-ink);background:transparent}
+[data-theme="light"] .bigchip.dash{color:#066a3b}
+.bigchip.solid{background:var(--primary-soft);border-color:transparent;color:var(--primary-ink)}
+[data-theme="light"] .bigchip.solid{background:#ddf3e5;color:#066a3b}
+.taskhint{font-size:11px;line-height:1.4;color:var(--ink-3);margin-top:9px}
+.compiled{margin:0 12px 12px;padding:13px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft)}
+.compiled .ch{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.compiled .ch b{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.compiled .auto{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--primary-ink);border:1px solid var(--primary);border-radius:999px;padding:3px 8px}
+[data-theme="light"] .compiled .auto{color:#066a3b}
+.compiled .auto .ic{width:11px;height:11px}
+.compiled .ct{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.4}
+.compiled .cd{border-top:1px dashed var(--line);margin:9px 0;height:0}
+.compiled .cb{font-size:12.5px;line-height:1.5;color:var(--primary-ink)}
+[data-theme="light"] .compiled .cb{color:#066a3b}
+/* memory graph */
+.graphwrap{position:relative;flex:1 1 auto;min-height:0;margin:0 12px 12px;border-radius:20px;background:var(--surface-2);border:1px solid var(--line-soft);overflow:hidden}
+.graphwrap svg{display:block;width:100%;height:100%}
+.gnode{font-size:9px;font-weight:700;fill:var(--ink-2)}
+.zoomctl{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:2px;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-soft)}
+.zoomctl button{width:48px;height:48px;border:0;border-radius:50%;background:transparent;color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.zoomctl button:hover{background:var(--surface-2)}
+.zoomctl .ic{width:18px;height:18px}
+/* memory list */
+.memgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px 12px}
+.memcard{display:flex;flex-direction:column;gap:7px;padding:13px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft);text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:104px}
+.memcard .mb{width:34px;height:34px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;color:#06291a}
+.memcard .mb .ic{width:18px;height:18px}
+.memcard b{font-size:13px;font-weight:700;color:var(--ink);line-height:1.2}
+.memcard span{font-size:10.5px;line-height:1.35;color:var(--ink-3);margin-top:auto}
+.memgroup{margin:0 12px 10px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line-soft);overflow:hidden}
+.memgroup .gh{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:6px 12px;border:0;background:transparent;font:inherit;font-size:10.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);cursor:pointer;text-align:left}
+.memgroup .gh .ic{width:14px;height:14px;color:var(--ink-3)}
+.memgroup .gh .cnt{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.memitem{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line-soft);text-align:left;width:100%;border-left:0;border-right:0;border-bottom:0;background:transparent;font:inherit;color:inherit;cursor:pointer}
+.memitem .mi{width:32px;height:32px;border-radius:10px;flex:none;background:var(--surface-3);color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center}
+.memitem .mi .ic{width:16px;height:16px}
+.memitem .mc{min-width:0;flex:1 1 auto}
+.memitem .mt2{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.25}
+.memitem .mt2 .new{font-size:8.5px;font-weight:900;letter-spacing:.06em;color:var(--primary-ink);background:var(--primary-soft);border-radius:999px;padding:2px 6px;flex:none}
+[data-theme="light"] .memitem .mt2 .new{color:#066a3b;background:#ddf3e5}
+.memitem .mt2 .conflict{font-size:8.5px;font-weight:900;letter-spacing:.06em;color:#8a4a06;background:rgba(194,98,10,.16);border-radius:999px;padding:2px 6px;flex:none}
+.memitem .ms{font-size:11px;line-height:1.4;color:var(--ink-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.memitem .mf{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10px;color:var(--ink-3);flex-wrap:wrap}
+.memitem .mf .ic{width:11px;height:11px}
+.memitem .mf .ht{color:var(--ink-3)}
+/* artifacts */
+.artlist{padding:0 8px 12px}
+.artitem{display:flex;align-items:flex-start;gap:12px;width:100%;padding:11px 12px;border:0;border-radius:16px;background:transparent;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:72px}
+.artitem:hover{background:var(--surface-2)}
+.artitem .ai{width:42px;height:42px;border-radius:12px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:#fff}
+.artitem .ai .ic{width:20px;height:20px}
+.artitem .ac2{min-width:0;flex:1 1 auto}
+.artitem .an{font-size:14px;font-weight:700;color:var(--ink);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.artitem .achips{display:flex;gap:5px;margin-top:5px;flex-wrap:wrap}
+.artitem .achips span{font-size:9.5px;font-weight:700;color:var(--ink-2);background:var(--surface-3);border-radius:999px;padding:2px 7px}
+.artitem .ad{font-size:10.5px;color:var(--ink-3);margin-top:5px}
+.artitem .bm{width:48px;height:48px;flex:none;border:0;border-radius:50%;background:transparent;color:var(--ink-3);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.artitem .bm .ic{width:18px;height:18px}
+/* document view */
+.docview{padding:12px 16px 20px;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.docview h5{margin:0 0 8px;font-size:15px;font-weight:900;color:var(--ink)}
+.docview p{margin:0 0 10px}
+.docview code{font-size:11px;background:var(--surface-3);border-radius:5px;padding:1px 5px;color:var(--ink)}
+.mdtable{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:11px}
+.mdtable th,.mdtable td{border:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.mdtable th{background:var(--surface-2);font-weight:900;color:var(--ink);font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+.mdtable td{color:var(--ink-2)}
+.mdtable td code{font-size:10px}
+.docview ul{margin:0 0 10px;padding-left:18px}
+.docview li{margin-bottom:6px}
+/* profile tabs + stats */
+.statrow{display:flex;align-items:center;justify-content:center;gap:18px;padding:0 16px 12px;flex-wrap:wrap}
+.statrow .st{text-align:center;min-width:0}
+.statrow .st b{display:block;font-size:16px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.statrow .st span{display:block;font-size:10.5px;font-weight:700;color:var(--ink-3);margin-top:1px}
+.emptybox{margin:0 16px 14px;padding:26px 16px;border-radius:18px;border:1px dashed var(--line);text-align:center;font-size:13px;color:var(--ink-3)}
+.phead{display:flex;align-items:flex-start;gap:12px;padding:6px 16px 10px}
+.phead .pava{width:64px;height:64px;border-radius:22px}
+.phead .pi{min-width:0;flex:1 1 auto}
+.phead .pi b{display:block;font-size:19px;font-weight:900;letter-spacing:-.01em;color:var(--ink);line-height:1.2}
+.phead .pi span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.phead .pacts{display:flex;gap:2px;flex:none}
+.phead .pacts .iconbtn{width:48px;height:48px}
+.phead .pacts .ic{width:20px;height:20px}
+/* dot badge on nav */
+.navi .dotbadge{position:absolute;top:-1px;right:-2px;width:8px;height:8px;border-radius:50%;background:var(--mint);border:1.5px solid var(--nav-bg)}
+
+/* rich media artifact card in chat */
+.artcard2{margin-top:9px;border-radius:16px;overflow:hidden;background:var(--surface-3);border:1px solid var(--line-soft)}
+.artcard2 .ahead{display:flex;align-items:center;gap:7px;padding:9px 11px;border-bottom:1px solid var(--line-soft)}
+.artcard2 .ahead .ic{width:14px;height:14px;color:var(--primary-ink)}
+[data-theme="light"] .artcard2 .ahead .ic{color:#066a3b}
+.artcard2 .ahead b{font-size:11.5px;font-weight:900;color:var(--ink)}
+.artcard2 .ahead .done{margin-left:auto;font-size:10px;font-weight:700;color:var(--ink-3)}
+.artcard2 .aprev{position:relative;height:104px;background:linear-gradient(150deg,#0b8249,#087c45 60%,#06512f);display:flex;align-items:center;justify-content:center}
+.artcard2 .aprev .pg{position:absolute;right:8px;bottom:8px;font-size:9.5px;font-weight:900;color:#eafff2;background:rgba(0,0,0,.42);border-radius:999px;padding:2px 7px}
+.artcard2 .aprev .mdchip{position:absolute;left:8px;top:8px;font-size:9px;font-weight:900;letter-spacing:.06em;color:#06291a;background:var(--mint);border-radius:999px;padding:2px 7px}
+.artcard2 .aprev .ttl{font-size:12.5px;font-weight:900;color:#eafff2;text-align:center;padding:0 14px;line-height:1.3}
+.artcard2 .afoot{display:flex;align-items:center;gap:6px;padding:8px 10px;flex-wrap:wrap}
+.artcard2 .afoot .mini2{min-height:48px;padding:0 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.artcard2 .afoot .mini2 .ic{width:12px;height:12px}
+.artcard2 .afoot .mini2.solid{background:var(--primary-grad);border-color:transparent;color:var(--on-primary)}
+/* suggestion chips under thread */
+.suggestrow{display:flex;gap:7px;padding:8px 12px 0;overflow-x:auto;flex:none;scrollbar-width:none}
+.suggestrow::-webkit-scrollbar{display:none}
+.suggestrow button{flex:none;min-height:48px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+/* new task bar */
+.newtaskbar{display:flex;align-items:center;gap:9px;margin:0 12px 8px;padding:9px 12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line-soft);flex:none}
+.newtaskbar .ic{width:15px;height:15px;color:var(--primary-ink);flex:none}
+[data-theme="light"] .newtaskbar .ic{color:#066a3b}
+.newtaskbar span{font-size:12px;font-weight:700;color:var(--ink-2);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.newtaskbar .go{min-height:48px;padding:0 11px;border-radius:999px;border:0;background:var(--primary-grad);color:var(--on-primary);font:inherit;font-size:11px;font-weight:900;cursor:pointer;flex:none}
+/* message action bar */
+.msgacts{display:flex;align-items:center;gap:2px;margin-top:6px}
+.msgacts button{width:48px;height:48px;border:0;border-radius:50%;background:transparent;color:var(--ink-3);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.msgacts button:hover{background:var(--surface-3)}
+.msgacts .ic{width:15px;height:15px}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width:1280px){
   .board{grid-template-columns:220px minmax(0,1fr);gap:22px}
@@ -871,7 +1062,6 @@ footer b{color:var(--page-ink)}
     <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3.2 13.9 8.4 19 10.3 13.9 12.2 12 17.4 10.1 12.2 5 10.3 10.1 8.4z" fill="currentColor" stroke="none"/><path d="M18.4 15.6 19.2 18 21.5 18.8 19.2 19.6 18.4 22 17.6 19.6 15.3 18.8 17.6 18z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-chats" viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v6a2.5 2.5 0 0 1-2.5 2.5H9.5L4 20z"/></symbol>
     <symbol id="i-agents" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3.4 19.2c0-3.1 2.5-5.2 5.6-5.2s5.6 2.1 5.6 5.2"/><circle cx="17.2" cy="9.4" r="2.4"/><path d="M16.4 14.2c2.4.2 4.2 2 4.2 4.4"/></symbol>
-    <symbol id="i-discover" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M15.6 8.4 13.7 13.7 8.4 15.6 10.3 10.3z"/></symbol>
     <symbol id="i-profile" viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.9"/><path d="M4.6 20.4c0-3.7 3.3-6 7.4-6s7.4 2.3 7.4 6"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.6 9 17.5 20 6.6"/></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.6v2M12 19.4v2M2.6 12h2M19.4 12h2M5.4 5.4l1.4 1.4M17.2 17.2l1.4 1.4M18.6 5.4l-1.4 1.4M6.8 17.2l-1.4 1.4"/></symbol>
@@ -904,6 +1094,76 @@ footer b{color:var(--page-ink)}
     <symbol id="i-filetext" viewBox="0 0 24 24"><path d="M13.6 3.4H7.4a2 2 0 0 0-2 2v13.2a2 2 0 0 0 2 2h9.2a2 2 0 0 0 2-2V8.4z"/><path d="M13.6 3.4v5h5M8.4 12.6h7M8.4 16h5"/></symbol>
     <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.4 2.6 5.4 13.4h5.2l-1 8 8.2-11h-5.2z"/></symbol>
     <symbol id="i-chatpref" viewBox="0 0 24 24"><path d="M4 7.4A2.4 2.4 0 0 1 6.4 5h11.2A2.4 2.4 0 0 1 20 7.4v6.2a2.4 2.4 0 0 1-2.4 2.4H9.6L4 20z"/><path d="M8.4 9.6h7.2M8.4 12.6h4.4"/></symbol>
+    <symbol id="i-memory" viewBox="0 0 24 24"><path d="M9.4 4.2A2.6 2.6 0 0 0 6.8 6.8v.3A2.7 2.7 0 0 0 5 9.6c0 .7.3 1.4.7 1.9A2.7 2.7 0 0 0 5 13.9c0 1 .5 1.8 1.3 2.3v.3a2.6 2.6 0 0 0 3.1 2.5"/><path d="M14.6 4.2a2.6 2.6 0 0 1 2.6 2.6v.3a2.7 2.7 0 0 1 1.8 2.5c0 .7-.3 1.4-.7 1.9a2.7 2.7 0 0 1 .7 2.4c0 1-.5 1.8-1.3 2.3v.3a2.6 2.6 0 0 1-3.1 2.5"/><path d="M12 4v16"/></symbol>
+    <symbol id="i-artifacts" viewBox="0 0 24 24"><path d="M12 3.4 3.6 7.6 12 11.8l8.4-4.2z"/><path d="M3.6 12 12 16.2 20.4 12"/><path d="M3.6 16.4 12 20.6l8.4-4.2"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 7h11M4 12h16M4 17h8"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.6" y="8.6" width="11" height="11" rx="2.4"/><path d="M15.4 5.4H6.8a2.4 2.4 0 0 0-2.4 2.4v8.6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="17.6" cy="6.4" r="2.6"/><circle cx="6.4" cy="12" r="2.6"/><circle cx="17.6" cy="17.6" r="2.6"/><path d="M8.7 10.7 15.3 7.7M8.7 13.3l6.6 3"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.6 4.4h10.8v15.2L12 15.6l-5.4 4z"/></symbol>
+    <symbol id="i-thumbup" viewBox="0 0 24 24"><path d="M7.4 10.6v9.2H4.6v-9.2z"/><path d="M7.4 10.6 11 4.2c1.4 0 2.2 1 2.2 2.2v3h4.4a2 2 0 0 1 2 2.4l-1.2 6a2 2 0 0 1-2 1.6H7.4"/></symbol>
+    <symbol id="i-thumbdown" viewBox="0 0 24 24"><path d="M7.4 13.4V4.2H4.6v9.2z"/><path d="M7.4 13.4 11 19.8c1.4 0 2.2-1 2.2-2.2v-3h4.4a2 2 0 0 0 2-2.4l-1.2-6a2 2 0 0 0-2-1.6H7.4"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M13.4 4.6h6v6"/><path d="M19.4 4.6 11 13"/><path d="M18 14.4v4.2a1.8 1.8 0 0 1-1.8 1.8H5.4a1.8 1.8 0 0 1-1.8-1.8V7.8A1.8 1.8 0 0 1 5.4 6h4.2"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24"><circle cx="6.4" cy="6.4" r="2.4"/><circle cx="17.6" cy="8.4" r="2.4"/><circle cx="10.4" cy="17.6" r="2.4"/><path d="M8.6 7.4 15.4 8.2M7.6 8.6l2 6.8M16.4 10.6l-4.4 5.4"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.4 5.6 18.4 12l-10 6.4z"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M15.4 4.6 19.4 8.6 8.6 19.4H4.6v-4z"/></symbol>
+    <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3.4 20 7.6v8.8L12 20.6 4 16.4V7.6z"/><path d="M4 7.6 12 11.8l8-4.2M12 11.8v8.8"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.6 12S6 6.4 12 6.4 21.4 12 21.4 12 18 17.6 12 17.6 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-microscope" viewBox="0 0 24 24"><path d="M8.4 4.6h4.2v7.2H8.4z"/><path d="M10.5 11.8v2.4"/><path d="M6.4 19.4h11.2"/><path d="M8.4 19.4a5.6 5.6 0 0 1 5.6-5.2"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><circle cx="7.4" cy="17.4" r="2.6"/><circle cx="17.4" cy="15.4" r="2.6"/><path d="M10 17.4V6.4l10-2v11"/></symbol>
+    <symbol id="i-3d" viewBox="0 0 24 24"><path d="M12 3.4 20 7.6v8.8L12 20.6 4 16.4V7.6z"/><path d="M4 7.6 12 11.8l8-4.2"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M13.6 3.4H7.4a2 2 0 0 0-2 2v13.2a2 2 0 0 0 2 2h9.2a2 2 0 0 0 2-2V8.4z"/><path d="M13.6 3.4v5h5"/></symbol>
+    <symbol id="i-slides" viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="11.4" rx="2"/><path d="M12 16v3.4M8.4 19.4h7.2"/></symbol>
+    <symbol id="i-sheet" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.4h16M4 14.6h16M9.4 4v16M14.6 4v16"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.4 13.6a3.6 3.6 0 0 0 5.1 0l2.6-2.6a3.6 3.6 0 0 0-5.1-5.1l-1.3 1.3"/><path d="M13.6 10.4a3.6 3.6 0 0 0-5.1 0l-2.6 2.6a3.6 3.6 0 0 0 5.1 5.1l1.3-1.3"/></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M19 11.4 12 18.4a4.2 4.2 0 0 1-6-6l7.4-7.4a2.8 2.8 0 0 1 4 4l-7.4 7.4a1.4 1.4 0 0 1-2-2l6.6-6.6"/></symbol>
+    <symbol id="i-photos" viewBox="0 0 24 24"><rect x="3.6" y="5.4" width="16.8" height="13.2" rx="2.2"/><circle cx="8.6" cy="10" r="1.6"/><path d="M4.4 16.4 9.6 12l3.4 3 2.6-2.2 4 3.6"/></symbol>
+    <symbol id="i-videos" viewBox="0 0 24 24"><rect x="3.4" y="6.4" width="12.2" height="11.2" rx="2.2"/><path d="M15.6 11 20.6 8v8l-5-3z"/></symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.4 13.8 9l5.6 1.8-5.6 1.8L12 18.2l-1.8-5.6L4.6 10.8 10.2 9z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></symbol>
+    <symbol id="i-checkcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M8.4 12.2 11 14.8l4.6-5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.4h6a2.4 2.4 0 0 1 2.4 2.4v11.2A2 2 0 0 0 10.4 17H4z"/><path d="M20 5.4h-6a2.4 2.4 0 0 0-2.4 2.4v11.2A2 2 0 0 1 13.6 17H20z"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.6" y="9.4" width="16.8" height="10.2" rx="1.8"/><path d="M3.6 13.4h16.8M12 9.4v10.2"/><path d="M12 9.4C10.4 6 8.6 5 7.4 5.8s-.4 3.6 4.6 3.6c5 0 5.8-2.8 4.6-3.6S13.6 6 12 9.4z"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3.4" y="5.6" width="17.2" height="12.8" rx="2.2"/><path d="M3.4 10h17.2"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19.4V4.6"/><path d="M4 19.4h16"/><rect x="7.4" y="12" width="3" height="5"/><rect x="12.4" y="8.4" width="3" height="8.6"/><rect x="17.4" y="10.4" width="3" height="6.6"/></symbol>
+    <symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.2"/><path d="M8.4 8.4a5 5 0 0 0 0 7.2M15.6 8.4a5 5 0 0 1 0 7.2"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"/></symbol>
+    <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M9.4 4.6a2 2 0 0 1 4 0v1.4h3.2a1.4 1.4 0 0 1 1.4 1.4v3.2h1.4a2 2 0 0 1 0 4h-1.4v3.2a1.4 1.4 0 0 1-1.4 1.4h-3.2v-1.4a2 2 0 0 0-4 0v1.4H6.2a1.4 1.4 0 0 1-1.4-1.4v-3.2h1.4a2 2 0 0 0 0-4H4.8V7.4a1.4 1.4 0 0 1 1.4-1.4h3.2z"/></symbol>
+    <symbol id="i-lifebuoy" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/><path d="M6.2 6.2 9.6 9.6M17.8 6.2 14.4 9.6M17.8 17.8 14.4 14.4M6.2 17.8 9.6 14.4"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9.4" cy="8.4" r="3.4"/><path d="M3.4 19.4c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2"/><path d="M16.4 5.4a3.2 3.2 0 0 1 0 6.2M17.4 14.6c2 .5 3.4 2.2 3.4 4.8"/></symbol>
+    <symbol id="i-personplus" viewBox="0 0 24 24"><circle cx="9.6" cy="8.2" r="3.7"/><path d="M3.4 19.6c0-3.4 2.8-5.6 6.2-5.6 1.5 0 2.9.4 4 1.2"/><path d="M17.4 13.6v6M14.4 16.6h6"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4.4" y="5.4" width="15.2" height="10.2" rx="1.8"/><path d="M2.6 18.6h18.8"/></symbol>
+    <symbol id="i-videoplus" viewBox="0 0 24 24"><rect x="3.4" y="6.4" width="12.2" height="11.2" rx="2.2"/><path d="M15.6 11 20.6 8v8l-5-3z"/><path d="M9.5 9.6v4.8M7.1 12h4.8"/></symbol>
+    <symbol id="i-chevdown" viewBox="0 0 24 24"><path d="M6.4 9.4 12 15l5.6-5.6"/></symbol>
+    <symbol id="i-arrowur" viewBox="0 0 24 24"><path d="M7.4 16.6 16.6 7.4"/><path d="M9.4 7.4h7.2v7.2"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5.4 12h13.2"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4.6 12a7.4 7.4 0 1 0 2.4-5.4"/><path d="M4.4 4.6v4.2h4.2"/></symbol>
+    <symbol id="i-clock2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.2 2"/></symbol>
+    <symbol id="i-bell2" viewBox="0 0 24 24"><path d="M6.4 10.4a5.6 5.6 0 0 1 11.2 0c0 4 1.4 5.4 1.4 5.4H5s1.4-1.4 1.4-5.4z"/><path d="M10.2 19a2 2 0 0 0 3.6 0"/></symbol>
+    <symbol id="i-newspaper" viewBox="0 0 24 24"><rect x="3.4" y="5.4" width="17.2" height="13.2" rx="1.8"/><path d="M7 9.4h6M7 12.6h6M7 15.8h4M16 9.4h1.4M16 12.6h1.4"/></symbol>
+    <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M3.4 11h17.2a8.6 8.6 0 0 1-17.2 0z"/><path d="M8.4 7.4c0-1.4 1-2 1-3.4M12 7.4c0-1.4 1-2 1-3.4M15.6 7.4c0-1.4 1-2 1-3.4"/></symbol>
+    <symbol id="i-mountains" viewBox="0 0 24 24"><path d="M2.6 18.4 9 8.4l4 6 2.4-3.4 6 7.4z"/><circle cx="7.4" cy="6.4" r="1.8"/></symbol>
+    <symbol id="i-globe2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8"/><path d="M12 3.6c2.4 2.4 3.6 5.2 3.6 8.4s-1.2 6-3.6 8.4c-2.4-2.4-3.6-5.2-3.6-8.4S9.6 6 12 3.6z"/></symbol>
+    <symbol id="i-download2" viewBox="0 0 24 24"><path d="M12 4.4v10.2"/><path d="M8.2 11 12 14.8 15.8 11"/><path d="M4.6 18.4h14.8"/></symbol>
+    <symbol id="i-mic2" viewBox="0 0 24 24"><rect x="9.4" y="3.4" width="5.2" height="10.2" rx="2.6"/><path d="M5.6 11.4a6.4 6.4 0 0 0 12.8 0"/><path d="M12 17.8v2.8"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M8.6 14.2a4 4 0 0 0 6.8 0"/><path d="M9.4 9.6v.1M14.6 9.6v.1"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.6" y="6.4" width="18.8" height="11.2" rx="2"/><path d="M6.4 10h.1M9.6 10h.1M12.8 10h.1M16 10h.1M6.4 13.4h.1M9.6 13.4h.1M12.8 13.4h.1M16 13.4h.1M8.4 16.4h7.2"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9.4 3.6h5.2l-.8 5.2 3.4 3.4H6.8l3.4-3.4z"/><path d="M12 12.2v8.2"/></symbol>
+    <symbol id="i-chatbubble" viewBox="0 0 24 24"><path d="M4 7.4A2.4 2.4 0 0 1 6.4 5h11.2A2.4 2.4 0 0 1 20 7.4v6.2a2.4 2.4 0 0 1-2.4 2.4H9.6L4 20z"/></symbol>
+    <symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 8.4v4.4a2.6 2.6 0 0 0 5.2 0V12a8.8 8.8 0 1 0-3.4 7"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.8"/><path d="M4.6 19.6c0-3.6 3.2-5.8 7.4-5.8s7.4 2.2 7.4 5.8"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.4 3.6 7.6 12 11.8l8.4-4.2z"/><path d="M3.6 12 12 16.2 20.4 12"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h6M14 7h6M4 12h10M18 12h2M4 17h3M11 17h9"/><circle cx="12" cy="7" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M7.4 3.6h9.2M7.4 20.4h9.2"/><path d="M8.4 3.6v3.2c0 2 3.6 3.4 3.6 5.2s-3.6 3.2-3.6 5.2v3.2"/><path d="M15.6 3.6v3.2c0 2-3.6 3.4-3.6 5.2s3.6 3.2 3.6 5.2v3.2"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24"><rect x="7.4" y="7.4" width="9.2" height="11.2" rx="4.6"/><path d="M9.4 7.4 8.4 4.6M14.6 7.4l1-2.8M7.4 11.4H4.4M7.4 15.4H4.4M16.6 11.4h3M16.6 15.4h3"/></symbol>
+    <symbol id="i-shield2" viewBox="0 0 24 24"><path d="M12 3.4 19.4 6v6c0 4.4-3 7.6-7.4 8.6C7.6 19.6 4.6 16.4 4.6 12V6z"/><path d="M9 12.2 11.2 14.4 15.2 10"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3.4" y="4.6" width="17.2" height="11.4" rx="2"/><path d="M12 16v3.4M8.4 19.4h7.2"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.4" y="5.4" width="17.2" height="13.2" rx="2"/><path d="M8 5.4v13.2M16 5.4v13.2M3.4 12h17.2"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.4 18.4a4.4 4.4 0 0 1-.4-8.8 5.6 5.6 0 0 1 10.8 1.2 3.8 3.8 0 0 1-.6 7.6z"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3.6 7.6 12 3.4l8.4 4.2v8.8L12 20.6 3.6 16.4z"/><path d="M3.6 7.6 12 11.8l8.4-4.2M12 11.8v8.8"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3.4 12h1.6M7 8.4v7.2M10.6 5.4v13.2M14.2 8.4v7.2M17.8 10.4v3.2M21 12h-.6"/></symbol>
+    <symbol id="i-caret" viewBox="0 0 24 24"><path d="M8.4 10.4 12 14l3.6-3.6"/></symbol>
   </defs>
 </svg>
 
@@ -933,11 +1193,18 @@ footer b{color:var(--page-ink)}
       <button class="rbtn is-on" type="button" data-go="home"><span class="n">01</span>Home / Chats</button>
       <button class="rbtn" type="button" data-go="chat"><span class="n">02</span>Chat</button>
       <button class="rbtn" type="button" data-go="agents"><span class="n">03</span>Agents</button>
-      <button class="rbtn" type="button" data-go="discover"><span class="n">04</span>Discover</button>
-      <button class="rbtn" type="button" data-go="profile"><span class="n">05</span>Profile</button>
+      <button class="rbtn" type="button" data-go="profile"><span class="n">04</span>Profile</button>
+      <button class="rbtn" type="button" data-go="settings"><span class="n">05</span>Settings</button>
+
+      <div class="rgrp">Tabs</div>
+      <button class="rbtn" type="button" data-go="memory"><span class="n">15</span>Memory</button>
+      <button class="rbtn" type="button" data-go="artifacts"><span class="n">16</span>Artifacts</button>
+
+      <div class="rgrp">Detail</div>
+      <button class="rbtn" type="button" data-go="document"><span class="n">17</span>Document view</button>
+      <button class="rbtn" type="button" data-go="createtask"><span class="n">18</span>Create task</button>
 
       <div class="rgrp">Settings</div>
-      <button class="rbtn" type="button" data-go="settings"><span class="n">06</span>Settings</button>
       <button class="rbtn" type="button" data-go="appearance"><span class="n">07</span>Appearance</button>
       <button class="rbtn" type="button" data-go="editprofile"><span class="n">08</span>Edit profile</button>
       <button class="rbtn" type="button" data-go="notifications"><span class="n">09</span>Notifications</button>
@@ -965,119 +1232,179 @@ footer b{color:var(--page-ink)}
             </div>
 
             <div class="appbar">
-              <div class="brandlock">
+              <button class="iconbtn" type="button" aria-label="Your profile" data-go="profile" style="padding:0">
+                <span class="ava" style="width:36px;height:36px;border-radius:12px"><img src="images/user-alex.png" alt=""></span>
+              </button>
+              <div class="brandlock" style="justify-content:center">
                 <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
                 <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
                 <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
               </div>
-              <button class="iconbtn" type="button" aria-label="Search"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></button>
-              <button class="iconbtn theme-btn" type="button" aria-label="Switch theme" data-theme-toggle="1">
-                <svg class="ic i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-                <svg class="ic i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+              <button class="iconbtn" type="button" aria-label="Quick actions" data-menu="quick" style="background:var(--primary-soft);color:var(--primary-ink)">
+                <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
               </button>
-              <button class="iconbtn" type="button" aria-label="Open settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
             </div>
 
             <div class="scroll">
-              <div class="searchrow">
+              <div class="filterrow">
+                <button class="filterbtn" type="button" aria-label="Filter chats" data-drawer="filter">
+                  <svg class="ic" aria-hidden="true"><use href="#i-filter"/></svg>
+                </button>
                 <div class="searchfield">
                   <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
-                  <span>Search chats, agents, people</span>
+                  <span>Search</span>
                 </div>
               </div>
 
-              <div class="chips" role="group" aria-label="Filters">
-                <button class="chip is-on" type="button">All</button>
-                <button class="chip" type="button">Unread</button>
-                <button class="chip" type="button"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg>Agents</button>
-                <button class="chip" type="button">Groups</button>
+              <button class="featcard" type="button" data-go="chat">
+                <span class="ava agent"><img src="images/agent-webpage.png" alt=""><span class="presence"></span></span>
+                <span class="rowbody">
+                  <span class="rowtop"><span class="rownm">fareed's Personal Agent</span><span class="rowtime">21:38</span></span>
+                  <span class="rowsnip"><span class="txt">[Custom Message]</span></span>
+                </span>
+              </button>
+
+              <button class="sechead" type="button" aria-expanded="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>
+                <span>Pinned</span><span class="cnt">· 1</span>
+                <svg class="ic chev" aria-hidden="true"><use href="#i-chevdown"/></svg>
+              </button>
+              <div class="list" style="padding-top:0">
+                <button class="row" type="button" data-go="chat">
+                  <span class="ava"><img src="images/user-alice.png" alt=""></span>
+                  <span class="rowbody">
+                    <span class="rowtop"><span class="rownm">Full-Stack Delivery Guild</span><span class="rowtime">Tue</span></span>
+                    <span class="rowsnip"><span class="txt">[Draft] @</span></span>
+                  </span>
+                </button>
               </div>
 
-              <div class="seclabel"><span>Recent</span><span>4 pinned</span></div>
-
-              <div class="list">
+              <button class="sechead" type="button" aria-expanded="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-chatbubble"/></svg>
+                <span>Chats</span><span class="cnt">· 15</span>
+                <svg class="ic chev" aria-hidden="true"><use href="#i-chevdown"/></svg>
+              </button>
+              <div class="list" style="padding-top:0">
                 <button class="row" type="button" data-go="chat">
                   <span class="ava agent"><img src="images/agent-webpage.png" alt=""><span class="presence"></span></span>
                   <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Webpage Developer</span><span class="rowtime">2m</span></span>
-                    <span class="rowsnip">
-                      <span class="agentsnip"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>Agent</span>
-                      <span class="txt">Landing page draft is ready — want me to publish it?</span>
-                      <span class="badge">3</span>
-                    </span>
+                    <span class="rowtop"><span class="rownm">Content Creator</span><span class="rowtime">00:09</span></span>
+                    <span class="rowsnip"><span class="txt">F1_2REPLYSYNTHETIC — got it. What wou...</span></span>
                   </span>
                 </button>
-
-                <button class="row" type="button" data-go="chat">
-                  <span class="ava"><img src="images/user-alice.png" alt=""></span>
-                  <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Design Team · 5</span><span class="rowtime">12m</span></span>
-                    <span class="rowsnip"><span class="txt">Alice: the new M3 tokens look great</span><span class="badge quiet">2</span></span>
-                  </span>
-                </button>
-
-                <button class="row" type="button" data-go="chat">
-                  <span class="ava agent"><img src="images/agent-slides.png" alt=""><span class="presence"></span></span>
-                  <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Slides Assistant</span><span class="rowtime">1h</span></span>
-                    <span class="rowsnip">
-                      <span class="agentsnip"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>Agent</span>
-                      <span class="txt">Q4 deck exported — 12 slides, brand theme applied</span>
-                    </span>
-                  </span>
-                </button>
-
-                <button class="row" type="button" data-go="chat">
-                  <span class="ava"><img src="images/user-david.png" alt=""></span>
-                  <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">David Park</span><span class="rowtime">3h</span></span>
-                    <span class="rowsnip"><span class="txt">Sent you the repo link for review</span></span>
-                  </span>
-                </button>
-
-                <button class="row" type="button" data-go="chat">
-                  <span class="ava agent"><img src="images/agent-market.png" alt=""><span class="presence"></span></span>
-                  <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Market Research</span><span class="rowtime">Yesterday</span></span>
-                    <span class="rowsnip">
-                      <span class="agentsnip"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>Agent</span>
-                      <span class="txt">Competitor brief finished — 8 sources cited</span>
-                    </span>
-                  </span>
-                </button>
-
                 <button class="row" type="button" data-go="chat">
                   <span class="ava agent"><img src="images/agent-accounting.png" alt=""><span class="presence"></span></span>
                   <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Accounting Assistant</span><span class="rowtime">Yesterday</span></span>
-                    <span class="rowsnip">
-                      <span class="agentsnip"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>Agent</span>
-                      <span class="txt">Invoice #2211 flagged for your review</span>
-                    </span>
+                    <span class="rowtop"><span class="rownm">Accounting Assistant</span><span class="rowtime">10/21/26</span></span>
+                    <span class="rowsnip"><span class="txt">[Custom Message]</span></span>
                   </span>
                 </button>
-
                 <button class="row" type="button" data-go="chat">
-                  <span class="ava"><img src="images/user-alex.png" alt=""></span>
+                  <span class="ava agent"><img src="images/agent-market.png" alt=""><span class="presence"></span></span>
                   <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Family · 8</span><span class="rowtime">Sun</span></span>
-                    <span class="rowsnip"><span class="txt">Mum: dinner at 8? Alex is bringing dessert</span></span>
+                    <span class="rowtop"><span class="rownm">QA Tester</span><span class="rowtime">10/20/26</span></span>
+                    <span class="rowsnip"><span class="txt">[Custom Message]</span></span>
                   </span>
                 </button>
-
                 <button class="row" type="button" data-go="chat">
-                  <span class="ava"><img src="images/user-alice.png" alt=""></span>
+                  <span class="ava"><img src="images/user-david.png" alt=""></span>
                   <span class="rowbody">
-                    <span class="rowtop"><span class="rownm">Alice Chen</span><span class="rowtime">Sun</span></span>
-                    <span class="rowsnip"><span class="typingdot">typing…</span></span>
+                    <span class="rowtop"><span class="rownm">AI Feature Build Room</span><span class="rowtime">10/17/26</span></span>
+                    <span class="rowsnip"><span class="txt">Prompt Engineer, Data Engineer, Frontend ...</span></span>
                   </span>
                 </button>
               </div>
             </div>
 
-            <button class="fab" type="button" aria-label="New chat" data-toast="New chat sheet would open here">
-              <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg>
-            </button>
+            <div class="menupop" id="menuQuick" role="menu" aria-label="Quick actions">
+              <button class="mrow" type="button" role="menuitem" data-toast="Create Agent"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg>Create Agent</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="New Group"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>New Group</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Add Contact"><svg class="ic" aria-hidden="true"><use href="#i-personplus"/></svg>Add Contact</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Create Artifacts"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg>Create Artifacts</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Create Automation"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg>Create Automation</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Create Local Agent"><svg class="ic" aria-hidden="true"><use href="#i-laptop"/></svg>Create Local Agent</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Start Video Meeting"><svg class="ic" aria-hidden="true"><use href="#i-videos"/></svg>Start Video Meeting</button>
+              <button class="mrow" type="button" role="menuitem" data-toast="Join Video Meeting"><svg class="ic" aria-hidden="true"><use href="#i-videoplus"/></svg>Join Video Meeting</button>
+            </div>
+
+            <div class="drawer" id="drawerFilter">
+              <div class="drawerbox">
+                <h4>Filter</h4>
+                <button class="drow is-on" type="button"><svg class="ic" aria-hidden="true"><use href="#i-filter"/></svg>All</button>
+                <button class="drow" type="button"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg>Agents</button>
+                <button class="drow" type="button"><svg class="ic" aria-hidden="true"><use href="#i-chatbubble"/></svg>Unread</button>
+                <button class="drow" type="button"><svg class="ic" aria-hidden="true"><use href="#i-at"/></svg>Mentions</button>
+                <button class="drow" type="button"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg>People</button>
+                <button class="drow" type="button"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>Groups</button>
+              </div>
+            </div>
+
+            <div class="sheet" id="sheetQuick">
+              <div class="sheetbox">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                  <h4 style="margin:0;flex:1 1 auto">Quick Actions</h4>
+                  <button class="iconbtn" type="button" aria-label="Close" data-close-sheet="1"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+                </div>
+
+                <div class="sheetsec">
+                  <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg><b>Agent tools</b></div>
+                  <div class="tilegrid" style="grid-template-columns:repeat(2,1fr)">
+                    <button class="tile" type="button" data-toast="Skills"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-puzzle"/></svg></span><span class="tl">Skills</span></button>
+                    <button class="tile" type="button" data-toast="Connectors"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg></span><span class="tl">Connectors</span></button>
+                  </div>
+                </div>
+
+                <div class="sheetsec">
+                  <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-paperclip"/></svg><b>Attach</b></div>
+                  <div class="tilegrid">
+                    <button class="tile" type="button" data-toast="Upload"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-paperclip"/></svg></span><span class="tl">Upload</span></button>
+                    <button class="tile" type="button" data-toast="Photos"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-photos"/></svg></span><span class="tl">Photos</span></button>
+                    <button class="tile" type="button" data-toast="Camera"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-camera"/></svg></span><span class="tl">Camera</span></button>
+                    <button class="tile" type="button" data-toast="Videos"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-videos"/></svg></span><span class="tl">Videos</span></button>
+                  </div>
+                </div>
+
+                <div class="sheetsec">
+                  <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg><b>Create artifact</b>
+                    <button class="more" type="button" data-toast="Explore more artifacts">Explore more &rsaquo;</button>
+                  </div>
+                  <div class="tilegrid">
+                    <button class="tile" type="button" data-toast="Web"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-globe2"/></svg></span><span class="tl">Web</span></button>
+                    <button class="tile" type="button" data-toast="Doc"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg></span><span class="tl">Doc</span></button>
+                    <button class="tile" type="button" data-toast="Slides"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-slides"/></svg></span><span class="tl">Slides</span></button>
+                    <button class="tile" type="button" data-toast="Sheet"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-sheet"/></svg></span><span class="tl">Sheet</span></button>
+                    <button class="tile" type="button" data-toast="Image"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span><span class="tl">Image</span></button>
+                    <button class="tile" type="button" data-toast="Video"><span class="pro">PRO</span><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-videos"/></svg></span><span class="tl">Video</span></button>
+                    <button class="tile" type="button" data-toast="Music"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></span><span class="tl">Music</span></button>
+                    <button class="tile" type="button" data-toast="3D"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-3d"/></svg></span><span class="tl">3D</span></button>
+                  </div>
+                </div>
+
+                <div class="sheetsec">
+                  <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-sliders"/></svg><b>Create automation</b>
+                    <button class="more" type="button" data-toast="Explore more automations">Explore more &rsaquo;</button>
+                  </div>
+                  <div class="tilegrid" style="grid-template-columns:1fr 1fr">
+                    <button class="tile wide" type="button" data-toast="Meeting reminder + prep">
+                      <span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-bell2"/></svg></span>
+                      <span class="tw"><b>Meeting reminder + prep</b><span>Remind me before a meeting and pull the l...</span></span>
+                    </button>
+                    <button class="tile wide" type="button" data-toast="Daily work brief">
+                      <span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-newspaper"/></svg></span>
+                      <span class="tw"><b>Daily work brief</b><span>Every morning, summarize progress, ...</span></span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="sheetsec">
+                  <div class="sh"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><b>Memory</b></div>
+                  <div class="tilegrid" style="grid-template-columns:1fr 1fr">
+                    <button class="tile" type="button" data-toast="Attach Memory"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg></span><span class="tl">Attach Memory</span></button>
+                    <button class="tile" type="button" data-toast="Recall Memory"><span class="tb"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg></span><span class="tl">Recall Memory</span></button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <nav class="navbar" aria-label="Primary">
               <button class="navi" type="button" data-go="home" aria-current="page">
@@ -1088,13 +1415,13 @@ footer b{color:var(--page-ink)}
                 <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
                 <span class="lbl">Agents</span>
               </button>
-              <button class="navi" type="button" data-go="discover">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg></span>
-                <span class="lbl">Discover</span>
+              <button class="navi" type="button" data-go="memory">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><span class="dotbadge"></span></span></span>
+                <span class="lbl">Memory</span>
               </button>
-              <button class="navi" type="button" data-go="profile">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg></span>
-                <span class="lbl">Profile</span>
+              <button class="navi" type="button" data-go="artifacts">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-artifacts"/></svg></span>
+                <span class="lbl">Artifacts</span>
               </button>
             </nav>
           </div>
@@ -1139,7 +1466,7 @@ footer b{color:var(--page-ink)}
 
                 <div class="msg user">
                   <div class="bubble">
-                    Draft a landing page for our AI meetup in Palo Alto — dark hero, teal accent, one CTA.
+                    Build the Teamily design system page — tokens, type scale and the accessibility notes.
                     <div class="mt"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>9:38 AM</div>
                   </div>
                 </div>
@@ -1147,31 +1474,30 @@ footer b{color:var(--page-ink)}
                 <div class="msg agent">
                   <span class="ava"><img src="images/agent-webpage.png" alt=""></span>
                   <div class="bubble">
-                    On it. I’ll use the Teamily green (#087c45) so it stays on-brand, keep one primary CTA, and make it mobile-first.
-                    <div class="artcard">
-                      <div class="artthumb"><span class="tag">Preview</span></div>
-                      <div class="artbody">
-                        <div class="t">meetup-landing · v1</div>
-                        <div class="s">Responsive · 12 sections · Lato</div>
-                        <div class="artrow"><span class="mini">Open preview</span><span class="mini">Publish</span></div>
+                    Done. I built it from the brand tokens you gave me and kept mint as fill only.
+                    <div class="artcard2">
+                      <div class="ahead">
+                        <svg class="ic" aria-hidden="true"><use href="#i-checkcircle"/></svg>
+                        <b>Completed</b>
+                        <span class="done">7m total</span>
+                      </div>
+                      <div class="aprev">
+                        <span class="mdchip">MD v1</span>
+                        <span class="ttl">Teamily Design System</span>
+                        <span class="pg">1 / 2</span>
+                      </div>
+                      <div class="afoot">
+                        <button class="mini2" type="button" data-go="document"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>View process</button>
+                        <button class="mini2 solid" type="button" data-toast="Opening Studio"><svg class="ic" aria-hidden="true"><use href="#i-external"/></svg>Open Studio</button>
                       </div>
                     </div>
-                    <div class="mt"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>9:38 AM</div>
-                  </div>
-                </div>
-
-                <div class="msg user">
-                  <div class="bubble">
-                    Looks right. Make the hero headline bigger and add the speaker line-up.
-                    <div class="mt"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>9:40 AM</div>
-                  </div>
-                </div>
-
-                <div class="msg agent">
-                  <span class="ava"><img src="images/agent-webpage.png" alt=""></span>
-                  <div class="bubble">
-                    Done — headline is now 56/60 with the mint accent, and the line-up is a 3-up card row that stacks on small screens. Draft is ready to publish.
-                    <div class="mt"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>9:41 AM</div>
+                    <div class="msgacts">
+                      <button type="button" aria-label="Copy"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
+                      <button type="button" aria-label="Good response"><svg class="ic" aria-hidden="true"><use href="#i-thumbup"/></svg></button>
+                      <button type="button" aria-label="Bad response"><svg class="ic" aria-hidden="true"><use href="#i-thumbdown"/></svg></button>
+                      <button type="button" aria-label="Share"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg></button>
+                    </div>
+                    <div class="mt"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg>9:45 AM</div>
                   </div>
                 </div>
 
@@ -1180,6 +1506,18 @@ footer b{color:var(--page-ink)}
                   <div class="bubble" style="padding:0"><div class="typing" style="display:flex"><i></i><i></i><i></i></div></div>
                 </div>
               </div>
+            </div>
+
+            <div class="suggestrow" role="group" aria-label="Suggestions">
+              <button type="button" data-toast="Show the token table">Show the token table</button>
+              <button type="button" data-toast="Add night mode">Add night mode</button>
+              <button type="button" data-toast="Export as PDF">Export as PDF</button>
+            </div>
+
+            <div class="newtaskbar">
+              <svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg>
+              <span>New task</span>
+              <button class="go" type="button" data-go="createtask">Create</button>
             </div>
 
             <form class="composer" id="composer" aria-label="Message composer">
@@ -1199,7 +1537,7 @@ footer b{color:var(--page-ink)}
             </form>
           </div>
         </div>
-        <div class="caption"><b>02</b> Chat · agent thread</div>
+        <div class="caption"><b>02</b> Chat · agent thread with artifact card</div>
       </div>
 
       <!-- ==================== 03 · AGENTS ==================== -->
@@ -1230,55 +1568,127 @@ footer b{color:var(--page-ink)}
               <button class="iconbtn" type="button" aria-label="Open settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
             </div>
 
+            <div class="tabs" role="tablist" aria-label="Agents sections">
+              <button class="tabbtn" type="button" role="tab" aria-selected="true" data-tab="agents">Agents</button>
+              <button class="tabbtn" type="button" role="tab" aria-selected="false" data-tab="teams">Agent Teams</button>
+              <button class="tabbtn" type="button" role="tab" aria-selected="false" data-tab="automations">Automations</button>
+            </div>
+
             <div class="scroll">
-              <div class="seclabel" style="padding-top:2px"><span>Your agents</span><span>4 active</span></div>
-
-              <div class="agentlist">
-                <div class="agentcard">
-                  <span class="ava agent"><img src="images/agent-webpage.png" alt=""></span>
-                  <div class="ac-body">
-                    <div class="ac-name">Webpage Developer <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
-                    <div class="ac-desc">Builds and publishes landing pages, docs and dashboards from a single prompt.</div>
-                    <div class="ac-foot"><span class="pilltag on">Working</span><span class="pilltag">Web</span></div>
+              <div class="tabpane" data-pane="agents">
+                <div class="seclabel" style="padding-top:2px"><span>Your agents</span><span>4 active</span></div>
+                <div class="agentlist">
+                  <div class="agentcard">
+                    <span class="ava agent"><img src="images/agent-webpage.png" alt=""></span>
+                    <div class="ac-body">
+                      <div class="ac-name">Webpage Developer <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
+                      <div class="ac-desc">Builds and publishes landing pages, docs and dashboards from a single prompt.</div>
+                      <div class="ac-foot"><span class="pilltag on">Working</span><span class="pilltag">Web</span></div>
+                    </div>
+                    <button class="minicta" type="button" data-go="chat">Open</button>
                   </div>
-                  <button class="minicta" type="button" data-go="chat">Open</button>
-                </div>
-
-                <div class="agentcard">
-                  <span class="ava agent"><img src="images/agent-slides.png" alt=""></span>
-                  <div class="ac-body">
-                    <div class="ac-name">Slides Assistant <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
-                    <div class="ac-desc">Turns a chat into a branded deck — outline, design and export in minutes.</div>
-                    <div class="ac-foot"><span class="pilltag on">Working</span><span class="pilltag">Slides</span></div>
+                  <div class="agentcard">
+                    <span class="ava agent"><img src="images/agent-slides.png" alt=""></span>
+                    <div class="ac-body">
+                      <div class="ac-name">Slides Assistant <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
+                      <div class="ac-desc">Turns a chat into a branded deck — outline, design and export in minutes.</div>
+                      <div class="ac-foot"><span class="pilltag on">Working</span><span class="pilltag">Slides</span></div>
+                    </div>
+                    <button class="minicta" type="button" data-toast="Slides Assistant opened">Open</button>
                   </div>
-                  <button class="minicta" type="button" data-toast="Slides Assistant opened">Open</button>
-                </div>
-
-                <div class="agentcard">
-                  <span class="ava agent"><img src="images/agent-market.png" alt=""></span>
-                  <div class="ac-body">
-                    <div class="ac-name">Market Research <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
-                    <div class="ac-desc">Researches competitors with cited sources and keeps the brief up to date.</div>
-                    <div class="ac-foot"><span class="pilltag">Idle</span><span class="pilltag">Research</span></div>
+                  <div class="agentcard">
+                    <span class="ava agent"><img src="images/agent-market.png" alt=""></span>
+                    <div class="ac-body">
+                      <div class="ac-name">Market Research <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
+                      <div class="ac-desc">Researches competitors with cited sources and keeps the brief up to date.</div>
+                      <div class="ac-foot"><span class="pilltag">Idle</span><span class="pilltag">Research</span></div>
+                    </div>
+                    <button class="minicta" type="button" data-toast="Market Research opened">Open</button>
                   </div>
-                  <button class="minicta" type="button" data-toast="Market Research opened">Open</button>
-                </div>
-
-                <div class="agentcard">
-                  <span class="ava agent"><img src="images/agent-accounting.png" alt=""></span>
-                  <div class="ac-body">
-                    <div class="ac-name">Accounting Assistant <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
-                    <div class="ac-desc">Reconciles invoices and flags anything that needs a human decision.</div>
-                    <div class="ac-foot"><span class="pilltag">Idle</span><span class="pilltag">Finance</span></div>
+                  <div class="agentcard">
+                    <span class="ava agent"><img src="images/agent-accounting.png" alt=""></span>
+                    <div class="ac-body">
+                      <div class="ac-name">Accounting Assistant <svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg></div>
+                      <div class="ac-desc">Reconciles invoices and flags anything that needs a human decision.</div>
+                      <div class="ac-foot"><span class="pilltag">Idle</span><span class="pilltag">Finance</span></div>
+                    </div>
+                    <button class="minicta" type="button" data-toast="Accounting Assistant opened">Open</button>
                   </div>
-                  <button class="minicta" type="button" data-toast="Accounting Assistant opened">Open</button>
                 </div>
+                <button class="newagent" type="button" data-toast="Create agent: name it, give it tools, done">
+                  <span class="plus"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></span>
+                  Create a new agent
+                </button>
               </div>
 
-              <button class="newagent" type="button" data-toast="Create agent: name it, give it tools, done">
-                <span class="plus"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></span>
-                Create a new agent
-              </button>
+              <div class="tabpane" data-pane="teams" hidden>
+                <div class="seclabel" style="padding-top:2px"><span>Your teams</span><span>3 teams</span></div>
+                <div class="teamcard">
+                  <div class="tt"><b>Full-Stack Delivery Guild</b><button class="create" type="button" data-toast="Create task for this team">Create</button></div>
+                  <div class="td">Ships a feature end to end — design, build, test and review in one thread.</div>
+                  <div class="tf">
+                    <span class="avgroup">
+                      <span class="ava"><img src="images/user-alice.png" alt=""></span>
+                      <span class="ava"><img src="images/user-david.png" alt=""></span>
+                      <span class="ava"><img src="images/agent-webpage.png" alt=""></span>
+                      <span class="more">+2</span>
+                    </span>
+                    <span class="memcount"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>5 members</span>
+                  </div>
+                  <div class="tagchips"><span>Frontend</span><span>Backend</span><span>QA</span></div>
+                </div>
+                <div class="teamcard">
+                  <div class="tt"><b>AI Feature Build Room</b><button class="create" type="button" data-toast="Create task for this team">Create</button></div>
+                  <div class="td">Prompt engineering, data prep and model evaluation for new AI features.</div>
+                  <div class="tf">
+                    <span class="avgroup">
+                      <span class="ava"><img src="images/user-david.png" alt=""></span>
+                      <span class="ava"><img src="images/agent-market.png" alt=""></span>
+                      <span class="more">+3</span>
+                    </span>
+                    <span class="memcount"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>5 members</span>
+                  </div>
+                  <div class="tagchips"><span>Prompt</span><span>Data</span><span>Eval</span></div>
+                </div>
+                <div class="teamcard">
+                  <div class="tt"><b>Growth Content Studio</b><button class="create" type="button" data-toast="Create task for this team">Create</button></div>
+                  <div class="td">Turns one idea into a blog, a deck and a set of social posts.</div>
+                  <div class="tf">
+                    <span class="avgroup">
+                      <span class="ava"><img src="images/agent-slides.png" alt=""></span>
+                      <span class="ava"><img src="images/user-alice.png" alt=""></span>
+                      <span class="more">+1</span>
+                    </span>
+                    <span class="memcount"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>3 members</span>
+                  </div>
+                  <div class="tagchips"><span>Copy</span><span>Slides</span></div>
+                </div>
+                <button class="newagent" type="button" data-toast="Create a new team">
+                  <span class="plus"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></span>
+                  Create a new team
+                </button>
+              </div>
+
+              <div class="tabpane" data-pane="automations" hidden>
+                <div class="seclabel" style="padding-top:2px"><span>Running</span><span>2 active</span></div>
+                <button class="autocard" type="button" data-toast="Meeting reminder + prep">
+                  <span class="ab"><svg class="ic" aria-hidden="true"><use href="#i-bell2"/></svg></span>
+                  <span class="at"><b>Meeting reminder + prep</b><span>Remind me before a meeting and pull the latest notes</span></span>
+                </button>
+                <button class="autocard" type="button" data-toast="Daily work brief">
+                  <span class="ab"><svg class="ic" aria-hidden="true"><use href="#i-newspaper"/></svg></span>
+                  <span class="at"><b>Daily work brief</b><span>Every morning, summarize progress and open items</span></span>
+                </button>
+                <div class="seclabel"><span>Paused</span><span>1</span></div>
+                <button class="autocard" type="button" data-toast="Weekly report">
+                  <span class="ab"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg></span>
+                  <span class="at"><b>Weekly report</b><span>Friday 17:00 · compile the week into one doc</span></span>
+                </button>
+                <button class="newagent" type="button" data-toast="Create automation">
+                  <span class="plus"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></span>
+                  Create automation
+                </button>
+              </div>
             </div>
 
             <nav class="navbar" aria-label="Primary">
@@ -1290,141 +1700,18 @@ footer b{color:var(--page-ink)}
                 <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
                 <span class="lbl">Agents</span>
               </button>
-              <button class="navi" type="button" data-go="discover">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg></span>
-                <span class="lbl">Discover</span>
+              <button class="navi" type="button" data-go="memory">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><span class="dotbadge"></span></span></span>
+                <span class="lbl">Memory</span>
               </button>
-              <button class="navi" type="button" data-go="profile">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg></span>
-                <span class="lbl">Profile</span>
-              </button>
-            </nav>
-          </div>
-        </div>
-        <div class="caption"><b>03</b> Agents tab</div>
-      </div>
-
-      <!-- ==================== 04 · DISCOVER ==================== -->
-      <div class="slot" id="p-discover">
-        <div class="phone">
-          <div class="screen">
-            <div class="camera" aria-hidden="true"></div>
-            <div class="statusbar">
-              <div class="sb-left">9:41</div>
-              <div class="sb-right" aria-hidden="true">
-                <svg class="ic"><use href="#i-signal"/></svg>
-                <svg class="ic"><use href="#i-wifi"/></svg>
-                <svg class="ic"><use href="#i-batt"/></svg>
-              </div>
-            </div>
-
-            <div class="appbar">
-              <div class="brandlock">
-                <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
-                <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
-                <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
-              </div>
-              <button class="iconbtn" type="button" aria-label="Search community"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></button>
-              <button class="iconbtn theme-btn" type="button" aria-label="Switch theme" data-theme-toggle="1">
-                <svg class="ic i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-                <svg class="ic i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
-              </button>
-              <button class="iconbtn" type="button" aria-label="Open settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
-            </div>
-
-            <div class="scroll">
-              <div class="discover-feature">
-                <div class="df-top">
-                  <img src="images/teamily-mark.png" alt="">
-                  <div>
-                    <div class="df-kicker">Featured agent</div>
-                    <div class="df-title">Webpage Developer</div>
-                  </div>
-                </div>
-                <p class="df-sub">Prompt a full landing page and get a published link in under two minutes.</p>
-                <button class="df-cta" type="button" data-go="chat">
-                  Start a chat <svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-              </div>
-
-              <div class="seclabel"><span>Trending in community</span><span>24</span></div>
-
-              <div class="dgrid">
-                <button class="dcard" type="button" data-toast="Slides Assistant added to your agents">
-                  <span class="ava agent"><img src="images/agent-slides.png" alt=""></span>
-                  <span class="nm">Slides Assistant</span>
-                  <span class="ds">Deck in 5 prompts · 2.1k users</span>
-                  <span class="tag">Productivity</span>
-                </button>
-                <button class="dcard" type="button" data-toast="Market Research added to your agents">
-                  <span class="ava agent"><img src="images/agent-market.png" alt=""></span>
-                  <span class="nm">Market Research</span>
-                  <span class="ds">Cited briefs · 1.4k users</span>
-                  <span class="tag">Research</span>
-                </button>
-                <button class="dcard" type="button" data-toast="Accounting Assistant added to your agents">
-                  <span class="ava agent"><img src="images/agent-accounting.png" alt=""></span>
-                  <span class="nm">Accounting Assistant</span>
-                  <span class="ds">Invoice triage · 980 users</span>
-                  <span class="tag">Finance</span>
-                </button>
-                <button class="dcard" type="button" data-toast="Design Critic added to your agents">
-                  <span class="ava" style="background:linear-gradient(135deg,#0b8249,#06512f);display:flex;align-items:center;justify-content:center;color:#eafff2">
-                    <svg class="ic" style="width:20px;height:20px" aria-hidden="true"><use href="#i-palette"/></svg>
-                  </span>
-                  <span class="nm">Design Critic</span>
-                  <span class="ds">M3 + a11y review · 760 users</span>
-                  <span class="tag">Design</span>
-                </button>
-              </div>
-
-              <div class="seclabel"><span>From people you follow</span></div>
-              <div style="padding:0 8px 16px">
-                <button class="socialrow" type="button" data-toast="Alice shared Webpage Developer">
-                  <span class="ava"><img src="images/user-alice.png" alt=""></span>
-                  <span class="sr-body">
-                    <span class="sr-t"><b>Alice Chen</b> shared Webpage Developer with the Design Team</span>
-                    <span class="sr-s">12 minutes ago · 3 replies</span>
-                  </span>
-                </button>
-                <button class="socialrow" type="button" data-toast="David published a research agent">
-                  <span class="ava"><img src="images/user-david.png" alt=""></span>
-                  <span class="sr-body">
-                    <span class="sr-t"><b>David Park</b> published a research agent with web + arXiv tools</span>
-                    <span class="sr-s">3 hours ago · 41 installs</span>
-                  </span>
-                </button>
-                <button class="socialrow" type="button" data-toast="Alex rated Slides Assistant">
-                  <span class="ava"><img src="images/user-alex.png" alt=""></span>
-                  <span class="sr-body">
-                    <span class="sr-t"><b>Alex Rivera</b> rated Slides Assistant 5 stars</span>
-                    <span class="sr-s">Yesterday · “deck looked on-brand in one shot”</span>
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <nav class="navbar" aria-label="Primary">
-              <button class="navi" type="button" data-go="home">
-                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-chats"/></svg><span class="count">3</span></span></span>
-                <span class="lbl">Chats</span>
-              </button>
-              <button class="navi" type="button" data-go="agents">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
-                <span class="lbl">Agents</span>
-              </button>
-              <button class="navi" type="button" data-go="discover" aria-current="page">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg></span>
-                <span class="lbl">Discover</span>
-              </button>
-              <button class="navi" type="button" data-go="profile">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg></span>
-                <span class="lbl">Profile</span>
+              <button class="navi" type="button" data-go="artifacts">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-artifacts"/></svg></span>
+                <span class="lbl">Artifacts</span>
               </button>
             </nav>
           </div>
         </div>
-        <div class="caption"><b>04</b> Discover tab</div>
+        <div class="caption"><b>03</b> Agents · Agents / Agent Teams / Automations</div>
       </div>
 
       <!-- ==================== 05 · PROFILE ==================== -->
@@ -1442,127 +1729,104 @@ footer b{color:var(--page-ink)}
             </div>
 
             <div class="appbar">
-              <div class="brandlock">
+              <button class="iconbtn" type="button" aria-label="Back" data-go="home"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+              <div class="brandlock" style="justify-content:center">
                 <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
                 <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
                 <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
               </div>
-              <button class="iconbtn theme-btn" type="button" aria-label="Switch theme" data-theme-toggle="1">
-                <svg class="ic i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-                <svg class="ic i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
-              </button>
               <button class="iconbtn" type="button" aria-label="Settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
             </div>
 
             <div class="scroll">
-              <div class="phero">
-                <div class="pava">
-                  <img src="images/user-alex.png" alt="Fareed Khan avatar" id="profileAva">
-                  <span class="pbadge"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <div class="phead">
+                <span class="ava pava"><img src="images/user-alex.png" alt=""></span>
+                <div class="pi">
+                  <b>Alex Rivera</b>
+                  <span>@alexrivera</span>
                 </div>
-                <h2 class="pname" id="profileName">Fareed Khan</h2>
-                <div class="pmail" id="profileEmail">fareed.khan@gmail.com</div>
-                <div class="prow">
-                  <span class="protag">Teamily Pro</span>
-                  <span class="psince">Member since Mar 2024</span>
+                <div class="pacts">
+                  <button class="iconbtn" type="button" aria-label="Share profile"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg></button>
+                  <button class="iconbtn" type="button" aria-label="Edit profile" data-go="editprofile"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg></button>
                 </div>
-                <button class="pedit" type="button" data-go="editprofile">
-                  <svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg>Edit profile
-                </button>
               </div>
 
-              <div class="stats">
-                <div class="stat"><b>128</b><span>Chats</span></div>
-                <div class="stat"><b>4</b><span>Agents</span></div>
-                <div class="stat"><b>37</b><span>Artifacts</span></div>
+              <div class="statrow">
+                <div class="st"><b>128</b><span>Following</span></div>
+                <div class="st"><b>2.4k</b><span>Followers</span></div>
+                <div class="st"><b>316</b><span>Likes &amp; Saves</span></div>
               </div>
 
-              <div class="seclabel"><span>Quick actions</span></div>
-              <div class="quick">
-                <button class="q" type="button" data-go="agents">
-                  <svg class="ic" aria-hidden="true"><use href="#i-userplus"/></svg>
-                  <span>Add an agent</span>
-                  <small>4 active</small>
+              <div class="tabs" role="tablist" aria-label="Profile sections">
+                <button class="tabbtn" type="button" role="tab" aria-selected="true" data-tab="posts">Posts</button>
+                <button class="tabbtn" type="button" role="tab" aria-selected="false" data-tab="favorites">Favorites</button>
+                <button class="tabbtn" type="button" role="tab" aria-selected="false" data-tab="likes">Likes</button>
+              </div>
+
+              <div class="tabpane" data-pane="posts">
+                <div class="emptybox">No posts yet. Share an artifact to start your feed.</div>
+              </div>
+              <div class="tabpane" data-pane="favorites" hidden>
+                <div class="emptybox">Nothing saved yet. Bookmark an artifact to keep it here.</div>
+              </div>
+              <div class="tabpane" data-pane="likes" hidden>
+                <div class="emptybox">No likes yet. Tap the heart on a post you enjoy.</div>
+              </div>
+
+              <div class="seclabel"><span>Your agents</span><span>4</span></div>
+              <div class="list" style="padding-top:0">
+                <button class="row" type="button" data-go="chat">
+                  <span class="ava agent"><img src="images/agent-webpage.png" alt=""><span class="presence"></span></span>
+                  <span class="rowbody">
+                    <span class="rowtop"><span class="rownm">Webpage Developer</span><span class="rowtime">Working</span></span>
+                    <span class="rowsnip"><span class="txt">Builds and publishes pages</span></span>
+                  </span>
                 </button>
-                <button class="q" type="button" data-go="appearance">
-                  <svg class="ic" aria-hidden="true"><use href="#i-palette"/></svg>
-                  <span>Appearance</span>
-                  <small id="qaTheme">Night mode</small>
+                <button class="row" type="button" data-toast="Slides Assistant">
+                  <span class="ava agent"><img src="images/agent-slides.png" alt=""><span class="presence"></span></span>
+                  <span class="rowbody">
+                    <span class="rowtop"><span class="rownm">Slides Assistant</span><span class="rowtime">Working</span></span>
+                    <span class="rowsnip"><span class="txt">Turns a chat into a deck</span></span>
+                  </span>
                 </button>
-                <button class="q" type="button" data-go="storage">
-                  <svg class="ic" aria-hidden="true"><use href="#i-db"/></svg>
-                  <span>Storage</span>
-                  <small>3.2 GB of 15 GB</small>
+                <button class="row" type="button" data-toast="Market Research">
+                  <span class="ava agent"><img src="images/agent-market.png" alt=""></span>
+                  <span class="rowbody">
+                    <span class="rowtop"><span class="rownm">Market Research</span><span class="rowtime">Idle</span></span>
+                    <span class="rowsnip"><span class="txt">Cited competitor briefs</span></span>
+                  </span>
                 </button>
-                <button class="q" type="button" data-go="notifications">
-                  <svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg>
-                  <span>Notifications</span>
-                  <small>5 of 7 on</small>
+                <button class="row" type="button" data-toast="Accounting Assistant">
+                  <span class="ava agent"><img src="images/agent-accounting.png" alt=""></span>
+                  <span class="rowbody">
+                    <span class="rowtop"><span class="rownm">Accounting Assistant</span><span class="rowtime">Idle</span></span>
+                    <span class="rowsnip"><span class="txt">Reconciles invoices</span></span>
+                  </span>
                 </button>
               </div>
 
               <div class="seclabel"><span>Account</span></div>
-              <div class="group">
+              <div class="list" style="padding-top:0">
                 <button class="srow" type="button" data-go="editprofile">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg></span>
-                  <span class="slabel"><span class="t">Personal information</span><span class="s">Name, email, avatar</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
+                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg></span>
+                  <span class="stxt"><b>Edit profile</b><span>Name, handle, bio and photo</span></span>
+                  <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg>
                 </button>
                 <button class="srow" type="button" data-go="privacy">
                   <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg></span>
-                  <span class="slabel"><span class="t">Privacy &amp; security</span><span class="s">Passcode, blocked users</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-toast="Teamily Pro · renews 12 Nov 2026">
-                  <span class="sic tint"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></span>
-                  <span class="slabel"><span class="t">Subscription</span><span class="s">Pro · renews 12 Nov</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
+                  <span class="stxt"><b>Privacy &amp; security</b><span>App lock, 2FA, blocked users</span></span>
+                  <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg>
                 </button>
                 <button class="srow" type="button" data-go="settings">
                   <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></span>
-                  <span class="slabel"><span class="t">All settings</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
+                  <span class="stxt"><b>All settings</b><span>Appearance, notifications, storage</span></span>
+                  <svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg>
                 </button>
               </div>
-
-              <button class="btn btn-outline btnblock" type="button" data-sheet="1">
-                <svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg>Sign out
-              </button>
-              <div style="height:10px"></div>
             </div>
-
-            <div class="sheet" id="signoutSheet">
-              <div class="sheetbox">
-                <h4>Sign out of Teamily AI?</h4>
-                <p>Your chats and artifacts stay on your account. You’ll need to sign in again on this phone.</p>
-                <div class="sheetbtns">
-                  <button class="btn btn-primary" type="button" data-close-sheet="1" data-toast="Signed out (demo)">Sign out</button>
-                  <button class="btn btn-ghost" type="button" data-close-sheet="1">Cancel</button>
-                </div>
-              </div>
-            </div>
-
-            <nav class="navbar" aria-label="Primary">
-              <button class="navi" type="button" data-go="home">
-                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-chats"/></svg><span class="count">3</span></span></span>
-                <span class="lbl">Chats</span>
-              </button>
-              <button class="navi" type="button" data-go="agents">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
-                <span class="lbl">Agents</span>
-              </button>
-              <button class="navi" type="button" data-go="discover">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg></span>
-                <span class="lbl">Discover</span>
-              </button>
-              <button class="navi" type="button" data-go="profile" aria-current="page">
-                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg></span>
-                <span class="lbl">Profile</span>
-              </button>
-            </nav>
           </div>
         </div>
-        <div class="caption"><b>05</b> Profile</div>
+        <div class="caption"><b>04</b> Profile · stats + Posts / Favorites / Likes</div>
       </div>
 
       <!-- ==================== 06 · SETTINGS ==================== -->
@@ -1579,122 +1843,80 @@ footer b{color:var(--page-ink)}
               </div>
             </div>
 
-            <div class="detailbar">
-              <button class="iconbtn" type="button" aria-label="Back" data-go="profile"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
-              <div class="dt">Settings</div>
-              <button class="iconbtn theme-btn" type="button" aria-label="Switch theme" data-theme-toggle="1">
-                <svg class="ic i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-                <svg class="ic i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
-              </button>
+            <div class="appbar">
+              <button class="iconbtn" type="button" aria-label="Back" data-go="home"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+              <div class="brandlock" style="justify-content:center">
+                <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
+                <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
+                <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
+              </div>
+              <button class="iconbtn" type="button" aria-label="Close" data-go="home"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
             </div>
 
             <div class="scroll">
-              <div class="seclabel" style="padding-top:10px"><span>Account</span></div>
-              <div class="group">
-                <button class="srow" type="button" data-go="editprofile">
-                  <span class="ava" style="width:44px;height:44px;border-radius:14px"><img src="images/user-alex.png" alt="" id="setAva"></span>
-                  <span class="slabel"><span class="t" id="setName">Fareed Khan</span><span class="s" id="setEmail">fareed.khan@gmail.com</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-toast="Teamily Pro · renews 12 Nov 2026">
-                  <span class="sic tint"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></span>
-                  <span class="slabel"><span class="t">Subscription</span><span class="s">Pro plan · 15 GB storage</span></span>
-                  <span class="sval">Renews 12 Nov</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
+              <div class="sdhead">
+                <span class="ava"><img src="images/user-alex.png" alt=""></span>
+                <div style="min-width:0;flex:1 1 auto">
+                  <div class="nm">Alex Rivera</div>
+                  <div class="em">alex@teamily.ai</div>
+                </div>
+                <button class="iconbtn" type="button" aria-label="Edit profile" data-go="editprofile"><svg class="ic" aria-hidden="true"><use href="#i-pencil"/></svg></button>
               </div>
 
-              <div class="seclabel"><span>Look &amp; feel</span></div>
-              <div class="group">
-                <button class="srow" type="button" data-go="appearance">
-                  <span class="sic tint"><svg class="ic" aria-hidden="true"><use href="#i-palette"/></svg></span>
-                  <span class="slabel"><span class="t">Appearance</span><span class="s">System, light or dark theme</span></span>
-                  <span class="sval" id="setThemeVal">Night</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-toast="Text size: Default (Lato 14.5px)">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-type"/></svg></span>
-                  <span class="slabel"><span class="t">Text size</span><span class="s">Chat and list font size</span></span>
-                  <span class="sval">Default</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-go="language">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg></span>
-                  <span class="slabel"><span class="t">Language</span></span>
-                  <span class="sval" id="setLangVal">English (US)</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
+              <div class="planbox">
+                <div class="pt"><b>Teamily Plus</b><button class="up" type="button" data-toast="Upgrade plan">Upgrade</button></div>
+                <div class="pbar">
+                  <div class="pl"><span>Credits</span><span>1,240 / 2,000</span></div>
+                  <div class="track"><i style="width:62%"></i></div>
+                </div>
+                <div class="pbar">
+                  <div class="pl"><span>Storage</span><span>3.2 / 15 GB</span></div>
+                  <div class="track"><i style="width:21%"></i></div>
+                </div>
+                <button class="minipill" type="button" data-toast="Create to Earn"><svg class="ic" aria-hidden="true"><use href="#i-gift"/></svg>Create to Earn</button>
               </div>
 
-              <div class="seclabel"><span>Messages</span></div>
-              <div class="group">
-                <button class="srow" type="button" data-go="notifications">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></span>
-                  <span class="slabel"><span class="t">Notifications</span><span class="s">Push, email, per-agent alerts</span></span>
-                  <span class="sval">5 of 7 on</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-go="chatprefs">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-chatpref"/></svg></span>
-                  <span class="slabel"><span class="t">Chat preferences</span><span class="s">Send with Enter, typing indicators</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-go="privacy">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg></span>
-                  <span class="slabel"><span class="t">Privacy &amp; security</span><span class="s">App lock, blocked users, data</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
+              <div class="list" style="padding-top:0">
+                <button class="drow" type="button" data-toast="Credit Center"><svg class="ic" aria-hidden="true"><use href="#i-card"/></svg>Credit Center</button>
+                <button class="drow" type="button" data-toast="Invite &amp; Earn"><svg class="ic" aria-hidden="true"><use href="#i-gift"/></svg>Invite &amp; Earn</button>
+                <button class="drow" type="button" data-toast="Plan &amp; Billing"><svg class="ic" aria-hidden="true"><use href="#i-card"/></svg>Plan &amp; Billing</button>
+                <button class="drow" type="button" data-go="storage"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>Usage</button>
               </div>
 
-              <div class="seclabel"><span>Data</span></div>
-              <div class="group">
-                <button class="srow" type="button" data-go="storage">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-db"/></svg></span>
-                  <span class="slabel"><span class="t">Storage</span><span class="s">3.2 GB used of 15 GB</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-toast="Auto-download: Wi-Fi only">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span>
-                  <span class="slabel"><span class="t">Media auto-download</span></span>
-                  <span class="sval">Wi-Fi only</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
+              <div class="seclabel"><span>Connect</span></div>
+              <div class="list" style="padding-top:0">
+                <button class="drow" type="button" data-toast="Channels"><svg class="ic" aria-hidden="true"><use href="#i-broadcast"/></svg>Channels</button>
+                <button class="drow" type="button" data-toast="App Connectors"><svg class="ic" aria-hidden="true"><use href="#i-puzzle"/></svg>App Connectors</button>
               </div>
 
               <div class="seclabel"><span>Support</span></div>
-              <div class="group">
-                <button class="srow" type="button" data-toast="Help centre opened">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-help"/></svg></span>
-                  <span class="slabel"><span class="t">Help centre</span></span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
-                <button class="srow" type="button" data-go="about">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg></span>
-                  <span class="slabel"><span class="t">About Teamily AI</span><span class="s">Version, terms, licenses</span></span>
-                  <span class="sval">1.8.2</span>
-                  <svg class="ic schev" aria-hidden="true"><use href="#i-chev"/></svg>
-                </button>
+              <div class="list" style="padding-top:0">
+                <button class="drow" type="button" data-toast="Onboarding Guide"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg>Onboarding Guide</button>
+                <button class="drow" type="button" data-toast="Help &amp; Feedback"><svg class="ic" aria-hidden="true"><use href="#i-lifebuoy"/></svg>Help &amp; Feedback</button>
+                <button class="drow" type="button" data-go="appearance"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg>All Settings</button>
               </div>
 
-              <button class="btn btn-outline btnblock" type="button" data-sheet="1">
-                <svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg>Sign out
-              </button>
-              <div class="legal">Teamily AI 1.8.2 (build 1820) · Made with Lato</div>
+              <div class="seclabel"><span>Appearance</span></div>
+              <div class="list" style="padding-top:0">
+                <button class="drow" type="button" data-theme-toggle="1"><svg class="ic" aria-hidden="true"><use href="#i-moon"/></svg>Dark mode<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-3)" id="sdTheme">Night</span></button>
+              </div>
+
+              <div class="list" style="padding-top:0;padding-bottom:16px">
+                <button class="drow" type="button" data-sheet="signout" style="color:#e06a5a"><svg class="ic" aria-hidden="true" style="color:#e06a5a"><use href="#i-logout"/></svg>Sign Out</button>
+              </div>
             </div>
 
-            <div class="sheet" id="signoutSheet2">
+            <div class="sheet" id="sheetSignout">
               <div class="sheetbox">
-                <h4>Sign out of Teamily AI?</h4>
-                <p>Your chats and artifacts stay on your account. You’ll need to sign in again on this phone.</p>
-                <div class="sheetbtns">
-                  <button class="btn btn-primary" type="button" data-close-sheet="1" data-toast="Signed out (demo)">Sign out</button>
-                  <button class="btn btn-ghost" type="button" data-close-sheet="1">Cancel</button>
-                </div>
+                <h4 style="margin:0 0 6px">Sign out of Teamily?</h4>
+                <p style="margin:0 0 14px;font-size:13px;line-height:1.5;color:var(--ink-2)">Your chats and artifacts stay on your account. You can sign back in any time.</p>
+                <button class="btn btn-primary btnblock" type="button" data-close-sheet="1" data-toast="Signed out">Sign out</button>
+                <button class="btn btn-ghost btnblock" type="button" data-close-sheet="1" style="margin-top:8px">Cancel</button>
               </div>
             </div>
           </div>
         </div>
-        <div class="caption"><b>06</b> Settings</div>
+        <div class="caption"><b>05</b> Settings · account drawer</div>
       </div>
 
       <!-- ==================== 07 · APPEARANCE ==================== -->
@@ -1894,7 +2116,7 @@ footer b{color:var(--page-ink)}
                   <button class="sw" type="button" role="switch" aria-checked="false" aria-label="Agent suggestions"><span class="track"></span><span class="thumb"></span></button>
                 </div>
                 <div class="srow">
-                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg></span>
+                  <span class="sic"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg></span>
                   <span class="slabel"><span class="t">Community activity</span><span class="s">Installs, ratings and mentions</span></span>
                   <button class="sw" type="button" role="switch" aria-checked="true" aria-label="Community activity"><span class="track"></span><span class="thumb"></span></button>
                 </div>
@@ -2325,6 +2547,417 @@ footer b{color:var(--page-ink)}
         <div class="caption"><b>14</b> About</div>
       </div>
 
+      <!-- ==================== 15 · MEMORY ==================== -->
+      <div class="slot" id="p-memory">
+        <div class="phone">
+          <div class="screen">
+            <div class="camera" aria-hidden="true"></div>
+            <div class="statusbar">
+              <div class="sb-left">9:41</div>
+              <div class="sb-right" aria-hidden="true">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic"><use href="#i-batt"/></svg>
+              </div>
+            </div>
+            <div class="appbar">
+              <div class="brandlock">
+                <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
+                <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
+                <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
+              </div>
+              <button class="iconbtn" type="button" aria-label="Search memory"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></button>
+              <button class="iconbtn theme-btn" type="button" aria-label="Switch theme" data-theme-toggle="1">
+                <svg class="ic i-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+                <svg class="ic i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+              </button>
+              <button class="iconbtn" type="button" aria-label="Open settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Memory view">
+              <button class="tabbtn" type="button" role="tab" aria-selected="true" data-tab="graph">Graph</button>
+              <button class="tabbtn" type="button" role="tab" aria-selected="false" data-tab="list">List</button>
+            </div>
+
+            <div class="tabpane" data-pane="graph" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+              <div class="filterrow" style="padding-top:8px">
+                <div class="searchfield">
+                  <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+                  <span>Search memory</span>
+                </div>
+              </div>
+              <div class="graphwrap">
+                <svg viewBox="0 0 320 300" role="img" aria-label="Memory graph of connected notes">
+                  <g stroke="var(--line)" stroke-width="1.2" fill="none">
+                    <path d="M160 150 L96 84"/><path d="M160 150 L232 92"/>
+                    <path d="M160 150 L84 214"/><path d="M160 150 L238 208"/>
+                    <path d="M160 150 L160 62"/><path d="M96 84 L232 92"/>
+                    <path d="M84 214 L238 208"/><path d="M160 62 L232 92"/>
+                  </g>
+                  <g>
+                    <circle cx="160" cy="150" r="26" fill="var(--primary)"/>
+                    <text class="gnode" x="160" y="153" text-anchor="middle" fill="#eafff2" style="font-size:9.5px;font-weight:900">Teamily</text>
+                    <circle cx="96" cy="84" r="17" fill="var(--surface-3)"/>
+                    <text class="gnode" x="96" y="87" text-anchor="middle">Design</text>
+                    <circle cx="232" cy="92" r="17" fill="var(--surface-3)"/>
+                    <text class="gnode" x="232" y="95" text-anchor="middle">Brand</text>
+                    <circle cx="84" cy="214" r="17" fill="var(--surface-3)"/>
+                    <text class="gnode" x="84" y="217" text-anchor="middle">People</text>
+                    <circle cx="238" cy="208" r="17" fill="var(--surface-3)"/>
+                    <text class="gnode" x="238" y="211" text-anchor="middle">Projects</text>
+                    <circle cx="160" cy="62" r="15" fill="var(--surface-3)"/>
+                    <text class="gnode" x="160" y="65" text-anchor="middle">Tokens</text>
+                  </g>
+                </svg>
+                <div class="zoomctl">
+                  <button type="button" aria-label="Zoom in"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+                  <button type="button" aria-label="Zoom out"><svg class="ic" aria-hidden="true"><use href="#i-minus"/></svg></button>
+                  <button type="button" aria-label="Reset view"><svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="tabpane" data-pane="list" hidden>
+              <div class="filterrow" style="padding-top:8px">
+                <div class="searchfield">
+                  <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+                  <span>Search memory</span>
+                </div>
+              </div>
+              <div class="memgroup">
+                <button class="gh" type="button" aria-expanded="true"><svg class="ic" aria-hidden="true"><use href="#i-chevdown"/></svg>Design<span class="cnt">3</span></button>
+                <button class="memitem" type="button" data-toast="Brand tokens">
+                  <span class="mi"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg></span>
+                  <span class="mc">
+                    <span class="mt2">Brand tokens <span class="new">NEW</span></span>
+                    <span class="ms">Primary #087c45, gradient #0b8249 → #087c45, mint #42d982 as fill only.</span>
+                    <span class="mf"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg><span class="ht">2h ago</span></span>
+                  </span>
+                </button>
+                <button class="memitem" type="button" data-toast="Type scale">
+                  <span class="mi"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg></span>
+                  <span class="mc">
+                    <span class="mt2">Type scale</span>
+                    <span class="ms">Lato 400/700/900. Display 28/34, title 20/26, body 14.5/21.</span>
+                    <span class="mf"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg><span class="ht">Yesterday</span></span>
+                  </span>
+                </button>
+                <button class="memitem" type="button" data-toast="Corner radius">
+                  <span class="mi"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg></span>
+                  <span class="mc">
+                    <span class="mt2">Corner radius <span class="conflict">CONFLICT</span></span>
+                    <span class="ms">Cards 20px, sheets 26px, chips 999px. Older note said 16px for cards.</span>
+                    <span class="mf"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg><span class="ht">3d ago</span></span>
+                  </span>
+                </button>
+              </div>
+              <div class="memgroup">
+                <button class="gh" type="button" aria-expanded="true"><svg class="ic" aria-hidden="true"><use href="#i-chevdown"/></svg>People<span class="cnt">2</span></button>
+                <button class="memitem" type="button" data-toast="Alex Rivera">
+                  <span class="mi"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg></span>
+                  <span class="mc">
+                    <span class="mt2">Alex Rivera</span>
+                    <span class="ms">Product designer, owns the Teamily Android design system.</span>
+                    <span class="mf"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg><span class="ht">5d ago</span></span>
+                  </span>
+                </button>
+                <button class="memitem" type="button" data-toast="Full-Stack Delivery Guild">
+                  <span class="mi"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg></span>
+                  <span class="mc">
+                    <span class="mt2">Full-Stack Delivery Guild</span>
+                    <span class="ms">5 members. Ships features end to end in one thread.</span>
+                    <span class="mf"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg><span class="ht">1w ago</span></span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <nav class="navbar" aria-label="Primary">
+              <button class="navi" type="button" data-go="home">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-chats"/></svg><span class="count">3</span></span></span>
+                <span class="lbl">Chats</span>
+              </button>
+              <button class="navi" type="button" data-go="agents">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
+                <span class="lbl">Agents</span>
+              </button>
+              <button class="navi" type="button" data-go="memory" aria-current="page">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><span class="dotbadge"></span></span></span>
+                <span class="lbl">Memory</span>
+              </button>
+              <button class="navi" type="button" data-go="artifacts">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-artifacts"/></svg></span>
+                <span class="lbl">Artifacts</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+        <div class="caption"><b>15</b> Memory · Graph / List</div>
+      </div>
+
+      <!-- ==================== 16 · ARTIFACTS ==================== -->
+      <div class="slot" id="p-artifacts">
+        <div class="phone">
+          <div class="screen">
+            <div class="camera" aria-hidden="true"></div>
+            <div class="statusbar">
+              <div class="sb-left">9:41</div>
+              <div class="sb-right" aria-hidden="true">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic"><use href="#i-batt"/></svg>
+              </div>
+            </div>
+
+            <div class="appbar">
+              <div class="brandlock">
+                <img class="mark" src="images/teamily-mark.png" alt="Teamily AI logo">
+                <img class="wm wm-light" src="images/teamily-wordmark.png" alt="Teamily AI">
+                <img class="wm wm-dark" src="images/teamily-wordmark-dark.png" alt="" aria-hidden="true">
+              </div>
+              <button class="iconbtn" type="button" aria-label="List view" data-toast="List view"><svg class="ic" aria-hidden="true"><use href="#i-list"/></svg></button>
+              <button class="iconbtn" type="button" aria-label="Grid view" data-toast="Grid view"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg></button>
+              <button class="iconbtn" type="button" aria-label="Open settings" data-go="settings"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
+            </div>
+
+            <div class="filterrow" style="padding-top:8px">
+              <div class="searchfield">
+                <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+                <span>Search artifacts</span>
+              </div>
+            </div>
+
+            <div class="scroll">
+              <div class="seclabel" style="padding-top:0"><span>Recent</span><span>6</span></div>
+              <div class="artlist">
+                <button class="artitem" type="button" data-go="document">
+                  <span class="ai" style="background:linear-gradient(150deg,#0b8249,#087c45)"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">Teamily Design System</span>
+                    <span class="achips"><span>MD</span><span>v1</span></span>
+                    <span class="ad">Webpage Developer · 7m</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+                <button class="artitem" type="button" data-toast="meetup-landing">
+                  <span class="ai" style="background:linear-gradient(150deg,#0b8249,#06512f)"><svg class="ic" aria-hidden="true"><use href="#i-globe2"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">meetup-landing</span>
+                    <span class="achips"><span>Web</span><span>v2</span></span>
+                    <span class="ad">Webpage Developer · 2h</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+                <button class="artitem" type="button" data-toast="Q3 review deck">
+                  <span class="ai" style="background:linear-gradient(150deg,#c2620a,#8a4a06)"><svg class="ic" aria-hidden="true"><use href="#i-slides"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">Q3 review deck</span>
+                    <span class="achips"><span>Slides</span><span>12</span></span>
+                    <span class="ad">Slides Assistant · Yesterday</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+                <button class="artitem" type="button" data-toast="Invoice ledger">
+                  <span class="ai" style="background:linear-gradient(150deg,#2f6f8f,#1d4a61)"><svg class="ic" aria-hidden="true"><use href="#i-sheet"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">Invoice ledger</span>
+                    <span class="achips"><span>Sheet</span><span>v4</span></span>
+                    <span class="ad">Accounting Assistant · 3d</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+                <button class="artitem" type="button" data-toast="Hero illustration">
+                  <span class="ai" style="background:linear-gradient(150deg,#6b4fa8,#43306e)"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">Hero illustration</span>
+                    <span class="achips"><span>Image</span><span>2K</span></span>
+                    <span class="ad">Webpage Developer · 5d</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+                <button class="artitem" type="button" data-toast="Launch teaser">
+                  <span class="ai" style="background:linear-gradient(150deg,#8a3a5a,#5c2439)"><svg class="ic" aria-hidden="true"><use href="#i-videos"/></svg></span>
+                  <span class="ac2">
+                    <span class="an">Launch teaser</span>
+                    <span class="achips"><span>Video</span><span>8s</span></span>
+                    <span class="ad">Slides Assistant · 1w</span>
+                  </span>
+                  <span class="bm" role="button" aria-label="Bookmark"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+                </button>
+              </div>
+            </div>
+
+            <nav class="navbar" aria-label="Primary">
+              <button class="navi" type="button" data-go="home">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-chats"/></svg><span class="count">3</span></span></span>
+                <span class="lbl">Chats</span>
+              </button>
+              <button class="navi" type="button" data-go="agents">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg></span>
+                <span class="lbl">Agents</span>
+              </button>
+              <button class="navi" type="button" data-go="memory">
+                <span class="pill"><span class="icwrap"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><span class="dotbadge"></span></span></span>
+                <span class="lbl">Memory</span>
+              </button>
+              <button class="navi" type="button" data-go="artifacts" aria-current="page">
+                <span class="pill"><svg class="ic" aria-hidden="true"><use href="#i-artifacts"/></svg></span>
+                <span class="lbl">Artifacts</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+        <div class="caption"><b>16</b> Artifacts</div>
+      </div>
+
+      <!-- ==================== 17 · DOCUMENT VIEW ==================== -->
+      <div class="slot" id="p-document">
+        <div class="phone">
+          <div class="screen">
+            <div class="camera" aria-hidden="true"></div>
+            <div class="statusbar">
+              <div class="sb-left">9:41</div>
+              <div class="sb-right" aria-hidden="true">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic"><use href="#i-batt"/></svg>
+              </div>
+            </div>
+
+            <div class="chatbar">
+              <button class="iconbtn" type="button" aria-label="Back" data-go="chat"><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+              <div class="chatid">
+                <span class="ava" style="background:var(--surface-3);display:inline-flex;align-items:center;justify-content:center"><svg class="ic" aria-hidden="true" style="width:18px;height:18px;color:var(--ink-2)"><use href="#i-doc"/></svg></span>
+                <span class="chatmeta">
+                  <span class="chatnm">README.md</span>
+                  <span class="chatst">MD v1 · 7m</span>
+                </span>
+              </div>
+              <button class="iconbtn" type="button" aria-label="Download"><svg class="ic" aria-hidden="true"><use href="#i-download2"/></svg></button>
+              <button class="iconbtn" type="button" aria-label="Share"><svg class="ic" aria-hidden="true"><use href="#i-share"/></svg></button>
+              <button class="iconbtn" type="button" aria-label="More options"><svg class="ic" aria-hidden="true"><use href="#i-more"/></svg></button>
+            </div>
+
+            <div class="scroll">
+              <div class="docview">
+                <h5>Teamily Design System</h5>
+                <p>Brand tokens, type scale and accessibility notes for the Teamily AI Android app. Every value below is taken from the shipped design.</p>
+
+                <p><b>Colour tokens</b></p>
+                <table class="mdtable">
+                  <thead><tr><th>Token</th><th>Day</th><th>Night</th></tr></thead>
+                  <tbody>
+                    <tr><td>primary</td><td><code>#087c45</code></td><td><code>#42d982</code></td></tr>
+                    <tr><td>canvas</td><td><code>#eef2ef</code></td><td><code>#141816</code></td></tr>
+                    <tr><td>ink</td><td><code>#182b23</code></td><td><code>#eef2ef</code></td></tr>
+                    <tr><td>agent bubble</td><td><code>#303433</code></td><td><code>#303433</code></td></tr>
+                    <tr><td>user bubble</td><td><code>#505752</code></td><td><code>#505752</code></td></tr>
+                  </tbody>
+                </table>
+
+                <p><b>Typography</b></p>
+                <ul>
+                  <li>Lato 400 — body and snippets</li>
+                  <li>Lato 700 — titles, buttons, row names</li>
+                  <li>Lato 900 — display, section labels, numerals</li>
+                </ul>
+
+                <p><b>Accessibility</b></p>
+                <ul>
+                  <li>Every touch target is at least 48 px.</li>
+                  <li>Mint <code>#42d982</code> is fill only — never text. On the light canvas it measures 1.62:1.</li>
+                  <li>Body text on canvas measures 14.91:1 in day and 15.25:1 in night.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="caption"><b>17</b> Document view · README.md</div>
+      </div>
+
+      <!-- ==================== 18 · CREATE TASK ==================== -->
+      <div class="slot" id="p-createtask">
+        <div class="phone">
+          <div class="screen">
+            <div class="camera" aria-hidden="true"></div>
+            <div class="statusbar">
+              <div class="sb-left">9:41</div>
+              <div class="sb-right" aria-hidden="true">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic"><use href="#i-batt"/></svg>
+              </div>
+            </div>
+
+            <div class="chatbar">
+              <button class="iconbtn" type="button" aria-label="Close" data-go="chat"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+              <div class="chatid">
+                <span class="chatmeta">
+                  <span class="chatnm">Create task</span>
+                  <span class="chatst">Compose a prompt for your team</span>
+                </span>
+              </div>
+              <button class="iconbtn" type="button" aria-label="Reset" data-toast="Reset prompt"><svg class="ic" aria-hidden="true"><use href="#i-reset"/></svg></button>
+            </div>
+
+            <div class="scroll">
+              <div class="compiled">
+                <div class="ch">
+                  <b>Compiled prompt</b>
+                  <span class="auto"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg>Auto</span>
+                </div>
+                <div class="ct">Build the Teamily design system page</div>
+                <div class="cd"></div>
+                <div class="cb">Every day at 09:00 · Full-Stack Delivery Guild · scope: design tokens, type scale, accessibility notes</div>
+              </div>
+
+              <div class="taskcard">
+                <div class="tk"><b>Intent</b><span>what should happen</span></div>
+                <div class="chiprow">
+                  <button class="bigchip solid" type="button" data-toast="Intent: build"><svg class="ic" aria-hidden="true"><use href="#i-sparkle"/></svg>Build</button>
+                  <button class="bigchip" type="button" data-toast="Intent: research"><svg class="ic" aria-hidden="true"><use href="#i-microscope"/></svg>Research</button>
+                  <button class="bigchip" type="button" data-toast="Intent: review"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>Review</button>
+                  <button class="bigchip dash" type="button" data-toast="Add intent"><svg class="ic end" aria-hidden="true"><use href="#i-plus"/></svg>Add</button>
+                </div>
+              </div>
+
+              <div class="taskcard">
+                <div class="tk"><b>Schedule</b><span>when it runs</span></div>
+                <div class="chiprow">
+                  <button class="bigchip solid" type="button" data-toast="Schedule: daily"><svg class="ic" aria-hidden="true"><use href="#i-clock2"/></svg>Daily 09:00</button>
+                  <button class="bigchip" type="button" data-toast="Schedule: once"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Once</button>
+                  <button class="bigchip" type="button" data-toast="Schedule: weekly"><svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg>Weekly</button>
+                </div>
+                <div class="taskhint">Runs in your timezone. You can pause it any time from Automations.</div>
+              </div>
+
+              <div class="taskcard">
+                <div class="tk"><b>Team</b><span>who does the work</span></div>
+                <div class="chiprow">
+                  <button class="bigchip solid" type="button" data-toast="Team: Full-Stack Delivery Guild"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>Full-Stack Delivery Guild</button>
+                  <button class="bigchip" type="button" data-toast="Team: AI Feature Build Room"><svg class="ic" aria-hidden="true"><use href="#i-people"/></svg>AI Feature Build Room</button>
+                </div>
+              </div>
+
+              <div class="taskcard">
+                <div class="tk"><b>Scope</b><span>what to include</span></div>
+                <div class="chiprow">
+                  <button class="bigchip solid" type="button" data-toast="Scope: tokens"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>Design tokens</button>
+                  <button class="bigchip solid" type="button" data-toast="Scope: type"><svg class="ic" aria-hidden="true"><use href="#i-doc"/></svg>Type scale</button>
+                  <button class="bigchip solid" type="button" data-toast="Scope: a11y"><svg class="ic" aria-hidden="true"><use href="#i-shield2"/></svg>Accessibility</button>
+                  <button class="bigchip dash" type="button" data-toast="Add scope"><svg class="ic end" aria-hidden="true"><use href="#i-plus"/></svg>Add</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:0 12px 12px;flex:none">
+              <button class="btn btn-primary btnblock" type="button" data-toast="Prompt generated"><svg class="ic" aria-hidden="true" style="width:16px;height:16px"><use href="#i-sparkle"/></svg>Generate Prompt</button>
+            </div>
+          </div>
+        </div>
+        <div class="caption"><b>18</b> Create task · prompt composition</div>
+      </div>
+
     </div><!-- /stage -->
 
     <!-- ============ NOTES COLUMN ============ -->
@@ -2334,7 +2967,7 @@ footer b{color:var(--page-ink)}
         <h4 id="noteTitle">Home / Chats</h4>
         <p id="noteBody">Top bar with the real Teamily lockup, search and settings. Recent chats mix agents (mint spark + presence dot) with people and groups. Bottom nav uses the M3 58×30 active indicator.</p>
         <ul id="noteList">
-          <li><b>4 nav destinations</b> — Chats, Agents, Discover, Profile</li>
+          <li><b>4 nav destinations</b> — Chats, Agents, Memory, Artifacts</li>
           <li><b>Touch targets</b> — every row ≥ 72px tall</li>
         </ul>
       </div>
@@ -2351,7 +2984,8 @@ footer b{color:var(--page-ink)}
       <div class="note">
         <div class="kicker">Navigation map</div>
         <ul>
-          <li>Nav: Chats → Home, Agents → Agents, Discover, Profile</li>
+          <li>Nav: Chats → Home, Agents → Agents, Memory → Memory, Artifacts → Artifacts</li>
+          <li>Header avatar → Profile; header menu → Settings</li>
           <li>Profile → Edit profile / Settings / Privacy</li>
           <li>Settings → Appearance, Notifications, Chat prefs, Privacy, Storage, Language, About</li>
           <li>Every detail screen has a working back arrow</li>
@@ -2368,12 +3002,12 @@ footer b{color:var(--page-ink)}
 
       <div class="card">
         <h3>Bottom navigation</h3>
-        <p>4 destinations, 80px bar, one 48px+ target per item, M3 active indicator pill — present on all 5 main screens.</p>
+        <p>4 destinations — Chats, Agents, Memory, Artifacts — 80px bar, one 48px+ target per item, M3 active indicator pill. Present on the 4 tab screens; Profile and Settings open from the header instead.</p>
         <div class="navanatomy">
           <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-chats"/></svg><span class="sz">48</span></div><div class="nm">Chats</div></div>
           <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-agents"/></svg><span class="sz">48</span></div><div class="nm">Agents</div></div>
-          <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-discover"/></svg><span class="sz">48</span></div><div class="nm">Discover</div></div>
-          <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-profile"/></svg><span class="sz">48</span></div><div class="nm">Profile</div></div>
+          <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-memory"/></svg><span class="sz">48</span></div><div class="nm">Memory</div></div>
+          <div class="anat"><div class="box"><svg class="ic" aria-hidden="true"><use href="#i-artifacts"/></svg><span class="sz">48</span></div><div class="nm">Artifacts</div></div>
         </div>
         <ul class="toklist" style="margin-top:18px">
           <li><span>Bar height</span><b class="mono">80px + safe area</b></li>
@@ -2503,20 +3137,23 @@ footer b{color:var(--page-ink)}
   var railBtns = Array.prototype.slice.call(document.querySelectorAll('.rail [data-go]'));
 
   var NOTES = {
-    home:        ['Home / Chats', 'Top bar with the real Teamily lockup, search and settings. Recent chats mix agents (mint spark + presence dot) with people and groups.', ['<b>4 nav destinations</b> — Chats, Agents, Discover, Profile', '<b>Every row</b> ≥ 72px tall']],
-    chat:        ['Chat', 'Agent thread at 14.5px with user and AI bubbles, an inline artifact card, and a composer with attach, mic and send.', ['<b>Send works</b> — type and press send; a reply comes back', '<b>Composer</b> 52px field, 48px send button']],
-    agents:      ['Agents', 'Four real agents with status pills, descriptions and an Open CTA that jumps into the chat thread.', ['<b>Open CTA</b> 48px tall', '<b>Create agent</b> dashed row at the end']],
-    discover:    ['Discover', 'Featured agent hero on brand green, a trend grid, and a social feed of what people you follow shared.', ['<b>Hero CTA</b> 48px', '<b>2-up cards</b> with tag footer']],
-    profile:     ['Profile', 'Avatar with verified badge, name and email, a 3-up stats row, four quick actions and an account section. Sign out opens a real bottom sheet.', ['<b>Stats</b> Chats / Agents / Artifacts', '<b>Sign out</b> → confirm sheet']],
-    settings:    ['Settings', 'Full list grouped by Account, Look & feel, Messages, Data and Support. Every row opens a real screen or shows a value.', ['<b>Appearance</b> shows the live mode', '<b>Sign out</b> at the bottom']],
-    appearance:  ['Appearance / Theme', 'Three radio cards with hand-drawn theme previews — System, Night, Day. Tapping one switches the whole app immediately, and a live preview block below shows the result.', ['<b>Persisted</b> in localStorage', '<b>Preview block</b> uses real tokens']],
+    home:        ['Home / Chats', 'Avatar opens Profile, the real Teamily lockup sits centred, and the green plus opens Quick Actions. A featured personal-agent card sits above collapsible Pinned and Chats groups.', ['<b>4 nav destinations</b> \u2014 Chats, Agents, Memory, Artifacts', '<b>Quick Actions</b> menu + filter drawer both open']],
+    chat:        ['Chat', 'Agent thread with a rich-media artifact card \u2014 Completed header, 7m total, MD v1 preview with a 1/2 pager, View process and Open Studio. Suggestion chips and a New task bar sit above the composer.', ['<b>Artifact card</b> opens Document view', '<b>Send works</b> \u2014 type and press send']],
+    agents:      ['Agents', 'Three tabs: Agents (4 cards with status pills and Open CTA), Agent Teams (3 team cards with member stacks and Create), Automations (running and paused rows).', ['<b>3 tabs</b> switch in place', '<b>Create</b> rows at the end of each tab']],
+    profile:     ['Profile', 'Avatar, name and handle, a 3-up stats row (Following / Followers / Likes & Saves), then Posts / Favorites / Likes tabs with empty states, the agent list and account rows.', ['<b>Stats</b> Following / Followers / Likes &amp; Saves', '<b>3 tabs</b> with real empty states']],
+    settings:    ['Settings', 'The account drawer: profile head, Teamily Plus plan with credit and storage bars, Create to Earn, Credit Center, Invite & Earn, Plan & Billing, Usage, Channels, App Connectors, Onboarding Guide, Help, All Settings, Dark mode and Sign Out.', ['<b>Plan bars</b> show real percentages', '<b>Sign Out</b> \u2192 confirm sheet']],
+    appearance:  ['Appearance / Theme', 'Three radio cards with hand-drawn theme previews \u2014 System, Night, Day. Tapping one switches the whole app immediately, and a live preview block below shows the result.', ['<b>Persisted</b> in localStorage', '<b>Preview block</b> uses real tokens']],
     editprofile: ['Edit profile', 'Avatar picker with three faces, name, email, handle and bio fields, and a Save action in the app bar plus a primary button.', ['<b>Save</b> updates Profile and Settings', '<b>Inputs</b> 52px, focus ring on green']],
-    notifications: ['Notifications', 'Per-type switches: push master, DMs, agent replies, suggestions, community, plus email and behaviour rows.', ['<b>7 switches</b> · master + 5 types + digest', '<b>Switch</b> 56×48 target']],
+    notifications: ['Notifications', 'Per-type switches: push master, DMs, agent replies, suggestions, community, plus email and behaviour rows.', ['<b>7 switches</b> \u00b7 master + 5 types + digest', '<b>Switch</b> 56\u00d748 target']],
     privacy:     ['Privacy & security', 'App lock, passcode, 2FA, read receipts, agent history sharing, a blocked-users list with unblock actions and data controls.', ['<b>Blocked users</b> with Unblock CTAs', '<b>Danger row</b> in red for clearing history']],
-    chatprefs:   ['Chat preferences', 'Composer and thread behaviour — send with Enter, hold to record, typing indicators, auto-play and agent activity cards.', ['<b>3 composer</b> + <b>3 thread</b> toggles', '<b>Defaults</b> for new chats']],
+    chatprefs:   ['Chat preferences', 'Composer and thread behaviour \u2014 send with Enter, hold to record, typing indicators, auto-play and agent activity cards.', ['<b>3 composer</b> + <b>3 thread</b> toggles', '<b>Defaults</b> for new chats']],
     storage:     ['Storage', '4-segment usage bar for 3.2 GB of 15 GB, a colour legend, and clean-up rows for cache, old media and agent logs.', ['<b>Bar</b> sums to 100%', '<b>Legend</b> matches segment colours']],
     language:    ['Language', 'Six languages as radio rows, plus an "always reply in app language" switch. Picking one updates the value shown on Settings.', ['<b>Radio rows</b> 58px tall', '<b>Syncs</b> back to Settings']],
-    about:       ['About', 'Real Teamily mark and wordmark, version and build, legal rows for terms, privacy and open-source licenses, and support contacts.', ['<b>Version</b> 1.8.2 (1820)', '<b>3 legal</b> rows + support']]
+    about:       ['About', 'Real Teamily mark and wordmark, version and build, legal rows for terms, privacy and open-source licenses, and support contacts.', ['<b>Version</b> 1.8.2 (1820)', '<b>3 legal</b> rows + support']],
+    memory:      ['Memory', 'Two views of the same store. Graph draws connected notes with a zoom control; List groups them by topic with NEW and CONFLICT badges and a timestamp on every row.', ['<b>Graph / List</b> tabs switch in place', '<b>Zoom</b> in, out and reset']],
+    artifacts:   ['Artifacts', 'Search plus list and grid toggles, then artifact rows with a coloured type tile, name, type and version chips, owner and age, and a bookmark action.', ['<b>Rows</b> \u2265 72px tall', '<b>Bookmark</b> 40px target']],
+    document:    ['Document view', 'A rendered README.md \u2014 heading, intro, a colour-token table with day and night columns, the type scale and the accessibility rules.', ['<b>Table</b> wraps, never overflows', '<b>Back</b> returns to Chat']],
+    createtask:  ['Create task', 'Prompt composition: a compiled-prompt card with an Auto badge, then Intent, Schedule, Team and Scope cards of selectable chips, and a Generate Prompt button.', ['<b>4 cards</b> \u00b7 chips \u2265 48px', '<b>Generate Prompt</b> full width']]
   };
 
   function go(screen) {
@@ -2624,10 +3261,57 @@ footer b{color:var(--page-ink)}
     if (m2) toast(m2);
   });
 
-  /* Esc closes sheets */
+  /* ---------------- tabs, menus, drawers ---------------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+
+    var tab = t.closest && t.closest('[data-tab]');
+    if (tab) {
+      var screen = tab.closest('.screen');
+      var key = tab.getAttribute('data-tab');
+      Array.prototype.forEach.call(screen.querySelectorAll('[data-tab]'), function (b) {
+        b.setAttribute('aria-selected', b === tab ? 'true' : 'false');
+      });
+      Array.prototype.forEach.call(screen.querySelectorAll('[data-pane]'), function (pane) {
+        pane.hidden = pane.getAttribute('data-pane') !== key;
+      });
+      return;
+    }
+
+    var menuBtn = t.closest && t.closest('[data-menu]');
+    if (menuBtn) {
+      var scr = menuBtn.closest('.screen');
+      var mp = scr && scr.querySelector('.menupop');
+      if (mp) mp.classList.toggle('on');
+      return;
+    }
+
+    var drawerBtn = t.closest && t.closest('[data-drawer]');
+    if (drawerBtn) {
+      var sc2 = drawerBtn.closest('.screen');
+      var dr = sc2 && sc2.querySelector('.drawer');
+      if (dr) dr.classList.add('on');
+      return;
+    }
+
+    var drClose = t.closest && t.closest('.drawer');
+    if (drClose && (t === drClose || t.closest('.drawerbox') === null)) {
+      drClose.classList.remove('on');
+      return;
+    }
+
+    /* click outside an open menu closes it */
+    if (!t.closest || !t.closest('.menupop')) {
+      Array.prototype.forEach.call(document.querySelectorAll('.menupop.on'), function (m) { m.classList.remove('on'); });
+    }
+  });
+
+  /* Esc closes sheets, menus and drawers */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       Array.prototype.forEach.call(document.querySelectorAll('.sheet'), function (s) { s.classList.remove('on'); });
+      Array.prototype.forEach.call(document.querySelectorAll('.menupop'), function (m) { m.classList.remove('on'); });
+      Array.prototype.forEach.call(document.querySelectorAll('.drawer'), function (d) { d.classList.remove('on'); });
     }
   });
 
