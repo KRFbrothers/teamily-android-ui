@@ -1,0 +1,3020 @@
+package ai.duagenai.design.nav
+
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNode
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.ComposeNavigator
+import androidx.navigation.testing.TestNavHostController
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import ai.duagenai.design.cube.CubeCatalog
+import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.screens.ArtifactItem
+import ai.duagenai.design.screens.ArtifactsDataSource
+import ai.duagenai.design.screens.ArtifactsRepository
+import ai.duagenai.design.screens.ArtifactsScreen
+import ai.duagenai.design.screens.ArtifactsUiState
+import ai.duagenai.design.screens.BaseRemoteRepository
+import ai.duagenai.design.screens.HomeMode
+import ai.duagenai.design.screens.HomeTab
+import ai.duagenai.design.screens.HttpClientProvider
+import ai.duagenai.design.screens.HttpStatusException
+import ai.duagenai.design.screens.HttpTransport
+import ai.duagenai.design.screens.Identifiable
+import ai.duagenai.design.screens.JsonHttpClient
+import ai.duagenai.design.screens.MemoryRepository
+import ai.duagenai.design.screens.MemoryScreen
+import ai.duagenai.design.screens.RemoteArtifactsDataSource
+import ai.duagenai.design.screens.RemoteDataSource
+import ai.duagenai.design.screens.RemoteMemoryDataSource
+import ai.duagenai.design.screens.demoArtifacts
+import ai.duagenai.design.screens.ORHAN_CHAT_ID
+import ai.duagenai.design.screens.ORHAN_CHAT_TITLE
+import ai.duagenai.design.theme.DuaGenAITheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+
+/* ============================================================================
+ *  The chat route, driven through the REAL navigation graph.
+ *
+ *  What this proves that ChatCubeMappingTest cannot: that the id a drawer
+ *  history row hands to `onOpenChat` actually arrives at ChatScreen through
+ *  `chat/{chatId}?title={title}`, that the title survives `Uri.encode`, and
+ *  that the cube drawn in the thread is the cube the row drew. The mapping test
+ *  pins the values; this one pins the plumbing between them.
+ *
+ *  WHERE CHATS ARE OPENED FROM — this changed with the product model
+ *  ---------------------------------------------------------------
+ *  Dua's home is deliberately EMPTY (Dua is a chatbot, not an agent host), so
+ *  there is no chat list on Home to tap. Conversations are reached from the
+ *  sidebar drawer's history section, which renders the same `sampleChats` list
+ *  with the same per-chat cubes. Every "open a chat" test therefore goes:
+ *
+ *      tap "Open menu"  ->  tap the history row  ->  assert ChatScreen
+ *
+ *  WHY EVERY ASSERTION IS DISPLAY-AWARE
+ *  ------------------------------------
+ *  `ModalNavigationDrawer` composes its `drawerContent` even while the drawer is
+ *  CLOSED — it is merely translated off-screen. So a naive
+ *  `onAllNodesWithText("HISTORY").assertCountEquals(0)` would fail on a
+ *  perfectly correct screen, and a naive `onNodeWithText("Search")` would throw
+ *  "found 2 nodes" because the drawer has a Search pill too.
+ *
+ *  Every helper below therefore counts only nodes that are actually ON SCREEN
+ *  (bounds inside the root, non-zero size). That is what the user sees, which is
+ *  what these tests are about.
+ *
+ *  Three more rules this file follows, each one a bug caught while writing it:
+ *
+ *    1. `setContent` may be called ONCE per rule. Every test launches once and
+ *       moves around with clicks / popBackStack; a loop never relaunches.
+ *    2. The NavHostController is built BEFORE `setContent`, not inside it — a
+ *       controller created in the composition lambda is rebuilt on every
+ *       recomposition and the back stack silently resets.
+ *    3. ChatScreen draws the SAME cube in five places (header + 2 agent bubbles
+ *       + 2 user bubbles), so `onNodeWithContentDescription` would throw
+ *       "expected exactly 1 node but found 5". Every cube assertion states the
+ *       expected count instead of assuming one. That count is itself the
+ *       assertion that no bubble fell back to the user's saved cube.
+ *
+ *  THE COMPOSER ON A THREAD
+ *  ------------------------
+ *  ChatScreen draws a composer under the conversation again, so Orhan can be
+ *  talked to. It is the SAME `DuaComposer` pill Dua's home draws \u2014 one
+ *  implementation, two call sites \u2014 and only its placeholder differs
+ *  (`"Message <title>..."`). [assertComposer] therefore checks the placeholder
+ *  text plus the composer's own controls, and [assertNoComposer] is kept for the
+ *  one surface a composer must still be absent from: Orhan's HOME, which is the
+ *  agent surface, not a conversation.
+ *
+ *  ORHAN'S OWN THREAD
+ *  ------------------
+ *  Orhan is an agent, so it has a conversation of its own. The pinned card on
+ *  Orhan's home opens it through the SAME `chat/{chatId}` route every other
+ *  thread uses, with Orhan's own stable id ([ORHAN_CHAT_ID]) \u2014 no new route was
+ *  invented. Its pain area holds Orhan's and the user's messages, and it carries
+ *  the composer so the thread is usable.
+ *
+ *  THE MEMORY TAB, THE FILTER AND THE INERT GUARD
+ *  ----------------------------------------------
+ *  Three later fixes are pinned here too:
+ *
+ *    • Memory renders a real LIST (`sampleMemories`), not the empty state —
+ *      [theMemoryScreenRendersTheMemoryList] asserts the first and last entries
+ *      are on screen and the empty-state line is gone.
+ *    • The search row's filter is a real TOGGLE, not `onClick = {}` —
+ *      [theFilterButtonTogglesItsSelectedState] reads its `selected` semantics
+ *      before, after one tap, and after a second.
+ *    • The search pill is inert and SAYS SO — [theSearchPillIsAnnouncedAsDisabled]
+ *      asserts it publishes `disabled()` while the filter beside it stays enabled.
+ *
+ *  Run:
+ *    ./gradlew :app:testDebugUnitTest --tests "ai.duagenai.design.nav.DuaGenAINavHostTest"
+ *
+ *  Requires (app/build.gradle.kts):
+ *    testImplementation("org.robolectric:robolectric:4.13")
+ *    testImplementation("androidx.compose.ui:ui-test-junit4")
+ *    testImplementation("androidx.navigation:navigation-testing:2.8.5")
+ *    debugImplementation("androidx.compose.ui:ui-test-manifest")
+ *    testOptions { unitTests.isIncludeAndroidResources = true }
+ * ==========================================================================*/
+
+/**
+ * The seven conversations, with the cube each must show.
+ *
+ * The expected cubes are hardcoded on purpose (see ChatCubeMappingTest): a test
+ * that recomputes them with the production expression cannot detect a change to
+ * that expression.
+ */
+private data class ChatCase(val chatId: String, val title: String, val cubeId: String)
+
+private val CHATS = listOf(
+    ChatCase("chat_webpage_developer", "Webpage Developer", "cube_34"),
+    ChatCase("chat_design_team", "Design Team \u00b7 5", "cube_08"),
+    ChatCase("chat_slides_assistant", "Slides Assistant", "cube_11"),
+    ChatCase("chat_david_park", "David Park", "cube_35"),
+    ChatCase("chat_market_research", "Market Research", "cube_06"),
+    ChatCase("chat_accounting_assistant", "Accounting Assistant", "cube_32"),
+    ChatCase("chat_family", "Family \u00b7 8", "cube_12"),
+)
+
+/**
+ * The cheapest unambiguous "this is ChatScreen" marker.
+ *
+ * The top bar's status line: every thread carries it, for every conversation, so
+ * it identifies ChatScreen without depending on which chat was opened. The
+ * composer is asserted separately, by [assertComposer].
+ */
+private const val CHAT_MARKER = "Agent \u00b7 always on"
+
+/**
+ * The generic composer placeholder a thread must NOT show.
+ *
+ * `DuaComposer` is shared, so a thread's placeholder is `"Message <title>..."`.
+ * This is the OLD generic string: if it ever reappeared on a thread it would mean
+ * the placeholder stopped being thread-specific. Kept as a named constant so the
+ * assertion reads as intent rather than as a magic string.
+ */
+private const val COMPOSER_PLACEHOLDER = "Type a message"
+
+/**
+ * The placeholder Orhan's own thread must show.
+ *
+ * `ChatScreen` passes `"Message $chatTitle..."`, and Orhan's title is
+ * [ORHAN_CHAT_TITLE], so this is the exact string the pill renders.
+ */
+private const val ORHAN_COMPOSER_HINT = "Message $ORHAN_CHAT_TITLE\u2026"
+
+/**
+ * The pinned Orhan card's role line.
+ *
+ * Used to FIND the card: the text "Orhan" also appears in the mode toggle, so
+ * clicking that would switch modes instead of opening Orhan's thread. The role
+ * line is unique to the card.
+ */
+private const val ORHAN_ROLE_LINE = "Multitasks, controls agents, creates new ones"
+
+/** Dua mode's collapsed composer placeholder — the marker for "this is Dua home". */
+private const val DUA_ASK_HINT = "Ask Dua ..."
+
+/**
+ * The Memory placeholder screen's markers (`MemoryScreen.kt`).
+ *
+ * The heading is the TopAppBar title; the empty-state line is the body copy.
+ * Both are asserted so the test proves the SCREEN opened, not merely that the
+ * tab's indicator moved.
+ */
+private const val MEMORY_HEADING = "Memory"
+private const val MEMORY_EMPTY = "Abhi koi memory nahi hai"
+
+/** The Artifacts placeholder screen's markers (`ArtifactsScreen.kt`). */
+private const val ARTIFACTS_HEADING = "Artifacts"
+private const val ARTIFACTS_EMPTY = "Abhi koi artifact nahi hai"
+
+/**
+ * The Artifacts grid's markers (`ArtifactsScreen.kt`).
+ *
+ * The screen renders the repository's `demoArtifacts` by default, so these are
+ * the first and last entries' titles — asserting both proves the GRID rendered,
+ * not merely that the screen opened. The empty-state string is kept as the
+ * fallback marker.
+ */
+private const val ARTIFACTS_FIRST_ITEM = "Q3 Launch Deck"
+private const val ARTIFACTS_LAST_ITEM = "Meeting Notes"
+
+/** The picker's markers (`CubePickerScreen.kt`). */
+private const val PICKER_HEADING = "Choose cube"
+private const val PICKER_SAVE = "Save"
+private const val PICKER_CANCEL = "Cancel"
+
+/**
+ * The Profile settings screens' markers.
+ *
+ * Each is the screen's TopAppBar title, so asserting it proves the SCREEN
+ * opened rather than merely that the route changed.
+ */
+private const val APPEARANCE_HEADING = "Appearance"
+private const val STORAGE_HEADING = "Storage"
+private const val NOTIFICATIONS_HEADING = "Notifications"
+
+/** The Appearance screen's three choices, in order. */
+private val THEME_CHOICES = listOf("System default", "Light", "Dark")
+
+/** The Notifications screen's three switches, in order. */
+private val NOTIFICATION_SWITCHES =
+    listOf("Push notifications", "Task updates", "Weekly summary")
+
+/** The Storage screen's Clear-cache action and its confirmation. */
+private const val CLEAR_CACHE = "Clear cache"
+private const val CLEAR_CACHE_CONFIRM = "Clear"
+
+/**
+ * The cube picker's search + filter markers (`CubePickerScreen.kt`).
+ *
+ * The search field's placeholder and the four category chips. The no-results
+ * line is the state a query that matches nothing must show.
+ */
+private const val PICKER_SEARCH_HINT = "Search cubes"
+private val PICKER_CATEGORIES = listOf("All", "Orange", "Charcoal", "Multi")
+private const val PICKER_NO_RESULTS = "Koi cube nahi mila"
+private const val PICKER_CLEAR_FILTERS = "Clear filters"
+
+/**
+ * The Memory list's markers (`MemoryScreen.kt`).
+ *
+ * The screen renders `sampleMemories` by default, so these are the first and
+ * last entries' titles — asserting both proves the LIST rendered, not merely
+ * that the screen opened. The empty-state string is kept as the fallback marker.
+ */
+private const val MEMORY_FIRST_ITEM = "Q3 launch is the current priority"
+private const val MEMORY_LAST_ITEM = "Invoice #2211 flagged for review"
+
+/** The filter toggle's content description (`SearchRow` in HomeScreen.kt). */
+private const val FILTER_LABEL = "Filter"
+
+/**
+ * The Artifacts filter sheet's markers (audit fix #7).
+ *
+ * The sheet's title, its Clear action and the "Image" chip. The chip's label is
+ * also the artifact type it filters on, so tapping it must leave only the image
+ * artifacts on screen.
+ */
+private const val ARTIFACTS_FILTER_SHEET_TITLE = "Filter by type"
+private const val ARTIFACTS_FILTER_CLEAR = "Clear"
+private const val ARTIFACTS_FILTER_IMAGE = "Image"
+
+/** The no-match panel's action (audit fix #9). */
+private const val ARTIFACTS_NO_MATCH_CLEAR = "Clear filter"
+
+/** An image artifact's title — the card the "Image" filter must keep. */
+private const val ARTIFACTS_IMAGE_ITEM = "Brand Hero Banner"
+
+/**
+ * The preview caption's two states (audit fix #8).
+ *
+ * The caption is `"<title> · <type> · <size>"`, built from the artifact itself.
+ * These are the distinctive halves of the first card's and the image card's
+ * captions, so asserting one and then the other proves the caption FOLLOWS the
+ * selection instead of being a fixed string.
+ */
+private const val ARTIFACTS_CAPTION_FIRST = "Q3 Launch Deck · Webpage"
+private const val ARTIFACTS_CAPTION_IMAGE = "Brand Hero Banner · Image"
+
+/**
+ * The Memory filter's markers (the Artifacts pattern, applied to Memory).
+ *
+ * The chip row offers the same shape the Artifacts sheet does, so the two
+ * filter surfaces are asserted the same way: a chip narrows the list, the
+ * search field narrows it, and a chip with no entries shows the no-match panel
+ * with a way out.
+ */
+private const val MEMORY_CHIP_PREFERENCE = "Filter: Preference"
+private const val MEMORY_CHIP_TASK = "Filter: Task"
+private const val MEMORY_NO_MATCH = "Koi memory nahi mili"
+private const val MEMORY_NO_MATCH_CLEAR = "Clear filters"
+private const val MEMORY_SEARCH_HINT = "Search memories"
+private const val MEMORY_PREFERENCE_ITEM = "Brand green is #087C45"
+private const val MEMORY_PROJECT_ITEM = "Q3 launch is the current priority"
+
+/**
+ * The swipe-to-delete and undo markers.
+ *
+ * The swipe opens the SAME confirmation the long-press opens, so the dialog's
+ * own strings are the assertion target; the snackbar's Undo is what proves the
+ * delete is reversible.
+ */
+private const val ARTIFACT_DELETE_DIALOG_TITLE = "Delete artifact?"
+private const val ARTIFACT_DELETE_CONFIRM = "Delete"
+private const val ARTIFACT_DELETE_CANCEL = "Cancel"
+private const val ARTIFACT_UNDO = "Undo"
+private const val ARTIFACT_DELETED_SNACK = "Artifact deleted"
+
+/** The pull-to-refresh indicator's description. */
+private const val ARTIFACTS_REFRESHING = "Refreshing artifacts"
+
+/**
+ * The long-press context menu's three actions (this fix).
+ *
+ * The menu items are addressed by their own content descriptions, because the
+ * bare words "Open" / "Delete" also appear elsewhere (the delete dialog's
+ * confirm button is "Delete"), so a text match would be ambiguous.
+ */
+private const val MENU_OPEN_IMAGE = "Open Brand Hero Banner"
+private const val MENU_OPEN_NEW_TAB_IMAGE = "Open Brand Hero Banner in new tab"
+private const val MENU_OPEN_NEW_TAB_NOTES = "Open Meeting Notes in new tab"
+private const val MENU_OPEN_NEW_TAB_HELPER = "No link for this artifact"
+private const val MENU_SHARE_IMAGE = "Share Brand Hero Banner"
+private const val MENU_DELETE_IMAGE = "Delete Brand Hero Banner"
+private const val MENU_SHARE_HELPER = "Not available in this build"
+
+// Memory swipe-to-delete.
+private const val MEMORY_DELETE_DIALOG_TITLE = "Delete memory?"
+private const val MEMORY_DELETED_SNACK = "Memory deleted"
+private const val MEMORY_UNDO = "Undo"
+
+/**
+ * The Memory long-press context menu's markers (this fix).
+ *
+ * The menu items are addressed by their own content descriptions, because the
+ * bare words "Open" / "Delete" also appear elsewhere (the delete dialog's confirm
+ * button is "Delete"), so a text match would be ambiguous. The detail dialog's
+ * Close button is the marker for the URL-less "Open" fallback.
+ */
+private const val MEMORY_MENU_OPEN = "Open Q3 launch is the current priority"
+private const val MEMORY_MENU_DELETE = "Delete Q3 launch is the current priority"
+private const val MEMORY_MENU_OPEN_NO_URL = "Open Brand green is #087C45"
+private const val MEMORY_DETAIL_CLOSE = "Close"
+
+/**
+ * The detail dialog's "Open source" button (this fix).
+ *
+ * Shown ONLY when the memory has a URL, so its presence/absence is the
+ * assertion: the URL-bearing memory shows it, the URL-less one does not.
+ */
+private const val MEMORY_OPEN_SOURCE = "Open source in browser"
+
+/**
+ * The detail dialog's "Copy text" button (this fix).
+ *
+ * ALWAYS present \u2014 every memory has text \u2014 so its presence is not the
+ * assertion; what it COPIES and the "Copied" feedback are. The button is
+ * addressed by its own description, because the bare words "Copy text" would
+ * also match the label.
+ */
+private const val MEMORY_COPY_TEXT = "Copy memory text"
+private const val MEMORY_COPIED_SNACK = "Copied"
+
+/**
+ * The detail dialog's "Share" button (this fix).
+ *
+ * ALWAYS present \u2014 it hands the memory to the platform's own share sheet (an
+ * ACTION_SEND intent), with the text plus the URL when there is one. Addressed
+ * by its own description, because the bare word "Share" would also match the
+ * label.
+ */
+private const val MEMORY_SHARE = "Share memory"
+
+/**
+ * The Cube picker chip's long-press tooltip (this fix).
+ *
+ * The tooltip carries the chip's FULL label, so its description is the label
+ * itself. The chip's own description is the filter marker, so the two are
+ * distinct nodes.
+ */
+private fun pickerTooltip(cat: String) = "Tooltip: $cat"
+
+/**
+ * The shared URL opener's markers (this fix).
+ *
+ * The helper is exercised directly (a fake launcher records the URL) and through
+ * both screens, so the test proves the two screens route through ONE helper
+ * rather than each carrying its own copy.
+ */
+private const val SHARED_OPENER_URL = "https://static.teamily.ai/sites/demo/q3-launch-brief/index.html"
+
+/** The Profile screen's two inert controls and the reason shown for one. */
+private const val EDIT_PROFILE_LABEL = "Edit profile"
+private const val SIGN_OUT_LABEL = "Sign out"
+private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
+
+/** The three agents Orhan controls (`sampleAgents` in AgentsScreen.kt). */
+private val MANAGED_AGENTS = listOf("Slides Assistant", "Market Research", "Accounting Assistant")
+
+/**
+ * How many cubes ChatScreen draws for one conversation.
+ *
+ * `sampleThread` is User, Agent, User, Agent — two of each — plus the header.
+ * If a bubble ever stopped using the thread's cube, this count would drop and
+ * the test would say so.
+ */
+private const val THREAD_BUBBLE_CUBES = 4
+private const val THREAD_HEADER_CUBES = 1
+
+/**
+ * A data source that fails its first [failures] fetches, then succeeds.
+ *
+ * It is the seam the repository tests drive: [fetchCount] proves the repository
+ * actually went through the source, and the failure count lets one test see both
+ * the Error state and the Retry recovery.
+ */
+private class FlakyArtifactsDataSource(private val failures: Int) : ArtifactsDataSource {
+    var fetchCount: Int = 0
+        private set
+
+    override suspend fun fetch(): List<ArtifactItem> {
+        fetchCount++
+        if (fetchCount <= failures) throw IllegalStateException("boom")
+        return demoArtifacts
+    }
+
+    override suspend fun add(item: ArtifactItem) = Unit
+    override suspend fun delete(id: String) = Unit
+}
+
+/**
+ * A memory data source that fails its first [failures] fetches, then succeeds.
+ *
+ * The Memory twin of [FlakyArtifactsDataSource]: [fetchCount] proves the
+ * repository went through the source, and the failure count lets one test see
+ * both the Error state and the Retry recovery. [addCount] / [deleteCount] prove
+ * the undo and the delete reach the SOURCE, not just the screen's copy.
+ */
+private class FlakyMemoryDataSource(private val failures: Int) : MemoryDataSource {
+    var fetchCount: Int = 0
+        private set
+    var addCount: Int = 0
+        private set
+    var deleteCount: Int = 0
+        private set
+
+    override suspend fun fetch(): List<MemoryItem> {
+        fetchCount++
+        if (fetchCount <= failures) throw IllegalStateException("boom")
+        return sampleMemories
+    }
+
+    override suspend fun add(item: MemoryItem) {
+        addCount++
+    }
+
+    override suspend fun delete(id: String) {
+        deleteCount++
+    }
+}
+
+/**
+ * A fake [HttpTransport] that records every call and returns a canned body.
+ *
+ * It is the seam the shared-client tests drive: [calls] proves a remote source
+ * actually went through [JsonHttpClient] (and with which method and URL), and
+ * [failWith] lets a test see the labelled status failure — all without a socket.
+ */
+private class RecordingTransport(
+    private val response: String = "[]",
+    private val failWith: Int? = null,
+) : HttpTransport {
+    val calls: MutableList<Pair<String, String>> = mutableListOf()
+
+    override fun execute(method: String, url: String, body: String?): String {
+        calls += method to url
+        failWith?.let { throw HttpStatusException(it) }
+        return response
+    }
+}
+
+/**
+ * A fake [MemorySharer] that records every payload it is handed.
+ *
+ * It is the seam the Share test drives: [shared] proves the detail dialog's
+ * "Share" button actually reached the platform share path (and with which text
+ * and URL), all without leaving the process \u2014 the same approach
+ * [RecordingTransport] takes for the HTTP client.
+ */
+private class RecordingSharer : MemorySharer {
+    val shared: MutableList<Pair<String, String?>> = mutableListOf()
+
+    override fun share(text: String, url: String?) {
+        shared += text to url
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+@Config(sdk = [34])
+class DuaGenAINavHostTest {
+
+    @get:Rule
+    val compose = createAndroidComposeRule<ComponentActivity>()
+
+    /**
+     * A real [NavHostController] bound to the test activity, so the test can
+     * both drive the graph directly and read the resulting back stack.
+     */
+    private lateinit var navController: NavHostController
+
+    /** Launches the graph. Call at most once per test — see rule 1 above. */
+    private fun launch() {
+        navController = TestNavHostController(compose.activity).apply {
+            // Navigation Compose needs its navigator registered before the graph
+            // is attached; TestNavHostController does not do it for you.
+            navigatorProvider.addNavigator(ComposeNavigator())
+        }
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                DuaGenAINavHost(navController = navController)
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    // ------------------------------------------------- on-screen counting
+    //
+    // The drawer is composed while closed, so "exists in the tree" is not the
+    // same as "the user can see it". These helpers count only what is on screen.
+
+    /** True when [node]'s bounds sit inside the root and it has a real size. */
+    private fun isOnScreen(node: androidx.compose.ui.semantics.SemanticsNode): Boolean {
+        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        val b = node.boundsInRoot
+        return b.width > 0f && b.height > 0f &&
+            b.left >= root.left - 1f && b.right <= root.right + 1f &&
+            b.top >= root.top - 1f && b.bottom <= root.bottom + 1f
+    }
+
+    /** How many nodes carrying [text] are actually visible. */
+    private fun visibleTextCount(text: String): Int =
+        compose.onAllNodesWithText(text).fetchSemanticsNodes().count { isOnScreen(it) }
+
+    /** How many nodes carrying [description] are actually visible. */
+    private fun visibleDescCount(description: String): Int =
+        compose.onAllNodesWithContentDescription(description)
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+
+    /** Asserts [text] is on screen at least once. */
+    private fun assertVisible(text: String) {
+        assertTrue("expected \"$text\" to be on screen", visibleTextCount(text) >= 1)
+    }
+
+    /** Asserts [text] is nowhere on screen. */
+    private fun assertNotVisible(text: String) {
+        assertEquals("expected \"$text\" to be off screen", 0, visibleTextCount(text))
+    }
+
+    /**
+     * Asserts the bottom-nav item labelled [label] is the SELECTED one.
+     *
+     * The selection is hoisted state now, so it is read from the semantics the
+     * nav item publishes (`selected = active`) rather than from a hardcoded
+     * constant. `hasText` finds the item's merged node; `isSelected` reads the
+     * flag the tint is drawn from, so the two can never disagree.
+     */
+    private fun assertTabSelected(label: String) {
+        val n = compose.onAllNodes(hasText(label) and isSelected())
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("expected the \"$label\" tab to be the selected one", n >= 1)
+    }
+
+    /**
+     * Asserts some visible node's text CONTAINS [fragment].
+     *
+     * `onAllNodesWithText` matches the WHOLE string by default, which is wrong
+     * for a message bubble: the bubble's text is a full sentence, so asserting a
+     * distinctive fragment of it needs substring matching.
+     */
+    private fun assertVisibleSubstring(fragment: String) {
+        val n = compose.onAllNodes(hasText(fragment, substring = true))
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("expected a visible node containing \"$fragment\"", n >= 1)
+    }
+
+    /** Asserts exactly [count] visible nodes carry [description]. */
+    private fun assertVisibleDescCount(description: String, count: Int) {
+        assertEquals(
+            "expected $count visible node(s) with description \"$description\"",
+            count,
+            visibleDescCount(description),
+        )
+    }
+
+    /**
+     * Asserts the thread HAS a composer, with [placeholder] as its hint.
+     *
+     * The composer is the shared `DuaComposer` pill, so it is identified by the
+     * three things it always draws: the placeholder text, the attach control and
+     * the mic control. The green voice button is drawn as shapes, not an icon, so
+     * it carries no content description of its own \u2014 the mic beside it is the
+     * stable marker for that end of the pill.
+     *
+     * The old generic placeholder must be gone: a thread's hint is
+     * `"Message <title>..."`, so seeing `"Type a message"` would mean the
+     * placeholder stopped being thread-specific.
+     */
+    private fun assertComposer(placeholder: String) {
+        assertVisible(placeholder)
+        assertNotVisible(COMPOSER_PLACEHOLDER)
+        assertVisibleDescCount("Add attachment", 1)
+        assertVisibleDescCount("Voice input", 1)
+        // The composer is LIVE, not a static pill: it carries a send control and
+        // exactly one field that accepts text.
+        assertVisibleDescCount("Send message", 1)
+        assertEquals(
+            "the composer must have exactly one editable field",
+            1,
+            compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+    }
+
+    /**
+     * Asserts a surface has NO composer at all.
+     *
+     * Used for Orhan's HOME, which must not draw the Dua pill: the composer
+     * belongs to a conversation, and Orhan's home is the agent surface. Checks
+     * the three things a composer would leave behind rather than trusting one
+     * string:
+     *
+     *   1. no node accepts text input (`hasSetTextAction`);
+     *   2. no composer placeholder is on screen;
+     *   3. the composer's own controls ("Add attachment", "Voice input") are
+     *      absent \u2014 they would only exist inside a composer.
+     */
+    private fun assertNoComposer() {
+        val editable = compose.onAllNodes(hasSetTextAction())
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+        assertEquals("this surface must have no text input", 0, editable)
+
+        assertNotVisible(COMPOSER_PLACEHOLDER)
+        assertVisibleDescCount("Add attachment", 0)
+        assertVisibleDescCount("Voice input", 0)
+    }
+
+    private fun currentRoute(): String? =
+        navController.currentBackStackEntry?.destination?.route
+
+    /** Opens the sidebar drawer from Home's hamburger. */
+    private fun openDrawer() {
+        compose.onNodeWithContentDescription("Open menu").performClick()
+        compose.waitForIdle()
+    }
+
+    /** Switches mode through the toggle's own labelled cell. */
+    private fun switchTo(mode: HomeMode) {
+        compose.onNodeWithContentDescription("${mode.label} mode").performClick()
+        compose.waitForIdle()
+    }
+
+    /** Opens a conversation the way a user does: drawer -> history row. */
+    private fun openChatFromDrawer(chat: ChatCase) {
+        openDrawer()
+        compose.onNodeWithText(chat.title).performClick()
+        compose.waitForIdle()
+    }
+
+    // ------------------------------------------------- Dua mode is plain
+
+    @Test
+    fun duaModeShowsOnlyTheComposerAndNoAgentSurface() {
+        launch()
+
+        // The composer is there…
+        assertVisible(DUA_ASK_HINT)
+
+        // …and nothing agent-related is. No section header, no search row, no
+        // bottom navigation, no agent row, no chat row.
+        assertNotVisible("AGENTS \u00b7 3")
+        assertNotVisible("CHATS \u00b7 7")
+        assertNotVisible("Search")
+        assertNotVisible(HomeTab.Managed.label)
+        assertNotVisible(HomeTab.Discover.label)
+        assertNotVisible(HomeTab.Memory.label)
+        assertNotVisible(HomeTab.Artifacts.label)
+
+        // No chat row either: Dua's home is empty, so no conversation title is
+        // on screen and no per-chat cube is drawn.
+        for (chat in CHATS) {
+            assertNotVisible(chat.title)
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 0)
+        }
+    }
+
+    @Test
+    fun duaModeHasNoAgentEntryPointAtAll() {
+        launch()
+
+        // The three agents Orhan manages must not appear anywhere in Dua mode —
+        // not as a row, not as a badge, not as a tab label.
+        for (agent in MANAGED_AGENTS) {
+            assertNotVisible(agent)
+        }
+
+        // The top bar's right button is the gear, not the plus.
+        assertVisibleDescCount("Settings", 1)
+        assertVisibleDescCount("New chat", 0)
+    }
+
+    // ------------------------------------------- Orhan mode is the agent surface
+
+    @Test
+    fun orhanModeShowsTheManagedAgentsAndTheManagedTab() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        // The agent surface: header, search row, the managed agents, the nav.
+        // `sampleAgents` is the three agents Orhan controls — the featured agent
+        // belongs to AgentsScreen, not to Orhan's home.
+        assertVisible("AGENTS \u00b7 3")
+        assertVisible("Search")
+        for (agent in MANAGED_AGENTS) {
+            assertVisible(agent)
+        }
+
+        // The second tab is "Managed" — Orhan is itself an agent, so the tab
+        // lists the agents it controls. "Agents" must not be a tab label.
+        assertVisible(HomeTab.Managed.label)
+        assertNotVisible("Agents")
+
+        // Orhan's HOME has no composer: the Dua pill belongs to a conversation,
+        // and this is the agent surface.
+        assertNotVisible(DUA_ASK_HINT)
+        assertNoComposer()
+
+        // And its right button is the plus, not the gear.
+        assertVisibleDescCount("New chat", 1)
+        assertVisibleDescCount("Settings", 0)
+    }
+
+    @Test
+    fun theToggleSwitchesBothWays() {
+        launch()
+
+        // Dua -> Orhan
+        switchTo(HomeMode.Orhan)
+        assertVisible("AGENTS \u00b7 3")
+        assertNotVisible(DUA_ASK_HINT)
+
+        // Orhan -> Dua
+        switchTo(HomeMode.Dua)
+        assertVisible(DUA_ASK_HINT)
+        assertNotVisible("AGENTS \u00b7 3")
+    }
+
+    @Test
+    fun theManagedTabOpensTheAgentsScreen() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        compose.onNodeWithText(HomeTab.Managed.label).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Managed tab must open the agents screen",
+            DuaGenAIRoutes.AGENTS,
+            currentRoute(),
+        )
+    }
+
+    @Test
+    fun theBottomNavSelectionIsHoistedAndMoves() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        // Chats is the default selection — the tab Orhan's home has always shown
+        // as active, now supplied by the host instead of hardcoded in HomeScreen.
+        assertTabSelected(HomeTab.Chats.label)
+
+        // Tapping Discover moves the selection AND navigates. The bottom nav is
+        // drawn by HomeScreen only, so the indicator is asserted after coming
+        // back: if the selection were still a constant inside HomeScreen, Home
+        // would re-render with Chats active and this would fail.
+        compose.onNodeWithText(HomeTab.Discover.label).performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.DISCOVER, currentRoute())
+
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertTabSelected(HomeTab.Discover.label)
+
+        // And back to Chats, so the move is not one-way.
+        compose.onNodeWithText(HomeTab.Chats.label).performClick()
+        compose.waitForIdle()
+        assertTabSelected(HomeTab.Chats.label)
+    }
+
+    @Test
+    fun theMemoryTabOpensTheMemoryScreen() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        compose.onNodeWithText(HomeTab.Memory.label).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Memory tab must open the memory screen",
+            DuaGenAIRoutes.MEMORY,
+            currentRoute(),
+        )
+        // The screen itself, not just the route: its title and its real list.
+        assertVisible(MEMORY_HEADING)
+        assertVisible(MEMORY_FIRST_ITEM)
+        assertVisible(MEMORY_LAST_ITEM)
+        // The list is showing, so the empty state must NOT be.
+        assertNotVisible(MEMORY_EMPTY)
+        // …and it is NOT the Artifacts screen.
+        assertNotVisible(ARTIFACTS_EMPTY)
+    }
+
+    /**
+     * The Memory screen renders a LIST, not the empty state.
+     *
+     * `sampleMemories` is the default, so every entry's title must be on screen
+     * and the empty-state line must be gone. This is the assertion that the list
+     * wiring actually happened rather than the placeholder staying put.
+     */
+    @Test
+    fun theMemoryScreenRendersTheMemoryList() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Memory.label).performClick()
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_FIRST_ITEM)
+        assertVisible(MEMORY_LAST_ITEM)
+        // A category chip and a timestamp from the first card.
+        assertVisible("Project")
+        assertVisible("2 din pehle")
+        assertNotVisible(MEMORY_EMPTY)
+    }
+
+    /**
+     * The filter button is a real toggle, not a dead control (audit fix #7).
+     *
+     * It used to be `onClick = {}`. Now it flips `filterActive`, which publishes
+     * `selected` semantics — so the state is readable from the node rather than
+     * from a screenshot. Tapping twice must return it to unselected.
+     */
+    @Test
+    fun theFilterButtonTogglesItsSelectedState() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        // Off by default.
+        assertEquals(
+            "the filter must start unselected",
+            0,
+            compose.onAllNodes(hasContentDescription(FILTER_LABEL) and isSelected())
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+
+        compose.onNodeWithContentDescription(FILTER_LABEL).performClick()
+        compose.waitForIdle()
+        assertTrue(
+            "tapping the filter must select it",
+            compose.onAllNodes(hasContentDescription(FILTER_LABEL) and isSelected())
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1,
+        )
+
+        // And back off, so the toggle is not one-way.
+        compose.onNodeWithContentDescription(FILTER_LABEL).performClick()
+        compose.waitForIdle()
+        assertEquals(
+            "tapping the filter again must deselect it",
+            0,
+            compose.onAllNodes(hasContentDescription(FILTER_LABEL) and isSelected())
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+    }
+
+    /**
+     * The search pill is inert and says so (audit fix #9).
+     *
+     * It is a presentational placeholder — this kit has no search index — so it
+     * must publish `disabled()` semantics instead of looking tappable and doing
+     * nothing. The filter beside it stays enabled, which is what makes this a
+     * guard rather than a blanket disable.
+     */
+    @Test
+    fun theSearchPillIsAnnouncedAsDisabled() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        val disabled = compose.onAllNodes(hasContentDescription("Search") and isNotEnabled())
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("the search pill must be announced as disabled", disabled >= 1)
+
+        // The filter is NOT disabled — it is a working control.
+        val filterDisabled = compose.onAllNodes(
+            hasContentDescription(FILTER_LABEL) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertEquals("the filter must stay enabled", 0, filterDisabled)
+    }
+
+    @Test
+    fun theArtifactsTabOpensTheArtifactsScreen() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Artifacts tab must open the artifacts screen",
+            DuaGenAIRoutes.ARTIFACTS,
+            currentRoute(),
+        )
+        assertVisible(ARTIFACTS_HEADING)
+        assertVisible(ARTIFACTS_EMPTY)
+        assertNotVisible(MEMORY_EMPTY)
+    }
+
+    /**
+     * The Artifacts screen renders a GRID, not the empty state.
+     *
+     * The repository's `demoArtifacts` is the default, so every entry's title must
+     * be on screen and the empty-state line must be gone. This is the assertion
+     * that the grid wiring actually happened rather than the placeholder staying
+     * put.
+     */
+    @Test
+    fun theArtifactsScreenRendersTheArtifactGrid() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        assertVisible(ARTIFACTS_FIRST_ITEM)
+        assertVisible(ARTIFACTS_LAST_ITEM)
+        // A type chip and a timestamp from the first card.
+        assertVisible("Webpage")
+        assertVisible("Aaj")
+        assertNotVisible(ARTIFACTS_EMPTY)
+    }
+
+    /**
+     * Audit fix #7 — the Artifacts filter button OPENS a sheet and APPLIES a
+     * filter.
+     *
+     * The button used to be a bare toggle that filtered nothing. Now it opens a
+     * ModalBottomSheet of type chips; tapping "Image" narrows the grid to the
+     * image artifacts only. Both halves are asserted: the sheet appears, and the
+     * grid actually changes — a sheet that opened but filtered nothing would
+     * still fail here.
+     */
+    @Test
+    fun theArtifactsFilterButtonOpensTheSheetAndFiltersTheGrid() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        // The unfiltered grid: a document and an image are both on screen.
+        assertVisible(ARTIFACTS_FIRST_ITEM)          // Q3 Launch Deck (Webpage)
+        assertVisible(ARTIFACTS_IMAGE_ITEM)          // Brand Hero Banner (Image)
+
+        // The filter button opens the sheet.
+        compose.onNodeWithContentDescription(FILTER_LABEL).performClick()
+        compose.waitForIdle()
+        assertVisible(ARTIFACTS_FILTER_SHEET_TITLE)
+        assertVisible(ARTIFACTS_FILTER_CLEAR)
+
+        // Applying "Image" narrows the grid: the image stays, the webpage goes.
+        // The chip is addressed by its own description, because the cards also
+        // carry their type as text.
+        compose.onNodeWithContentDescription("Filter: $ARTIFACTS_FILTER_IMAGE").performClick()
+        compose.waitForIdle()
+        assertVisible(ARTIFACTS_IMAGE_ITEM)
+        assertNotVisible(ARTIFACTS_FIRST_ITEM)
+
+        // Clear restores the full grid.
+        compose.onNodeWithText(ARTIFACTS_FILTER_CLEAR).performClick()
+        compose.waitForIdle()
+        assertVisible(ARTIFACTS_FIRST_ITEM)
+    }
+
+    /**
+     * Audit fix #9 — a filter that matches nothing shows the no-match panel, not
+     * a blank grid.
+     *
+     * "Link" is a real artifact type with no demo entries, so it is the case the
+     * panel exists for. The panel must name the filter and offer the way out.
+     */
+    @Test
+    fun aFilterWithNoMatchesShowsTheNoMatchPanel() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription(FILTER_LABEL).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Filter: Link").performClick()
+        compose.waitForIdle()
+
+        // The panel names the filter and offers the way out — never a blank area.
+        assertVisibleSubstring("Koi Link artifact nahi mila")
+        assertVisible(ARTIFACTS_NO_MATCH_CLEAR)
+        assertNotVisible(ARTIFACTS_FIRST_ITEM)
+
+        // The way out works.
+        compose.onNodeWithText(ARTIFACTS_NO_MATCH_CLEAR).performClick()
+        compose.waitForIdle()
+        assertVisible(ARTIFACTS_FIRST_ITEM)
+    }
+
+    /**
+     * Audit fix #8 — the preview caption describes the SELECTED artifact.
+     *
+     * The caption is built from the artifact's own name, type and size, so it
+     * must change when a different card is selected. Asserting the first card's
+     * caption, then a second card's, proves it follows the selection rather than
+     * being a fixed string.
+     */
+    @Test
+    fun thePreviewCaptionFollowsTheSelectedArtifact() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        // The caption starts on the first card.
+        assertVisibleSubstring(ARTIFACTS_CAPTION_FIRST)
+
+        // Selecting another card moves the caption to that card.
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performClick()
+        compose.waitForIdle()
+        assertVisibleSubstring(ARTIFACTS_CAPTION_IMAGE)
+        assertNotVisible(ARTIFACTS_CAPTION_FIRST)
+    }
+
+    /**
+     * Audit fix #9 — a disabled control is announced as disabled and cannot act.
+     *
+     * "Edit profile" used to be `onClick = {}`: it looked live and swallowed the
+     * tap. It is now `enabled = false`, so it publishes `disabled()` semantics
+     * and a click changes nothing. The helper line that explains why is asserted
+     * too, because a disabled control with no reason is its own usability bug.
+     */
+    @Test
+    fun theDisabledProfileControlsAreNotClickable() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitForIdle()
+
+        // Both inert controls are announced as disabled.
+        val disabled = compose.onAllNodes(
+            hasText(EDIT_PROFILE_LABEL) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("\"$EDIT_PROFILE_LABEL\" must be announced as disabled", disabled >= 1)
+
+        val signOutDisabled = compose.onAllNodes(
+            hasText(SIGN_OUT_LABEL) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("\"$SIGN_OUT_LABEL\" must be announced as disabled", signOutDisabled >= 1)
+
+        // The reason is on screen, not left to the user to guess.
+        assertVisible(EDIT_PROFILE_HELPER)
+
+        // Clicking it changes nothing: the Profile screen is still the route.
+        compose.onNodeWithText(EDIT_PROFILE_LABEL).performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+    }
+
+    // ------------------------------------------- Memory filter + search
+
+    /**
+     * The Memory category chips filter the list.
+     *
+     * The chip row is the Artifacts pattern applied to Memory: tapping
+     * "Preference" must leave only the preference memories on screen and drop
+     * the project ones. Asserting both halves proves the chip actually filters
+     * rather than only changing its own selected state.
+     */
+    @Test
+    fun theMemoryFilterChipNarrowsTheList() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Memory.label).performClick()
+        compose.waitForIdle()
+
+        // Unfiltered: a project memory and a preference memory are both there.
+        assertVisible(MEMORY_PROJECT_ITEM)
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+
+        // The chip is addressed by its own description, because the cards also
+        // carry their category as text.
+        compose.onNodeWithContentDescription(MEMORY_CHIP_PREFERENCE).performClick()
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+        assertNotVisible(MEMORY_PROJECT_ITEM)
+    }
+
+    /**
+     * The Memory search field filters the list, and combines with the chip.
+     *
+     * Typing narrows the list to the matching memory. The query is chosen to hit
+     * exactly ONE entry ("087C45" appears only in the brand-green memory), so
+     * the assertion proves the search actually filtered rather than merely
+     * leaving the list intact.
+     */
+    @Test
+    fun theMemorySearchFiltersTheList() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Memory.label).performClick()
+        compose.waitForIdle()
+
+        // The search field is there (its placeholder is showing)…
+        assertVisible(MEMORY_SEARCH_HINT)
+
+        // …and typing in it filters the list. The Memory screen has exactly one
+        // text field, so this selector is unambiguous.
+        compose.onNode(hasSetTextAction()).performTextInput("087C45")
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+        assertNotVisible(MEMORY_PROJECT_ITEM)
+    }
+
+    /**
+     * A Memory chip with no entries shows the no-match panel, not a blank list.
+     *
+     * "Task" is a real memory category with no demo entries, so it is the case
+     * the panel exists for. The panel must say so and offer the way out, and the
+     * way out must restore the full list.
+     */
+    @Test
+    fun aMemoryFilterWithNoMatchesShowsTheNoMatchPanel() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Memory.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription(MEMORY_CHIP_TASK).performClick()
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_NO_MATCH)
+        assertVisible(MEMORY_NO_MATCH_CLEAR)
+        assertNotVisible(MEMORY_PROJECT_ITEM)
+
+        // The way out works.
+        compose.onNodeWithText(MEMORY_NO_MATCH_CLEAR).performClick()
+        compose.waitForIdle()
+        assertVisible(MEMORY_PROJECT_ITEM)
+    }
+
+    // ------------------------------------------- Artifacts swipe + refresh
+
+    /**
+     * Swipe-to-delete opens the SAME confirmation the long-press opens, and
+     * confirming removes the artifact.
+     *
+     * The swipe is a real gesture on the card, so this proves the gesture is
+     * wired rather than only the dialog. The card must be gone afterwards.
+     */
+    @Test
+    fun swipingAnArtifactCardOpensTheDeleteConfirmation() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        assertVisible(ARTIFACTS_IMAGE_ITEM)
+
+        // Swipe the image card from end to start.
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+
+        // The confirmation appears \u2014 the same one the long-press opens.
+        assertVisible(ARTIFACT_DELETE_DIALOG_TITLE)
+        assertVisible(ARTIFACT_DELETE_CONFIRM)
+
+        // Confirming removes the artifact and offers Undo.
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+        assertNotVisible(ARTIFACTS_IMAGE_ITEM)
+        assertVisible(ARTIFACT_DELETED_SNACK)
+        assertVisible(ARTIFACT_UNDO)
+    }
+
+    /**
+     * Undo restores a deleted artifact.
+     *
+     * The snackbar's Undo re-adds through the repository, so the card must come
+     * back. This is what makes the delete reversible rather than final.
+     */
+    @Test
+    fun undoingADeleteRestoresTheArtifact() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+        assertNotVisible(ARTIFACTS_IMAGE_ITEM)
+
+        // Undo brings it back.
+        compose.onNodeWithText(ARTIFACT_UNDO).performClick()
+        compose.waitForIdle()
+        assertVisible(ARTIFACTS_IMAGE_ITEM)
+    }
+
+    /**
+     * Cancelling the delete confirmation leaves the artifact alone.
+     *
+     * The swipe must not destroy anything on its own \u2014 the dialog owns the
+     * decision, so Cancel is a no-op on the data.
+     */
+    @Test
+    fun cancellingTheDeleteConfirmationKeepsTheArtifact() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        assertVisible(ARTIFACT_DELETE_DIALOG_TITLE)
+
+        compose.onNodeWithText(ARTIFACT_DELETE_CANCEL).performClick()
+        compose.waitForIdle()
+
+        assertVisible(ARTIFACTS_IMAGE_ITEM)
+        assertNotVisible(ARTIFACT_DELETED_SNACK)
+    }
+
+    /**
+     * Pull-to-refresh re-runs the repository's load path.
+     *
+     * The gesture must reach the repository, not merely spin an indicator, so
+     * this asserts the repository's own `loadCount` went up AND the grid is
+     * still on screen afterwards \u2014 a refresh must not blank the content.
+     */
+    @Test
+    fun pullToRefreshReloadsTheArtifacts() {
+        val repository = ArtifactsRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ArtifactsScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        val before = repository.loadCount
+        assertTrue("the first load must have run", before >= 1)
+
+        // The refresh path the gesture calls.
+        kotlinx.coroutines.runBlocking { repository.refresh() }
+        compose.waitForIdle()
+
+        assertTrue(
+            "pull-to-refresh must re-run the repository's load()",
+            repository.loadCount > before,
+        )
+        // The grid is still there \u2014 a refresh never blanks the content.
+        assertVisible(ARTIFACTS_FIRST_ITEM)
+    }
+
+    // ------------------------------------------- long-press context menu
+
+    /**
+     * Long-pressing a card opens the CONTEXT MENU, and its Open action moves the
+     * preview caption to that card.
+     *
+     * The menu is the new surface: it used to be that a long-press opened the
+     * delete dialog directly. Now it opens a menu of three actions, and Open is
+     * the one that selects the card — which is what the caption follows. Both
+     * halves are asserted, so a menu that opened but did nothing would fail.
+     */
+    @Test
+    fun longPressOpensTheContextMenuAndOpenUpdatesTheCaption() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        // The caption starts on the first card.
+        assertVisibleSubstring(ARTIFACTS_CAPTION_FIRST)
+
+        // Long-press the image card: the menu opens with all three actions.
+        compose.onNodeWithContentDescription("$ARTIFACTS_IMAGE_ITEM, Image")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        assertVisibleDescCount(MENU_OPEN_IMAGE, 1)
+        assertVisibleDescCount(MENU_SHARE_IMAGE, 1)
+        assertVisibleDescCount(MENU_DELETE_IMAGE, 1)
+
+        // Open selects the card, so the caption follows it.
+        compose.onNodeWithContentDescription(MENU_OPEN_IMAGE).performClick()
+        compose.waitForIdle()
+        assertVisibleSubstring(ARTIFACTS_CAPTION_IMAGE)
+        assertNotVisible(ARTIFACTS_CAPTION_FIRST)
+    }
+
+    /**
+     * The context menu's Share item is DISABLED and says why.
+     *
+     * A real share sheet is not available in this build, so the item must not
+     * look live and swallow the tap — it publishes `disabled()` semantics and
+     * carries a helper line. This is audit fix #9's rule applied to a menu item.
+     */
+    @Test
+    fun theContextMenuShareItemIsDisabled() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("$ARTIFACTS_IMAGE_ITEM, Image")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+
+        val disabled = compose.onAllNodes(
+            hasContentDescription(MENU_SHARE_IMAGE) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("the Share item must be announced as disabled", disabled >= 1)
+
+        // The reason is on screen, not left to the user to guess.
+        assertVisible(MENU_SHARE_HELPER)
+    }
+
+    /**
+     * The context menu's Delete action opens the SAME confirmation the swipe
+     * opens.
+     *
+     * One delete path, two gestures: the menu's Delete and the swipe both set the
+     * same pending-delete state, so the dialog is identical. Confirming removes
+     * the artifact.
+     */
+    @Test
+    fun theContextMenuDeleteOpensTheConfirmation() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("$ARTIFACTS_IMAGE_ITEM, Image")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(MENU_DELETE_IMAGE).performClick()
+        compose.waitForIdle()
+
+        // The same confirmation the swipe opens.
+        assertVisible(ARTIFACT_DELETE_DIALOG_TITLE)
+        assertVisible(ARTIFACT_DELETE_CONFIRM)
+
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+        assertNotVisible(ARTIFACTS_IMAGE_ITEM)
+        assertVisible(ARTIFACT_DELETED_SNACK)
+    }
+
+    /**
+     * The context menu has FOUR items, in Material 3's order, and "Open in new
+     * tab" fires the platform's URL handler.
+     *
+     * The handler is injected, so this proves the intent path is wired without
+     * leaving the process: the lambda records the URL it was handed.
+     */
+    @Test
+    fun theContextMenuHasFourItemsAndOpenInNewTabFiresTheIntent() {
+        val opened = mutableListOf<String>()
+        val repository = ArtifactsRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ArtifactsScreen(
+                    repository = repository,
+                    onOpenInNewTab = { opened += it },
+                )
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("$ARTIFACTS_IMAGE_ITEM, Image")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+
+        // All four items are present.
+        assertVisibleDescCount(MENU_OPEN_IMAGE, 1)
+        assertVisibleDescCount(MENU_OPEN_NEW_TAB_IMAGE, 1)
+        assertVisibleDescCount(MENU_SHARE_IMAGE, 1)
+        assertVisibleDescCount(MENU_DELETE_IMAGE, 1)
+
+        // Tapping it hands the artifact's URL to the platform handler.
+        compose.onNodeWithContentDescription(MENU_OPEN_NEW_TAB_IMAGE).performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, opened.size)
+        assertTrue(
+            "the opened URL must be the artifact's own",
+            opened.single().contains("brand-hero"),
+        )
+    }
+
+    /**
+     * "Open in new tab" is DISABLED for an artifact with no URL.
+     *
+     * Meeting Notes is seeded without a URL on purpose, so this is the state that
+     * proves the item cannot be a silent no-op: it is announced as disabled and
+     * carries a helper line saying why.
+     */
+    @Test
+    fun openInNewTabIsDisabledWhenTheArtifactHasNoUrl() {
+        val opened = mutableListOf<String>()
+        val repository = ArtifactsRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ArtifactsScreen(
+                    repository = repository,
+                    onOpenInNewTab = { opened += it },
+                )
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("$ARTIFACTS_LAST_ITEM, Document")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+
+        val disabled = compose.onAllNodes(
+            hasContentDescription(MENU_OPEN_NEW_TAB_NOTES) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("the item must be announced as disabled", disabled >= 1)
+        assertVisible(MENU_OPEN_NEW_TAB_HELPER)
+
+        // And a tap cannot fire the handler.
+        compose.onNodeWithContentDescription(MENU_OPEN_NEW_TAB_NOTES).performClick()
+        compose.waitForIdle()
+        assertTrue("a disabled item must not open anything", opened.isEmpty())
+    }
+
+    // ------------------------------------------- Memory swipe-to-delete
+
+    /**
+     * Swiping a memory row opens the delete confirmation, confirming removes it,
+     * and Undo restores it through the repository.
+     *
+     * The whole loop is asserted, because the point of the fix is that the row is
+     * reversible: delete must go through the data source and Undo must come back
+     * through it too.
+     */
+    @Test
+    fun swipingAMemoryRowDeletesItAndUndoRestoresIt() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM")
+            .performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_DELETE_DIALOG_TITLE)
+
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+        assertNotVisible(MEMORY_PREFERENCE_ITEM)
+        assertVisible(MEMORY_DELETED_SNACK)
+
+        compose.onNodeWithText(MEMORY_UNDO).performClick()
+        compose.waitForIdle()
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+    }
+
+    /**
+     * Cancelling the memory delete confirmation keeps the row.
+     *
+     * The swipe must not destroy anything on its own — the dialog owns the
+     * decision.
+     */
+    @Test
+    fun cancellingTheMemoryDeleteKeepsTheRow() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM")
+            .performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        assertVisible(MEMORY_DELETE_DIALOG_TITLE)
+
+        compose.onNodeWithText(ARTIFACT_DELETE_CANCEL).performClick()
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+        assertNotVisible(MEMORY_DELETED_SNACK)
+    }
+
+    // ------------------------------------------- Memory pull-to-refresh
+
+    /**
+     * Pull-to-refresh on the Memory screen re-runs the repository's load path.
+     *
+     * The gesture must reach the repository, not merely spin an indicator, so
+     * this asserts the repository's own `loadCount` went up AND the list is still
+     * on screen afterwards — a refresh must not blank the content.
+     */
+    @Test
+    fun memoryPullToRefreshReloadsTheList() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        val before = repository.loadCount
+        assertTrue("the first load must have run", before >= 1)
+
+        // The refresh path the gesture calls.
+        kotlinx.coroutines.runBlocking { repository.refresh() }
+        compose.waitForIdle()
+
+        assertTrue(
+            "pull-to-refresh must re-run the repository's load()",
+            repository.loadCount > before,
+        )
+        // The list is still there — a refresh never blanks the content.
+        assertVisible(MEMORY_FIRST_ITEM)
+    }
+
+    // ------------------------------------------- repository data source
+
+    /**
+     * The repository loads THROUGH its data source, not from a local list.
+     *
+     * A fake source counts its fetches, so this proves the data actually came
+     * from the source — the seam a real backend plugs into.
+     */
+    @Test
+    fun theRepositoryLoadsFromItsDataSource() {
+        val source = FlakyArtifactsDataSource(failures = 0)
+        val repository = ArtifactsRepository(dataSource = source)
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+
+        val state = repository.state.value
+        assertTrue("the load must end Loaded", state is ArtifactsUiState.Loaded)
+        assertEquals(
+            "the loaded list must be the source's list",
+            demoArtifacts.size,
+            (state as ArtifactsUiState.Loaded).artifacts.size,
+        )
+        assertTrue("load() must go through the data source", source.fetchCount >= 1)
+    }
+
+    /**
+     * A failing data source surfaces an Error, and Retry recovers.
+     *
+     * The source fails its first fetch and succeeds afterwards, so this proves
+     * both halves of the error contract: the failure becomes
+     * [ArtifactsUiState.Error], and re-running `load()` (what Retry does) ends
+     * Loaded.
+     */
+    @Test
+    fun theRepositorySurfacesAnErrorAndRetryRecovers() {
+        val source = FlakyArtifactsDataSource(failures = 1)
+        val repository = ArtifactsRepository(dataSource = source)
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+        assertTrue(
+            "a failing source must surface an Error",
+            repository.state.value is ArtifactsUiState.Error,
+        )
+
+        // Retry: the same load() call, now succeeding.
+        kotlinx.coroutines.runBlocking { repository.load() }
+        assertTrue(
+            "Retry must recover to Loaded",
+            repository.state.value is ArtifactsUiState.Loaded,
+        )
+    }
+
+    // ------------------------------------------- Memory long-press menu
+
+    /**
+     * Long-pressing a memory row opens the context menu with Open and Delete.
+     *
+     * The same pattern the Artifacts grid uses: a Material 3 DropdownMenu anchored
+     * to the row, the destructive action last. Both items are addressed by their
+     * own content descriptions, because the bare words also appear elsewhere.
+     */
+    @Test
+    fun longPressOnAMemoryRowOpensTheContextMenu() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+
+        assertVisibleDescCount(MEMORY_MENU_OPEN, 1)
+        assertVisibleDescCount(MEMORY_MENU_DELETE, 1)
+    }
+
+    /**
+     * The menu's "Open" falls back to the detail dialog when the memory has no
+     * URL.
+     *
+     * Brand green is seeded without a URL on purpose, so this is the state that
+     * proves "Open" is never a silent no-op: the shared [UrlOpener] returns false
+     * and the screen shows the memory's detail instead.
+     */
+    @Test
+    fun theMemoryMenuOpenFallsBackToTheDetailDialogWhenThereIsNoUrl() {
+        val opened = mutableListOf<String>()
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(MEMORY_MENU_OPEN_NO_URL).performClick()
+        compose.waitForIdle()
+
+        // The detail dialog opened (its Close button is unique to it)…
+        assertVisible(MEMORY_DETAIL_CLOSE)
+        // …and nothing was handed to the platform, because there was no URL.
+        assertTrue("a URL-less Open must not open anything", opened.isEmpty())
+    }
+
+    /**
+     * The menu's "Open" hands the memory's URL to the SHARED opener.
+     *
+     * The launcher is injected, so this proves the Memory screen routes through
+     * the same helper the Artifacts screen uses — without leaving the process.
+     */
+    @Test
+    fun theMemoryMenuOpenHandsTheUrlToTheSharedOpener() {
+        val opened = mutableListOf<String>()
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(MEMORY_MENU_OPEN).performClick()
+        compose.waitForIdle()
+
+        assertEquals(1, opened.size)
+        assertEquals(SHARED_OPENER_URL, opened.single())
+        // The detail dialog did NOT open: there was a URL to open instead.
+        assertNotVisible(MEMORY_DETAIL_CLOSE)
+    }
+
+    /**
+     * The menu's Delete opens the SAME confirmation the swipe opens, and Undo
+     * restores the row through the repository.
+     *
+     * One delete path, two gestures: the menu's Delete and the swipe both set the
+     * same pending-delete state, so the dialog is identical.
+     */
+    @Test
+    fun theMemoryMenuDeleteOpensTheSameConfirmationAndUndoRestores() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM")
+            .performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(MEMORY_MENU_DELETE).performClick()
+        compose.waitForIdle()
+
+        // The same confirmation the swipe opens.
+        assertVisible(MEMORY_DELETE_DIALOG_TITLE)
+
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+        assertNotVisible(MEMORY_PROJECT_ITEM)
+        assertVisible(MEMORY_DELETED_SNACK)
+
+        compose.onNodeWithText(MEMORY_UNDO).performClick()
+        compose.waitForIdle()
+        assertVisible(MEMORY_PROJECT_ITEM)
+    }
+
+    // ------------------------------------------- shared URL opener
+
+    /**
+     * The detail dialog's "Open source" button appears ONLY when the memory has a
+     * URL, and tapping it hands that URL to the SHARED opener.
+     *
+     * Two halves, one rule: a URL-bearing memory shows the button and it opens
+     * the URL through the same [UrlOpener] the context menu uses; a URL-less
+     * memory shows NO button at all (not a disabled one), because there is
+     * nothing to open.
+     */
+    @Test
+    fun theMemoryDetailOpenSourceButtonAppearsOnlyWithAUrl() {
+        val opened = mutableListOf<String>()
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
+            }
+        }
+        compose.waitForIdle()
+
+        // A memory WITH a URL: tap the card, the detail dialog opens, and the
+        // "Open source" button is there.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(MEMORY_OPEN_SOURCE, 1)
+
+        // Tapping it hands the URL to the shared opener.
+        compose.onNodeWithContentDescription(MEMORY_OPEN_SOURCE).performClick()
+        compose.waitForIdle()
+        assertEquals(1, opened.size)
+        assertEquals(SHARED_OPENER_URL, opened.single())
+
+        // A memory WITHOUT a URL: the detail dialog opens but the button is
+        // ABSENT \u2014 not disabled, not empty.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisible(MEMORY_DETAIL_CLOSE)
+        assertVisibleDescCount(MEMORY_OPEN_SOURCE, 0)
+    }
+
+    /**
+     * The detail dialog's "Copy text" button copies the whole memory and shows
+     * the "Copied" feedback.
+     *
+     * The button is ALWAYS present (every memory has text), so this asserts the
+     * two things that matter: the clipboard receives the memory's title + summary,
+     * and the confirmation appears on the same snackbar surface the undo flow
+     * uses.
+     */
+    @Test
+    fun theMemoryDetailCopyTextButtonCopiesTheMemoryAndConfirms() {
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        // Open the detail dialog for a memory WITH a URL: Copy text sits beside
+        // Open source and Close.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(MEMORY_COPY_TEXT, 1)
+
+        // Tap it: the clipboard gets the whole memory, and the confirmation shows.
+        compose.onNodeWithContentDescription(MEMORY_COPY_TEXT).performClick()
+        compose.waitForIdle()
+        val clipboard = compose.activity.getSystemService(android.content.ClipboardManager::class.java)
+        assertTrue(
+            "the memory's text must reach the clipboard",
+            clipboard.hasPrimaryClip() &&
+                clipboard.primaryClip!!.getItemAt(0).text.toString().contains(MEMORY_PROJECT_ITEM),
+        )
+        assertVisible(MEMORY_COPIED_SNACK)
+
+        // A memory WITHOUT a URL still shows Copy text \u2014 it is not tied to the URL.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(MEMORY_COPY_TEXT, 1)
+    }
+
+    /**
+     * The detail dialog's "Share" button is shown, and tapping it hands the
+     * memory's text (plus its URL when it has one) to the platform share seam.
+     *
+     * The sharer is injected, so this proves the screen routes the payload
+     * through the ACTION_SEND seam without leaving the process \u2014 the same
+     * approach the URL-opener test takes. The button is ALWAYS present (every
+     * memory can be shared), so the URL-less memory shares too, with a null URL.
+     */
+    @Test
+    fun theMemoryDetailShareButtonSharesTheMemoryTextAndUrl() {
+        val sharer = RecordingSharer()
+        val repository = MemoryRepository(loadDelayMs = 0)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository, onShare = { text, url -> sharer.share(text, url) })
+            }
+        }
+        compose.waitForIdle()
+
+        // A memory WITH a URL: the detail dialog shows Share beside Copy text.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PROJECT_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(MEMORY_SHARE, 1)
+
+        // Tapping it hands the memory's text AND its URL to the sharer.
+        compose.onNodeWithContentDescription(MEMORY_SHARE).performClick()
+        compose.waitForIdle()
+        assertEquals(1, sharer.shared.size)
+        val (text, url) = sharer.shared.single()
+        assertTrue(
+            "the shared text must carry the memory's title",
+            text.contains(MEMORY_PROJECT_ITEM),
+        )
+        assertEquals(SHARED_OPENER_URL, url)
+
+        // A memory WITHOUT a URL still shows Share \u2014 it is not tied to the URL \u2014
+        // and the shared url is null.
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(MEMORY_SHARE, 1)
+        compose.onNodeWithContentDescription(MEMORY_SHARE).performClick()
+        compose.waitForIdle()
+        assertEquals(2, sharer.shared.size)
+        assertTrue("a URL-less memory must share a null url", sharer.shared.last().second == null)
+    }
+
+    /**
+     * The Cube picker's category chips are 48dp touch targets.
+     *
+     * The audit's rule applied to the picker: the chip's drawn size is unchanged,
+     * but its tappable box must meet the M3 48dp minimum. The chip is addressed
+     * by its own description, and its height is read from the semantics bounds.
+     */
+    @Test
+    fun theCubePickerChipsAreAtLeast48dpTall() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
+
+        for (cat in PICKER_CATEGORIES) {
+            val node = compose.onNodeWithContentDescription("Filter: $cat").fetchSemanticsNode()
+            val heightDp = node.boundsInRoot.height / compose.density
+            assertTrue(
+                "the \"$cat\" chip must be at least 48dp tall, was ${heightDp}dp",
+                heightDp >= 48f,
+            )
+        }
+    }
+
+    // ------------------------------------------- cube picker chip tooltip
+
+    /**
+     * Long-pressing a Cube picker chip shows a tooltip with the chip's FULL
+     * label, and the tap still applies the filter.
+     *
+     * The tooltip is the M3 plain tooltip, so its content is the label itself;
+     * the chip's own description is the filter marker. Asserting both proves the
+     * two gestures stay distinct: the long-press reveals the name, the tap
+     * filters.
+     */
+    @Test
+    fun theCubePickerChipLongPressShowsATooltipWithTheFullLabel() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
+
+        // The tooltip is not up before the long-press.
+        assertVisibleDescCount(pickerTooltip("Charcoal"), 0)
+
+        // Long-press the chip: the tooltip appears with the full label.
+        compose.onNodeWithContentDescription("Filter: Charcoal").performTouchInput { longClick() }
+        compose.waitForIdle()
+        assertVisibleDescCount(pickerTooltip("Charcoal"), 1)
+
+        // The tap still applies the filter (the long-press did not).
+        compose.onNodeWithContentDescription("Filter: Orange").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Filter: Orange").assertIsSelected()
+    }
+
+    // ------------------------------------------- shared URL opener
+
+    /**
+     * The shared [UrlOpener] opens a real URL and reports it, and no-ops on a
+     * null/blank one.
+     *
+     * This is the helper's own contract, tested directly: the boolean is what lets
+     * a caller show a fallback (Memory) or keep a control disabled (Artifacts)
+     * instead of swallowing the tap.
+     */
+    @Test
+    fun theSharedUrlOpenerOpensAUrlAndReportsIt() {
+        val opened = mutableListOf<String>()
+        val opener = UrlOpener(UrlLauncher { opened += it })
+
+        assertTrue("a real URL must open", opener.open(SHARED_OPENER_URL))
+        assertEquals(1, opened.size)
+        assertEquals(SHARED_OPENER_URL, opened.single())
+
+        // Null and blank are the same answer: nothing opened.
+        assertTrue("a null URL must not open", !opener.open(null))
+        assertTrue("a blank URL must not open", !opener.open("   "))
+        assertEquals("nothing more must have been opened", 1, opened.size)
+    }
+
+    // ------------------------------------------- Memory repository source
+
+    /**
+     * The Memory repository loads THROUGH its data source, not from a local list.
+     *
+     * The Memory twin of [theRepositoryLoadsFromItsDataSource]: a fake source
+     * counts its fetches, so this proves the data came from the source — the seam
+     * a real backend plugs into.
+     */
+    @Test
+    fun theMemoryRepositoryLoadsFromItsDataSource() {
+        val source = FlakyMemoryDataSource(failures = 0)
+        val repository = MemoryRepository(dataSource = source)
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+
+        val state = repository.state.value
+        assertTrue("the load must end Loaded", state is MemoryUiState.Loaded)
+        assertEquals(
+            "the loaded list must be the source's list",
+            sampleMemories.size,
+            (state as MemoryUiState.Loaded).memories.size,
+        )
+        assertTrue("load() must go through the data source", source.fetchCount >= 1)
+    }
+
+    /**
+     * A failing Memory source surfaces an Error, and Retry recovers.
+     *
+     * Both halves of the error contract: the failure becomes
+     * [MemoryUiState.Error], and re-running `load()` (what Retry does) ends
+     * Loaded.
+     */
+    @Test
+    fun theMemoryRepositorySurfacesAnErrorAndRetryRecovers() {
+        val source = FlakyMemoryDataSource(failures = 1)
+        val repository = MemoryRepository(dataSource = source)
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+        assertTrue(
+            "a failing source must surface an Error",
+            repository.state.value is MemoryUiState.Error,
+        )
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+        assertTrue(
+            "Retry must recover to Loaded",
+            repository.state.value is MemoryUiState.Loaded,
+        )
+    }
+
+    /**
+     * The Memory delete and the undo's add both go THROUGH the data source.
+     *
+     * This is what makes the undo honest: the row is restored by the same source
+     * that removed it, not only in the screen's copy.
+     */
+    @Test
+    fun theMemoryRepositoryDeleteAndUndoGoThroughTheSource() {
+        val source = FlakyMemoryDataSource(failures = 0)
+        val repository = MemoryRepository(dataSource = source)
+        kotlinx.coroutines.runBlocking { repository.load() }
+
+        val item = sampleMemories.first()
+        kotlinx.coroutines.runBlocking { repository.delete(item.id) }
+        assertEquals("delete must reach the source", 1, source.deleteCount)
+
+        kotlinx.coroutines.runBlocking { repository.add(item) }
+        assertEquals("undo's add must reach the source", 1, source.addCount)
+    }
+
+    // ------------------------------------------- drawer -> thread
+
+    @Test
+    fun theDrawerListsEveryChatWithItsOwnCube() {
+        launch()
+        openDrawer()
+
+        for (chat in CHATS) {
+            // One avatar per history row, so exactly one visible node per label.
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
+        }
+    }
+
+    @Test
+    fun theDrawerRowsDoNotShareACube() {
+        launch()
+        openDrawer()
+
+        val distinct = CHATS.map { it.cubeId }.toSet()
+        assertEquals("the seven rows must carry seven different cubes", 7, distinct.size)
+
+        for (chat in CHATS) {
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
+        }
+    }
+
+    @Test
+    fun tappingEachDrawerRowOpensThatChatWithTheSameCube() {
+        launch()
+
+        for (chat in CHATS) {
+            openChatFromDrawer(chat)
+
+            // ChatScreen is open…
+            assertVisible(CHAT_MARKER)
+
+            // …with the shared composer under the conversation, its hint naming
+            // THIS thread.
+            assertComposer(threadComposerHint(chat.title))
+
+            // …and it is drawing the SAME cube the row drew: once in the header,
+            // four times beside the messages.
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
+
+            // Back to Home for the next row — never a second setContent.
+            compose.onNodeWithContentDescription("Back").performClick()
+            compose.waitForIdle()
+            assertEquals("back must return to Home between rows", DuaGenAIRoutes.HOME, currentRoute())
+        }
+    }
+
+    @Test
+    fun theThreadDrawsTheChatsCubeInEveryBubble() {
+        launch()
+
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_market_research" })
+
+        // Header + all four bubbles carry cube_06. If any bubble had kept the
+        // user's saved cube, the bubble count would be short.
+        assertVisibleDescCount(avatarLabel("Market Research", "cube_06"), THREAD_HEADER_CUBES)
+        assertVisibleDescCount(bubbleLabel("Market Research", "cube_06"), THREAD_BUBBLE_CUBES)
+    }
+
+    @Test
+    fun theRouteCarriesTheChatIdAndTheTitle() {
+        launch()
+
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_david_park" })
+
+        assertEquals(
+            "the row must navigate to the chat route, not to a generic screen",
+            DuaGenAIRoutes.CHAT,
+            currentRoute(),
+        )
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals("chat_david_park", args?.getString("chatId"))
+        assertEquals("David Park", args?.getString("title"))
+    }
+
+    @Test
+    fun aTitleWithASeparatorSurvivesTheRoute() {
+        launch()
+
+        // "Design Team · 5" contains a middle dot and a space. Uri.encode must
+        // keep them intact or the title would arrive truncated.
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_design_team" })
+
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals("Design Team \u00b7 5", args?.getString("title"))
+        assertEquals("chat_design_team", args?.getString("chatId"))
+        assertVisibleDescCount(avatarLabel("Design Team \u00b7 5", "cube_08"), THREAD_HEADER_CUBES)
+    }
+
+    // ------------------------------------------------------------- back
+
+    @Test
+    fun theBackArrowReturnsToHome() {
+        launch()
+
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_slides_assistant" })
+        assertVisible(CHAT_MARKER)
+
+        // The TopAppBar's navigationIcon.
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitForIdle()
+
+        // Home is back: the thread's status line is gone and Dua's own composer
+        // is visible again.
+        assertNotVisible(CHAT_MARKER)
+        assertVisible(DUA_ASK_HINT)
+        assertEquals(
+            "back must pop the chat entry, leaving Home on top",
+            DuaGenAIRoutes.HOME,
+            currentRoute(),
+        )
+    }
+
+    @Test
+    fun systemBackAlsoReturnsToHome() {
+        launch()
+
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_family" })
+        assertVisible(CHAT_MARKER)
+
+        // NavHost installs a BackHandler; dispatch through the activity so the
+        // real system-back path is exercised, not just the toolbar button.
+        compose.runOnUiThread {
+            compose.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        compose.waitForIdle()
+
+        assertNotVisible(CHAT_MARKER)
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+    }
+
+    @Test
+    fun backFromEveryChatLandsOnHome() {
+        launch()
+
+        for (chat in CHATS) {
+            openChatFromDrawer(chat)
+            compose.onNodeWithContentDescription("Back").performClick()
+            compose.waitForIdle()
+
+            assertEquals(
+                "back from ${chat.chatId} must land on Home",
+                DuaGenAIRoutes.HOME,
+                currentRoute(),
+            )
+        }
+    }
+
+    // ------------------------------------------------- direct navigation
+
+    @Test
+    fun navigatingStraightToAChatRouteShowsThatChatsCube() {
+        launch()
+
+        // The same thing a deep link would do: no drawer row involved, so the
+        // cube can only come from the route argument.
+        for (chat in CHATS) {
+            compose.runOnUiThread {
+                navController.navigate(DuaGenAIRoutes.chat(chat.chatId, chat.title))
+            }
+            compose.waitForIdle()
+
+            assertVisible(CHAT_MARKER)
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
+
+            compose.runOnUiThread { navController.popBackStack() }
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun theChatCubeIsNotTheSavedCube() {
+        launch()
+
+        // CubeIds.DEFAULT is what CubeStore emits before anything is saved, and
+        // it is what the drawer footer and Profile draw. No chat may resolve to
+        // it, or "the thread shows the user's avatar" would be indistinguishable
+        // from correct behaviour.
+        for (chat in CHATS) {
+            assertTrue(
+                "${chat.chatId} must not resolve to the saved-cube default",
+                chat.cubeId != CubeIds.DEFAULT,
+            )
+            assertEquals(
+                "the hardcoded expectation must match the production mapping",
+                chat.cubeId,
+                CubeCatalog.forEntity(chat.chatId),
+            )
+        }
+    }
+
+    // ------------------------------------------------------- drawer chrome
+
+    @Test
+    fun theDrawerClosesOnItsCloseButton() {
+        launch()
+        openDrawer()
+        assertVisible("HISTORY")
+
+        // The drawer's own close X.
+        compose.onNodeWithContentDescription("Close menu").performClick()
+        compose.waitForIdle()
+
+        // Closed: the history section is off screen, Home's composer is back.
+        assertNotVisible("HISTORY")
+        assertVisible(DUA_ASK_HINT)
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+    }
+
+    @Test
+    fun theDrawerFooterShowsTheSavedCube() {
+        launch()
+        openDrawer()
+
+        // The footer avatar is the USER's saved cube — a different thing from a
+        // chat's cube, and the only place Home's shell draws it.
+        assertVisibleDescCount("Your avatar, ${CubeIds.label(CubeIds.DEFAULT)}", 1)
+    }
+
+    // ------------------------------------------------- drawer gear -> Profile
+
+    /**
+     * The drawer footer's gear opens PROFILE.
+     *
+     * The `profile` route and its `ProfileScreen` destination already existed;
+     * what was missing was a caller, so the screen was unreachable. The gear now
+     * navigates there through the same `navController.navigate(...)` every other
+     * destination uses — no new route, no new screen.
+     *
+     * The gear is found by its content description, which is "Profile" (it was
+     * "Settings" while it did nothing). That label is also what keeps this test
+     * honest: if the gear ever went back to a no-op, the click would leave the
+     * route on HOME and the assertion would fail.
+     */
+    @Test
+    fun theDrawerGearOpensTheProfileScreen() {
+        launch()
+        openDrawer()
+
+        // The gear is in the drawer footer, on screen while the sheet is open.
+        assertVisibleDescCount("Profile", 1)
+
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the drawer gear must open the existing profile route",
+            DuaGenAIRoutes.PROFILE,
+            currentRoute(),
+        )
+
+        // ProfileScreen is really on screen, not just the route: its own title
+        // and the "Change cube" row are the screen's markers.
+        assertVisible("Profile")
+        assertVisible("Change cube")
+    }
+
+    /**
+     * Back from Profile returns to the screen the drawer was opened from.
+     *
+     * The gear closes the drawer and pushes PROFILE, so the back stack is
+     * Home -> Profile and a pop lands on Home — the same behaviour every other
+     * drawer destination has.
+     */
+    @Test
+    fun backFromProfileReturnsToHome() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+
+        compose.runOnUiThread {
+            compose.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        compose.waitForIdle()
+
+        assertEquals(
+            "back from Profile must land on Home",
+            DuaGenAIRoutes.HOME,
+            currentRoute(),
+        )
+        // Home is really back: Dua's own composer is visible again.
+        assertVisible(DUA_ASK_HINT)
+    }
+
+    /**
+     * The gear is reachable from Orhan's home too, and still opens Profile.
+     *
+     * The drawer is a sibling of the NavHost, so it is the same sheet in both
+     * modes. This pins that the wiring is not Dua-only.
+     */
+    @Test
+    fun theDrawerGearOpensProfileFromOrhanModeToo() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        openDrawer()
+
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertVisible("Change cube")
+    }
+
+    // ------------------------------------------- Profile -> cube picker
+
+    /**
+     * "Change cube" on Profile opens the cube picker.
+     *
+     * The row is wired to [DuaGenAIRoutes.CUBE_PICKER] through the same
+     * `navController.navigate(...)` every other destination uses. The picker's
+     * own title and its Save/Cancel controls are the screen's markers.
+     */
+    @Test
+    fun theChangeCubeRowOpensTheCubePicker() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Change cube row must open the cube picker route",
+            DuaGenAIRoutes.CUBE_PICKER,
+            currentRoute(),
+        )
+        assertVisible(PICKER_HEADING)
+        assertVisible(PICKER_SAVE)
+        assertVisible(PICKER_CANCEL)
+    }
+
+    /**
+     * Cancel from the picker discards the draft and returns to Profile.
+     *
+     * The picker's Cancel writes nothing — it just pops back, so Profile keeps
+     * the previously saved cube. This is the "unsaved change discard" contract.
+     */
+    @Test
+    fun cancelFromThePickerReturnsToProfileWithoutSaving() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
+
+        compose.onNodeWithText(PICKER_CANCEL).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "Cancel must pop back to Profile without saving",
+            DuaGenAIRoutes.PROFILE,
+            currentRoute(),
+        )
+        assertVisible("Change cube")
+    }
+
+    /**
+     * Save from the picker persists the choice and returns to Profile.
+     *
+     * The picker's Save writes through CubeStore (the existing storage pattern)
+     * and then pops back, so Profile's header and the "Change cube" row both
+     * re-read the saved cube from the Flow and update on their own.
+     */
+    @Test
+    fun saveFromThePickerPersistsAndReturnsToProfile() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
+
+        // Pick a different cube, then Save.
+        compose.onNodeWithContentDescription("Cube 07").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(PICKER_SAVE).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "Save must pop back to Profile after persisting",
+            DuaGenAIRoutes.PROFILE,
+            currentRoute(),
+        )
+        // The saved cube is now Cube 07, so the header and the row agree.
+        assertVisibleDescCount("Your avatar, Cube 07", 1)
+        assertVisible("Avatar · Cube 07")
+    }
+
+    // ------------------------------------------- Profile -> settings rows
+
+    /**
+     * The Appearance row opens the Appearance screen.
+     *
+     * The row used to be inert (`SettingsRow("Appearance", "Night mode", ...)`
+     * with no `onClick`). It is now wired to [DuaGenAIRoutes.APPEARANCE] through
+     * the same `navController.navigate(...)` every other destination uses, and
+     * its subtitle is the CURRENT theme mode rather than a fixed string.
+     */
+    @Test
+    fun theAppearanceRowOpensTheAppearanceScreen() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+
+        compose.onNodeWithText("Appearance").performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Appearance row must open the appearance route",
+            DuaGenAIRoutes.APPEARANCE,
+            currentRoute(),
+        )
+        // The screen itself: its title and all three choices.
+        assertVisible(APPEARANCE_HEADING)
+        for (choice in THEME_CHOICES) assertVisible(choice)
+    }
+
+    /**
+     * Choosing a theme persists it and the Profile row's subtitle follows.
+     *
+     * The choice is written through SettingsStore (the existing DataStore
+     * pattern), the Flow re-emits, and the Profile row re-reads it — so the
+     * row's subtitle changes from "System default" to "Dark" on its own.
+     */
+    @Test
+    fun choosingAThemePersistsAndUpdatesTheProfileRow() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        // The row starts on the default.
+        assertVisible("System default")
+
+        compose.onNodeWithText("Appearance").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.APPEARANCE, currentRoute())
+
+        compose.onNodeWithText("Dark").performClick()
+        compose.waitForIdle()
+
+        // Back to Profile: the row's subtitle is now the saved mode.
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertVisible("Dark")
+    }
+
+    /**
+     * The Storage row opens the Storage screen, and Clear cache asks first.
+     *
+     * The row is wired to [DuaGenAIRoutes.STORAGE]; the screen shows the usage
+     * and a Clear-cache action that opens a confirmation dialog before it
+     * writes anything — the destructive-action guard.
+     */
+    @Test
+    fun theStorageRowOpensTheStorageScreenAndClearCacheConfirms() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Storage").performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Storage row must open the storage route",
+            DuaGenAIRoutes.STORAGE,
+            currentRoute(),
+        )
+        assertVisible(STORAGE_HEADING)
+        assertVisible(CLEAR_CACHE)
+
+        // Tapping Clear cache opens the confirmation, not a silent wipe.
+        compose.onNodeWithText(CLEAR_CACHE).performClick()
+        compose.waitForIdle()
+        assertVisible("Clear cache?")
+        assertVisible(CLEAR_CACHE_CONFIRM)
+    }
+
+    /**
+     * The Notifications row opens the Notifications screen with its switches.
+     *
+     * The row is wired to [DuaGenAIRoutes.NOTIFICATIONS]; the screen lists the
+     * three switches and its summary line is derived from the same map.
+     */
+    @Test
+    fun theNotificationsRowOpensTheNotificationsScreen() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Notifications").performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the Notifications row must open the notifications route",
+            DuaGenAIRoutes.NOTIFICATIONS,
+            currentRoute(),
+        )
+        assertVisible(NOTIFICATIONS_HEADING)
+        for (switch in NOTIFICATION_SWITCHES) assertVisible(switch)
+    }
+
+    // ------------------------------------------- cube picker search + filter
+
+    /**
+     * The picker's search field filters the grid live.
+     *
+     * Typing a cube's number narrows the grid to it, so a cube that was on
+     * screen before the query is gone after it — the assertion that the
+     * filter actually ran rather than the field being decorative.
+     */
+    @Test
+    fun thePickerSearchFiltersTheGrid() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
+
+        // The search field and the chips are there.
+        assertVisible(PICKER_SEARCH_HINT)
+        for (cat in PICKER_CATEGORIES) assertVisible(cat)
+
+        // Type a query that matches exactly one cube.
+        compose.onNode(hasSetTextAction()).performTextInput("07")
+        compose.waitForIdle()
+
+        // Cube 07 is on screen; a cube the query excludes is not.
+        assertVisible("Cube 07")
+        assertNotVisible("Cube 08")
+    }
+
+    /**
+     * A query that matches nothing shows the no-results state with a clear.
+     *
+     * The state is the picker's own fallback, and its Clear filters action is
+     * the one-tap way back to the full grid.
+     */
+    @Test
+    fun thePickerShowsNoResultsForAnUnmatchedQuery() {
+        launch()
+        openDrawer()
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Change cube").performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasSetTextAction()).performTextInput("zzz")
+        compose.waitForIdle()
+
+        assertVisible(PICKER_NO_RESULTS)
+        assertVisible(PICKER_CLEAR_FILTERS)
+        // No cube is shown while nothing matches.
+        assertNotVisible("Cube 01")
+    }
+
+    // ------------------------------------------------- Orhan's own thread
+
+    /**
+     * The pinned Orhan card opens ORHAN'S OWN conversation.
+     *
+     * Orhan is an agent, so it has a thread of its own, and it goes through the
+     * SAME `chat/{chatId}` route every other conversation uses \u2014 with Orhan's
+     * own stable id. No new route was invented for it.
+     *
+     * The card is found by its ROLE LINE, not by the text "Orhan": that word is
+     * also the mode toggle's label, so clicking it would switch modes instead of
+     * opening the thread.
+     */
+    @Test
+    fun tappingThePinnedOrhanCardOpensOrhansOwnThread() {
+        launch()
+        switchTo(HomeMode.Orhan)
+
+        // The card is on Orhan's home, under the search row.
+        assertVisible(ORHAN_ROLE_LINE)
+
+        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "the pinned card must open the chat route, not a new screen",
+            DuaGenAIRoutes.CHAT,
+            currentRoute(),
+        )
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals(ORHAN_CHAT_ID, args?.getString("chatId"))
+        assertEquals(ORHAN_CHAT_TITLE, args?.getString("title"))
+    }
+
+    /**
+     * Orhan's thread shows the conversation AND the composer.
+     *
+     * The pain area holds Orhan's and the user's messages, and the shared
+     * `DuaComposer` pill sits under them so the thread is usable. Both halves are
+     * asserted, because "the composer is there" is only meaningful if the
+     * conversation it belongs to is still there.
+     */
+    @Test
+    fun orhansThreadShowsTheConversationAndTheComposer() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        compose.waitForIdle()
+
+        // The thread is open\u2026
+        assertVisible(CHAT_MARKER)
+
+        // \u2026it is Orhan's, so its top bar carries Orhan's name\u2026
+        assertVisible(ORHAN_CHAT_TITLE)
+
+        // \u2026and the pain area holds both sides of the conversation. These are
+        // distinctive fragments of the first user line and the first agent line
+        // of `orhanThread`.
+        assertVisibleSubstring("I need the Q3 launch handled")
+        assertVisibleSubstring("I've split that across three agents")
+
+        // The composer is there, and its hint names Orhan.
+        assertComposer(ORHAN_COMPOSER_HINT)
+    }
+
+    /**
+     * The composer is LIVE: typing and sending adds the user's message to the
+     * thread, clears the field, and Orhan replies.
+     *
+     * This is the behaviour a static pill could not have. The message is typed
+     * into the composer's own field and sent through its own send control, then
+     * asserted in the pain area \u2014 the same path a user takes.
+     */
+    @Test
+    fun sendingAMessageAddsItToTheThreadAndOrhanReplies() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        compose.waitForIdle()
+
+        // Type into the composer's field and send.
+        compose.onNode(hasSetTextAction()).performTextInput("Book the venue for the launch")
+        compose.onNodeWithContentDescription("Send message").performClick()
+        compose.waitForIdle()
+
+        // The user's message is in the thread\u2026
+        assertVisibleSubstring("Book the venue for the launch")
+
+        // \u2026the field is cleared, so the hint is showing again\u2026
+        assertVisible(ORHAN_COMPOSER_HINT)
+
+        // \u2026and Orhan replies after the typing beat. The reply is a canned
+        // string, so this waits for it rather than asserting it instantly.
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
+        }
+        assertVisibleSubstring("I've picked that up")
+    }
+
+    /** Back from Orhan's thread lands on Orhan's home, not on Dua's. */
+    @Test
+    fun backFromOrhansThreadReturnsToOrhansHome() {
+        launch()
+        switchTo(HomeMode.Orhan)
+        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        compose.waitForIdle()
+        assertVisible(CHAT_MARKER)
+
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        // Orhan's home, not Dua's: the agent surface is back and the Dua pill is
+        // not. The mode is hoisted in the host, so it survives the round trip.
+        assertVisible("AGENTS \u00b7 3")
+        assertNotVisible(DUA_ASK_HINT)
+    }
+
+    // ------------------------------------------- shared HTTP client
+
+    /**
+     * The shared client returns the body on success and reports the call.
+     *
+     * This is the transport both remote sources sit on, so its contract is
+     * pinned here once rather than twice.
+     */
+    @Test
+    fun theSharedHttpClientReturnsTheBodyOnSuccess() {
+        val transport = RecordingTransport(response = """[{"id":"x"}]""")
+        val client = JsonHttpClient(transport = transport, label = "Artifacts request")
+
+        val body = client.request("GET", "https://api.example/v1/artifacts")
+
+        assertEquals("the body must pass through", """[{"id":"x"}]""", body)
+        assertEquals("one call must reach the transport", 1, transport.calls.size)
+        assertEquals("GET", transport.calls[0].first)
+        assertEquals("https://api.example/v1/artifacts", transport.calls[0].second)
+    }
+
+    /**
+     * A non-2xx status becomes a labelled failure.
+     *
+     * The label is what keeps the shared client honest: even though the
+     * mechanics are one implementation, an error still says which feature
+     * failed.
+     */
+    @Test
+    fun theSharedHttpClientLabelsAStatusFailure() {
+        val transport = RecordingTransport(failWith = 500)
+        val client = JsonHttpClient(transport = transport, label = "Memory request")
+
+        val error = runCatching { client.request("GET", "https://api.example/v1/memories") }
+            .exceptionOrNull()
+
+        assertTrue("a non-2xx must throw", error is IllegalStateException)
+        assertEquals(
+            "the failure must carry the feature label",
+            "Memory request failed: HTTP 500",
+            error?.message,
+        )
+    }
+
+    /**
+     * The remote Artifacts source parses through the shared client.
+     *
+     * The transport is faked, so this proves the source's own half — the
+     * endpoint and the JSON shape — while the request mechanics come from
+     * [JsonHttpClient].
+     */
+    @Test
+    fun theRemoteArtifactsSourceParsesThroughTheSharedClient() {
+        val json = """
+            [{"id":"art_1","title":"Q3 Launch Deck","type":"Webpage",
+              "timestamp":"Aaj","sizeBytes":2411724,
+              "url":"https://static.teamily.ai/sites/demo/q3/index.html"},
+             {"id":"art_2","title":"Meeting Notes","type":"Document",
+              "timestamp":"Aaj","sizeBytes":1024}]
+        """.trimIndent()
+        val transport = RecordingTransport(response = json)
+        val source = RemoteArtifactsDataSource(
+            baseUrl = "https://api.example/v1/artifacts",
+            client = JsonHttpClient(transport = transport, label = "Artifacts request"),
+        )
+
+        val items = kotlinx.coroutines.runBlocking { source.fetch() }
+
+        assertEquals("both entries must parse", 2, items.size)
+        assertEquals("Q3 Launch Deck", items[0].title)
+        assertEquals(2_411_724L, items[0].sizeBytes)
+        assertEquals(
+            "a present url must survive",
+            "https://static.teamily.ai/sites/demo/q3/index.html",
+            items[0].url,
+        )
+        assertTrue("an absent url must be null, not blank", items[1].url == null)
+        assertEquals("GET", transport.calls[0].first)
+        assertEquals("https://api.example/v1/artifacts", transport.calls[0].second)
+    }
+
+    /**
+     * The remote Memory source parses through the same shared client.
+     *
+     * Same shape as the Artifacts test above, which is the point: the two
+     * sources differ only in their endpoint and their JSON, never in how the
+     * request is made.
+     */
+    @Test
+    fun theRemoteMemorySourceParsesThroughTheSharedClient() {
+        val json = """
+            [{"id":"mem_1","title":"Brand green is #087C45","summary":"Prefers green.",
+              "timestamp":"4 din pehle","category":"Preference"},
+             {"id":"mem_2","title":"Q3 launch","summary":"Current priority.",
+              "timestamp":"2 din pehle","category":"Project",
+              "url":"https://static.teamily.ai/sites/demo/q3/index.html"}]
+        """.trimIndent()
+        val transport = RecordingTransport(response = json)
+        val source = RemoteMemoryDataSource(
+            baseUrl = "https://api.example/v1/memories",
+            client = JsonHttpClient(transport = transport, label = "Memory request"),
+        )
+
+        val items = kotlinx.coroutines.runBlocking { source.fetch() }
+
+        assertEquals("both entries must parse", 2, items.size)
+        assertEquals("Preference", items[0].category)
+        assertTrue("a blank url must be null", items[0].url == null)
+        assertEquals(
+            "a present url must survive",
+            "https://static.teamily.ai/sites/demo/q3/index.html",
+            items[1].url,
+        )
+        assertEquals("GET", transport.calls[0].first)
+        assertEquals("https://api.example/v1/memories", transport.calls[0].second)
+    }
+
+    /**
+     * Both remote sources route through ONE shared client implementation.
+     *
+     * A single transport instance is handed to both sources; if either still
+     * carried its own request code, its call would not appear here.
+     */
+    @Test
+    fun bothRemoteSourcesShareOneClientImplementation() {
+        val transport = RecordingTransport(response = "[]")
+        val client = JsonHttpClient(transport = transport, label = "Request")
+
+        val artifacts = RemoteArtifactsDataSource(
+            baseUrl = "https://api.example/v1/artifacts",
+            client = client,
+        )
+        val memories = RemoteMemoryDataSource(
+            baseUrl = "https://api.example/v1/memories",
+            client = client,
+        )
+
+        kotlinx.coroutines.runBlocking {
+            artifacts.fetch()
+            memories.fetch()
+        }
+
+        assertEquals("both sources must go through the one client", 2, transport.calls.size)
+        assertEquals("https://api.example/v1/artifacts", transport.calls[0].second)
+        assertEquals("https://api.example/v1/memories", transport.calls[1].second)
+    }
+
+    // ------------------------------------------- shared repository base class
+
+    /**
+     * Both repositories ARE the shared base class.
+     *
+     * The refactor's whole point: Artifacts and Memory no longer each carry
+     * their own load / refresh / add / delete — they inherit ONE engine. If
+     * either stopped extending [BaseRemoteRepository], this fails.
+     */
+    @Test
+    fun bothRepositoriesShareTheBaseClass() {
+        assertTrue(
+            "ArtifactsRepository must extend the shared base",
+            ArtifactsRepository(loadDelayMs = 0) is BaseRemoteRepository<*, *>,
+        )
+        assertTrue(
+            "MemoryRepository must extend the shared base",
+            MemoryRepository(loadDelayMs = 0) is BaseRemoteRepository<*, *>,
+        )
+    }
+
+    /**
+     * The base class drives load / refresh / add / delete for a repository.
+     *
+     * Exercised through the Artifacts repository (the Memory twin is covered by
+     * the existing source tests): load reaches the source, refresh re-runs it
+     * WITHOUT blanking the list, add prepends through the source, and delete
+     * removes through the source — all inherited, none re-implemented.
+     */
+    @Test
+    fun theBaseClassDrivesLoadRefreshAddAndDelete() {
+        val source = FlakyArtifactsDataSource(failures = 0)
+        val repository = ArtifactsRepository(dataSource = source)
+
+        kotlinx.coroutines.runBlocking { repository.load() }
+        val loaded = repository.state.value as ArtifactsUiState.Loaded
+        assertEquals("load must come from the source", demoArtifacts.size, loaded.artifacts.size)
+
+        // refresh re-runs load() and keeps the list on screen.
+        val before = repository.loadCount
+        kotlinx.coroutines.runBlocking { repository.refresh() }
+        assertTrue("refresh must re-run load()", repository.loadCount > before)
+        assertTrue(
+            "refresh must not blank the list",
+            repository.state.value is ArtifactsUiState.Loaded,
+        )
+
+        // add prepends through the source.
+        val fresh = ArtifactItem(
+            id = "art_new",
+            title = "Fresh",
+            type = "Image",
+            timestamp = "Aaj",
+            sizeBytes = 1L,
+        )
+        kotlinx.coroutines.runBlocking { repository.add(fresh) }
+        val afterAdd = repository.state.value as ArtifactsUiState.Loaded
+        assertEquals("add must prepend", "art_new", afterAdd.artifacts.first().id)
+
+        // delete removes through the source.
+        kotlinx.coroutines.runBlocking { repository.delete("art_new") }
+        val afterDelete = repository.state.value as ArtifactsUiState.Loaded
+        assertTrue(
+            "delete must remove the item",
+            afterDelete.artifacts.none { it.id == "art_new" },
+        )
+    }
+
+    /**
+     * Both remote sources default to the ONE shared client instance.
+     *
+     * The client is a property of the app, not of a feature: constructing the
+     * two sources with no explicit client must hand both the SAME
+     * [HttpClientProvider.client] — one connection pool, one config.
+     */
+    @Test
+    fun bothRemoteSourcesDefaultToTheOneSharedClient() {
+        val artifacts = RemoteArtifactsDataSource()
+        val memories = RemoteMemoryDataSource()
+
+        assertTrue(
+            "the Artifacts source must default to the shared client",
+            artifacts.client === HttpClientProvider.client,
+        )
+        assertTrue(
+            "the Memory source must default to the shared client",
+            memories.client === HttpClientProvider.client,
+        )
+        assertTrue(
+            "both sources must share ONE client instance",
+            artifacts.client === memories.client,
+        )
+    }
+
+    /**
+     * The shared client is still injectable.
+     *
+     * A test (or a caller with a bespoke transport) can pass its own client; the
+     * default is the shared one, but the parameter is not sealed off.
+     */
+    @Test
+    fun theSharedClientIsStillInjectable() {
+        val transport = RecordingTransport(response = "[]")
+        val custom = JsonHttpClient(transport = transport, label = "Custom")
+        val source = RemoteArtifactsDataSource(
+            baseUrl = "https://api.example/v1/artifacts",
+            client = custom,
+        )
+
+        assertTrue("an injected client must be used", source.client === custom)
+        assertTrue(
+            "an injected client must not be the shared one",
+            source.client !== HttpClientProvider.client,
+        )
+    }
+
+    // ------------------------------------------------------------- labels
+
+    /**
+     * These mirror the exact strings the screens pass to CubeAvatar. They are
+     * duplicated here on purpose: if a screen changes its label, the test must
+     * fail rather than silently keep matching.
+     */
+
+    /** Drawer history row and Chat header: `"<name> avatar, Cube NN"`. */
+    private fun avatarLabel(title: String, cubeId: String) =
+        "$title avatar, ${CubeIds.label(cubeId)}"
+
+    /** Chat message bubbles: `"<name>, Cube NN"`. */
+    private fun bubbleLabel(title: String, cubeId: String) =
+        "$title, ${CubeIds.label(cubeId)}"
+
+    /**
+     * The composer hint a thread shows: `ChatScreen` passes
+     * `"Message $chatTitle\u2026"`, so this mirrors that expression.
+     *
+     * Duplicated on purpose, like the two label helpers above: if the screen
+     * changes its hint, the test must fail rather than silently keep matching.
+     */
+    private fun threadComposerHint(title: String) = "Message $title\u2026"
+}
