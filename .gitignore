@@ -1,0 +1,62 @@
+# ============================================================
+# Teamily AI Android UI design package (v36)
+# Android + Kotlin + Gradle standard ignores.
+#
+# NOTE: The actual design deliverables MUST stay tracked:
+#   documents/teamily-m3-design_v36/**   (Kotlin Compose sources)
+#   webpages/teamily-m3-design_v36/**    (index.html, fonts/, icons/)
+# Nothing below matches those paths — only build output, caches,
+# IDE state, signing material, logs and secrets are ignored.
+# ============================================================
+
+# ---------- Gradle ----------
+.gradle/
+build/
+local.properties
+*.iml
+
+# ---------- Android Studio / IntelliJ ----------
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+.kotlin/
+
+# ---------- Build outputs ----------
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+
+# ---------- Signing / secrets ----------
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+
+# ---------- Logs ----------
+*.log
+
+# ---------- Env / secrets ----------
+.env
+.env.*
+
+# ---------- Node (webpages tooling only) ----------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- Misc ----------
+*.swp
+*~
