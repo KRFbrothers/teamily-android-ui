@@ -25,10 +25,12 @@ Dua Gen AI — ek complete package: Dua AI, Dua Agent aur Dua Workspace.
 ## What's in here
 
 ```
-documents/M3-design_v01/     ← Kotlin (Jetpack Compose) sources, 20 files
-webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
+documents/M3-design_v01/     ← Kotlin (Jetpack Compose) sources, 24 files
+    res/font/                        ← official Lato Regular / Bold (ttf, SIL OFL)
+    licenses/lato-OFL.txt            ← Lato license
+webpages/M3-design_v01/      ← Interactive HTML preview + assets
     index.html                       ← the whole preview in one file
-    fonts/                           ← Lato 400 / 700 / 900 (woff2, local)
+    fonts/                           ← Lato 400 / 700 (woff2, from the same official files)
     icons/                           ← cube_01.svg … cube_42.svg
 ```
 
@@ -56,6 +58,8 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
 | `UrlOpener.kt` | Shared URL-opening helper |
 | `TouchTargets.kt` | 48dp minimum touch-target helper |
 | `TeamilyTokens.kt` | Forest-slate glass palette (light/dark) and card / composer / dock shapes |
+| `TeamilyTypography.kt` | Teamily type scale; pass `teamilyTypography(LatoFontFamily)` once the app loads `res/font/` |
+| `TeamilyEffects.kt` | Shadows, glass blur, press scale, and motion |
 | `SettingsStore.kt` | Settings persistence |
 | `DuaGenAINavHostTest.kt` | Compose UI test suite for the nav host and screens |
 
