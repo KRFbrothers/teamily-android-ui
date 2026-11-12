@@ -1,6 +1,6 @@
-# Teamily AI — Android UI Design Package (v36)
+# Dua Gen AI — Android UI Design Package (v01)
 
-This repository is the **UI design package for the Teamily AI Android app**, version **v36**.
+This repository is the **UI design package for the Dua Gen AI Android app**, version **v01**.
 It contains the Material 3 (M3) design implementation as Jetpack Compose Kotlin sources plus a
 self-contained interactive HTML preview of the same screens.
 
@@ -13,14 +13,14 @@ file is a pixel-accurate, clickable preview of the same UI.
 ## What's in here
 
 ```
-documents/teamily-m3-design_v36/     ← Kotlin (Jetpack Compose) sources, 20 files
-webpages/teamily-m3-design_v36/      ← Interactive HTML preview + assets, 46 files
+documents/M3-design_v01/     ← Kotlin (Jetpack Compose) sources, 20 files
+webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
     index.html                       ← the whole preview in one file
     fonts/                           ← Lato 400 / 700 / 900 (woff2, local)
     icons/                           ← cube_01.svg … cube_42.svg
 ```
 
-### `documents/teamily-m3-design_v36/` — Kotlin sources
+### `documents/M3-design_v01/` — Kotlin sources
 
 | File | What it is |
 |---|---|
@@ -45,7 +45,7 @@ webpages/teamily-m3-design_v36/      ← Interactive HTML preview + assets, 46 f
 | `SettingsStore.kt` | Settings persistence |
 | `DuaGenAINavHostTest.kt` | Compose UI test suite for the nav host and screens |
 
-### `webpages/teamily-m3-design_v36/` — HTML preview
+### `webpages/M3-design_v01/` — HTML preview
 
 `index.html` is a single self-contained page that renders every screen as a phone mock, in
 **light and dark** mode side by side. It is interactive: buttons, dialogs, snackbars, swipe
@@ -57,11 +57,11 @@ gestures, long-press menus and tooltips all work in the browser.
 
 **The HTML preview (easiest):**
 
-1. Open `webpages/teamily-m3-design_v36/index.html` in any modern browser — no server, no build
+1. Open `webpages/M3-design_v01/index.html` in any modern browser — no server, no build
    step, no network needed (fonts and icons are local).
 2. Or serve it locally:
    ```bash
-   cd webpages/teamily-m3-design_v36
+   cd webpages/M3-design_v01
    python3 -m http.server 8000
    # then open http://localhost:8000/
    ```
@@ -89,4 +89,4 @@ they are meant to be dropped into a Compose app that provides an M3 theme.
 
 ## Version
 
-**v36** — the latest iteration of the design package.
+**v01** — the latest iteration of the design package.

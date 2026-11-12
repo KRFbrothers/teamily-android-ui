@@ -1,10 +1,10 @@
 # ============================================================
-# Teamily AI Android UI design package (v36)
+# Teamily AI Android UI design package (v01)
 # Android + Kotlin + Gradle standard ignores.
 #
 # NOTE: The actual design deliverables MUST stay tracked:
-#   documents/teamily-m3-design_v36/**   (Kotlin Compose sources)
-#   webpages/teamily-m3-design_v36/**    (index.html, fonts/, icons/)
+#   documents/M3-design_v01/**   (Kotlin Compose sources)
+#   webpages/M3-design_v01/**    (index.html, fonts/, icons/)
 # Nothing below matches those paths — only build output, caches,
 # IDE state, signing material, logs and secrets are ignored.
 # ============================================================
