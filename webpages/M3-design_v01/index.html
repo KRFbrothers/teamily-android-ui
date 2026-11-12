@@ -131,7 +131,7 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
   --danger-soft:#f7dcd9;--danger-ink:#a4271e;
   --user-bubble:#087c45;--user-ink:#ffffff;--agent-bubble:#ffffff;--agent-ink:#182b23;
   --field:#eef2ef;--field-edge:#d7e2db;--nav-bg:rgba(255,255,255,.94);
-  --grad:linear-gradient(180deg,#0b8249 0%,#087c45 100%);
+  --grad:linear-gradient(180deg,#118a51 0%,#087c45 100%);
   background:var(--canvas);color:var(--ink);
 }
 .phone.dark{
@@ -1058,8 +1058,8 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
    CSS-only layer on top of the preview above: atmosphere glow, frosted glass
    on the drawer / dialogs / sheets / floating tab dock / composer, 32px
    composer capsule with a focus halo, hover lift on interactive cards, and
-   the Fira Code stack for code. No markup, copy or JS hooks change.
-   Token values follow ui_polish_complete.md §1.1 exactly; the card / nav /
+   the system monospace stack for code. No markup, copy or JS hooks change.
+   Token values follow the Teamily 1:1 match spec (--nv-* of teamily.zip); the card / nav /
    plus / bubble tokens mirror TeamilyTokens.kt so the preview and the
    Compose screens agree.
    ========================================================================== */
@@ -1068,22 +1068,23 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 :root,:root[data-theme='light']{
   --nv-canvas:#eef2ef;
   --nv-atmosphere-deep:#e8f3ec;
-  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,var(--nv-atmosphere-deep) 0,transparent 52%),#fafbfa;
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,var(--nv-atmosphere-deep) 0,transparent 55%),#ffffff;
   --nv-pane:#ffffffbd;
   --nv-pane-edge:#2847350f;
   --nv-glass:#f0f5f394;
   --nv-glass-blur:36px;
   --nv-glass-filter:blur(var(--nv-glass-blur)) saturate(1.15);
   --nv-glass-highlight:inset 0 1px 2px #ffffff59,inset 0 -1px 2px #ffffff1a;
-  --nv-user-bubble:#dde6e0;
-  --nv-agent-bubble:#ffffff;
+  --nv-user-bubble:#ddf3e5;
+  --nv-agent-bubble:#f0f2f0;
   --nv-shadow-resting:0 1px 2px #2847350a,0 6px 18px -10px #2847351f;
   --nv-shadow-floating:0 0 0 .5px #2847351a,0 1px 2px #2847350d,0 12px 32px -14px #28473530;
   --nv-card-hover-shadow:0 2px 4px #28473512,0 20px 44px -14px #28473540;
-  --nv-primary-fill:linear-gradient(180deg,#0b8249 0%,#087c45 100%);
+  --nv-primary-fill:linear-gradient(180deg,#118a51 0%,#087c45 100%);
   --nv-focus-outline:2px solid #087c45;
   --nv-focus-halo:0 0 0 3px #087c4533;
-  --nv-radius-3xl:32px;
+  --nv-radius-xs:8px;--nv-radius-md:12px;--nv-radius-lg:16px;--nv-radius-xl:20px;
+  --nv-radius-2xl:24px;--nv-radius-3xl:32px;--nv-radius-pill:999px;
   --nv-ease:cubic-bezier(.4,.1,.2,1);
 }
 :root[data-theme='dark']{
@@ -1097,12 +1098,12 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
   --nv-glass-filter:blur(var(--nv-glass-blur)) saturate(1.3);
   --nv-glass-surface:linear-gradient(180deg,#29322ccc,#1d2520ad);
   --nv-glass-highlight:inset 0 1px 2px #dbe5dd1c,inset 0 -1px 2px #0005;
-  --nv-user-bubble:#253d31;
+  --nv-user-bubble:#505752;
   --nv-agent-bubble:#303433;
   --nv-shadow-resting:0 1px 2px #0005,0 7px 14px -7px #0008;
   --nv-shadow-floating:0 1px 2px #0006,0 10px 22px -9px #000b;
   --nv-card-hover-shadow:0 1px 2px #0007,0 13px 25px -9px #000c;
-  --nv-primary-fill:linear-gradient(180deg,#0b8249 0%,#087c45 100%);
+  --nv-primary-fill:linear-gradient(180deg,#118a51 0%,#087c45 100%);
   --nv-focus-outline:2px solid #d9e1da;
   --nv-focus-halo:0 0 0 3px #b8c3ba55;
 }
@@ -1110,41 +1111,49 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 /* Phone frames carry their OWN light/dark (a light and a dark phone sit side
    by side), so the same §1.1 values are re-scoped per frame. */
 .phone{
-  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#e8f3ec 0,transparent 52%),#fafbfa;
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#e8f3ec 0,transparent 55%),#ffffff;
   --nv-pane:#ffffffbd;--nv-pane-edge:#2847350f;
   --nv-glass-filter:blur(36px) saturate(1.15);
   --nv-glass-highlight:inset 0 1px 2px #ffffff59,inset 0 -1px 2px #ffffff1a;
-  --nv-user-bubble:#dde6e0;--nv-agent-bubble:#ffffff;
+  --nv-user-bubble:#ddf3e5;--nv-agent-bubble:#f0f2f0;
   --nv-shadow-resting:0 1px 2px #2847350a,0 6px 18px -10px #2847351f;
   --nv-shadow-floating:0 0 0 .5px #2847351a,0 1px 2px #2847350d,0 12px 32px -14px #28473530;
   --nv-card-hover-shadow:0 2px 4px #28473512,0 20px 44px -14px #28473540;
   --nv-focus-halo:0 0 0 3px #087c4533;
   /* TeamilyLightPalette mirrors (TeamilyTokens.kt) */
-  --tm-solid:#fafbfa;
+  --tm-solid:#ffffff;
   --tm-card-hero:#ddf3e5;
   --tm-card-grad:linear-gradient(180deg,#fafcfbbd,#f0f5f394);
-  --tm-border-grad:linear-gradient(145deg,#ffffff,#e8ede9,#cfd9d2);
-  --tm-border:#e1e7e2;
+  --tm-surface-grad:linear-gradient(180deg,#ffffffb8,#f7fbf98a,#ecf3ef7a);
+  --tm-border-grad:linear-gradient(145deg,#ffffffcc,#e8ede9,#28473514);
+  --tm-border:#dde6e0;--tm-border-strong:#c9d5cd;
+  --tm-composer-bg:#eef2ef;
+  --tm-bubble-user-ink:#182b23;--tm-bubble-agent-ink:#182b23;
+  --tm-primary-glow:0 4px 10px #087c4566,0 0 10px #06482a33;
   --tm-nav-selected:#ddf3e5;--tm-nav-selected-ink:#066a3b;
   --tm-plus-fill:#0a8048;--tm-plus-icon:#ffffff;
   --tm-send-ink:#ffffff;
 }
 .phone.dark{
-  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#242b27 0,transparent 48%),#171c19;
+  --nv-atmosphere:linear-gradient(180deg,#1e2522 0%,#1d2220 50%,#171c19 100%);
   --nv-pane:#1f2521eb;--nv-pane-edge:#aebbb133;
   --nv-glass-filter:blur(36px) saturate(1.3);
   --nv-glass-highlight:inset 0 1px 2px #dbe5dd1c,inset 0 -1px 2px #0005;
-  --nv-user-bubble:#253d31;--nv-agent-bubble:#303433;
+  --nv-user-bubble:#505752;--nv-agent-bubble:#303433;
   --nv-shadow-resting:0 1px 2px #0005,0 7px 14px -7px #0008;
   --nv-shadow-floating:0 1px 2px #0006,0 10px 22px -9px #000b;
   --nv-card-hover-shadow:0 1px 2px #0007,0 13px 25px -9px #000c;
   --nv-focus-halo:0 0 0 3px #b8c3ba55;
   /* TeamilyDarkPalette mirrors (TeamilyTokens.kt) */
-  --tm-solid:#171c19;
+  --tm-solid:#1d2220;
   --tm-card-hero:#253d31;
   --tm-card-grad:linear-gradient(180deg,#29322ccc,#1d2520ad);
-  --tm-border-grad:linear-gradient(145deg,#aebbb15c,#4c564f);
-  --tm-border:#323b36;
+  --tm-surface-grad:linear-gradient(180deg,#2f3932bd,#232c26a3,#1b231e94);
+  --tm-border-grad:linear-gradient(145deg,#d1dad338,#4c564f);
+  --tm-border:#d1dad338;
+  --tm-composer-bg:#29322c;
+  --tm-bubble-user-ink:#ffffff;--tm-bubble-agent-ink:#eaf0ec;
+  --tm-primary-glow:none;
   --tm-nav-selected:#545b56;--tm-nav-selected-ink:#f7f9f7;
   --tm-plus-fill:#cbe7d2;--tm-plus-icon:#17201b;
   --tm-send-ink:#ecffef;
@@ -1154,7 +1163,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 body{font-family:"Lato",system-ui,-apple-system,sans-serif}
 .phone{font-family:"Lato",system-ui,-apple-system,sans-serif}
 pre,code,kbd,samp,pre code,td code,th code,ul.clean code{
-  font-family:"Fira Code",ui-monospace,SFMono-Regular,monospace
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace
 }
 
 /* 1.2.1 — atmosphere: the page and every phone canvas get the radial glow.
@@ -1185,18 +1194,19 @@ body{background:var(--nv-atmosphere);background-attachment:fixed}
 .ask-pill,.phone.dark .ask-pill{
   backdrop-filter:var(--nv-glass-filter);
   -webkit-backdrop-filter:var(--nv-glass-filter);
-  background:var(--nv-pane);
+  background:var(--tm-composer-bg);
   border-color:var(--nv-pane-edge);
-  border-radius:var(--nv-radius-3xl,32px);
+  border-radius:28px;
   box-shadow:var(--nv-shadow-floating),var(--nv-glass-highlight);
   transition:box-shadow .24s cubic-bezier(.4,.1,.2,1);
 }
 .ask-pill:focus-within,.phone.dark .ask-pill:focus-within{
   box-shadow:var(--nv-focus-halo),var(--nv-shadow-floating);
 }
-/* Send: brandGradient with a light glyph, mirroring SendButton in Compose. */
+/* Send: brandGradient with a light glyph, mirroring SendButton in Compose.
+   Light mode adds the primary green glow (--tm-primary-glow is none in dark). */
 .svbtn .svdisc,
-html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);color:var(--tm-send-ink)}
+html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);color:var(--tm-send-ink);box-shadow:var(--tm-primary-glow)}
 
 /* Header "+" (New chat) — plusFill / plusIcon. Still 48px. */
 .cb[aria-label="New chat"]{background:var(--tm-plus-fill);color:var(--tm-plus-icon)}
@@ -1224,8 +1234,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 }
 
 /* Chat bubbles — §1.1 bubble tokens; user 20px all round, agent + 1px border */
-.msg.user .bub{background:var(--nv-user-bubble);color:var(--ink);border-radius:20px}
-.msg.agent .bub{background:var(--nv-agent-bubble);color:var(--agent-ink);border:1px solid var(--tm-border)}
+.msg.user .bub{background:var(--nv-user-bubble);color:var(--tm-bubble-user-ink);border-radius:20px}
+.msg.agent .bub{background:var(--nv-agent-bubble);color:var(--tm-bubble-agent-ink);border:1px solid var(--tm-border)}
 .typing i{background:var(--agent-ink)}
 
 /* 1.2.4 — hover lift on interactive cards (desktop pointer only). Swipe rows
@@ -1241,11 +1251,39 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     transform:translateY(-4px);box-shadow:var(--nv-card-hover-shadow);
   }
 }
+/* Press/tap lift (spec §8): scale 0.98 on the pinned Agent card and the
+   primary green Send disc, mirroring teamilyPressScale in Compose. */
+.svbtn .svdisc{transition:transform .24s cubic-bezier(.4,.1,.2,1)}
+.pincard:active{transform:scale(.98)}
+.svbtn:active .svdisc{transform:scale(.98)}
 @media (prefers-reduced-motion:reduce){
-  .row,.pincard,.mem-swipe,.art-swipe,.file,.ask-pill,.btn,.cb{transition:none}
+  .row,.pincard,.mem-swipe,.art-swipe,.file,.ask-pill,.btn,.cb,.svbtn .svdisc{transition:none}
   .row:hover,.pincard:hover,.mem-swipe:hover,.art-swipe:hover,.file:hover,
-  .btn:hover,.cb:hover{transform:none}
+  .btn:hover,.cb:hover,.pincard:active,.svbtn:active .svdisc{transform:none}
 }
+
+/* Type scale (spec §9, --text-*), mirroring TeamilyTypography.kt. Lato ships
+   400 / 700 / 900 only, so SemiBold / Medium roles use 700. */
+.phone{
+  --text-2xl:700 24px/32px "Lato",system-ui,sans-serif;
+  --text-xl:700 20px/28px "Lato",system-ui,sans-serif;
+  --text-lg:700 18px/28px "Lato",system-ui,sans-serif;
+  --text-base:400 16px/24px "Lato",system-ui,sans-serif;
+  --text-sm:400 14px/20px "Lato",system-ui,sans-serif;
+  --text-xs:700 12px/16px "Lato",system-ui,sans-serif;
+}
+.tv-bar .tv-title,.pf-bar .pf-title,.pk-title,.st-title,.dr-brand{font:var(--text-2xl);letter-spacing:-.02em}
+.pf-name,.pf-stat b{font:var(--text-xl)}
+.chatbar .ctitle,.st-dialog-card h4,.art-dialog-card h4,.art-sheet-card h4{font:var(--text-lg)}
+.pincard .pname,.row-name,.mem-title,.dr-name,.tv-head,
+.pk-noresults .nr-head,.art-error .ae-head,.mem-nomatch .nm-head{font:var(--text-base);font-weight:700}
+.ask-pill .ph,.ask-pill .ph-input{font:var(--text-base)}
+.pincard .prole,.row-snip,.mem-sum,.bub,.tv-sub,
+.pk-noresults .nr-sub,.mem-nomatch .nm-sub{font:var(--text-sm)}
+.pincard .ptime,.row-time,.mem-time,.art-time,.mtime,.cmp-chip{font:var(--text-xs)}
+/* The taller --text-* line-heights must not squeeze swipe rows inside the
+   flex list (overflow:hidden would clip the chip / title row). */
+.mem-swipe,.art-swipe{flex-shrink:0}
 </style>
 </head>
 <body>

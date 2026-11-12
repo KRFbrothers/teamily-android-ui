@@ -57,6 +57,7 @@ import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyCanvas
 import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
@@ -331,10 +332,10 @@ fun ChatScreen(
         agentTyping = false
     }
 
-    // Forest-slate polish: the canvas gradient sits behind the whole thread;
-    // the Scaffold and top bar are transparent so it shows through.
+    // Teamily canvas behind the whole thread (light atmosphere / dark
+    // gradient); the Scaffold and top bar are transparent so it shows through.
     Scaffold(
-        modifier = modifier.background(teamilyPalette().bgCanvasGradient),
+        modifier = modifier.teamilyCanvas(teamilyPalette()),
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(

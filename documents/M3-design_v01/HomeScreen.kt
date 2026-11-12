@@ -3,7 +3,9 @@ package ai.duagenai.design.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,7 +71,11 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyCanvas
 import ai.duagenai.design.theme.teamilyPalette
+import ai.duagenai.design.theme.teamilyPressScale
+import ai.duagenai.design.theme.teamilyPrimaryGlow
+import ai.duagenai.design.theme.teamilyRestingShadow
 
 /* ============================================================================
  *  Home — the two modes, per the confirmed product model
@@ -229,9 +236,9 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Forest-slate polish: the canvas is the palette's vertical
-            // gradient (#1E2522 -> #1D2220 -> #171C19 in dark).
-            .background(teamilyPalette().bgCanvasGradient),
+            // Teamily canvas: light atmosphere (#E8F3EC at 8%/92%) over
+            // white; dark keeps the vertical bgCanvasGradient.
+            .teamilyCanvas(teamilyPalette()),
     ) {
         Column(Modifier.fillMaxSize()) {
 
@@ -749,13 +756,25 @@ private enum class SendMode { Send, Stop, Voice }
 @Composable
 private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -> Unit) {
     val palette = teamilyPalette()
+    val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(MinTouchTarget)
+            .teamilyPressScale(interactionSource)
             .then(
                 when (mode) {
-                    SendMode.Send -> Modifier.clickable(role = Role.Button, onClick = onSend)
-                    SendMode.Stop -> Modifier.clickable(role = Role.Button, onClick = onStop)
+                    SendMode.Send -> Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = LocalIndication.current,
+                        role = Role.Button,
+                        onClick = onSend,
+                    )
+                    SendMode.Stop -> Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = LocalIndication.current,
+                        role = Role.Button,
+                        onClick = onStop,
+                    )
                     SendMode.Voice -> Modifier
                 },
             )
@@ -772,6 +791,8 @@ private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -
         Box(
             modifier = Modifier
                 .size(42.dp)
+                // Light-mode primary green glow (no-op in dark).
+                .teamilyPrimaryGlow(palette)
                 .clip(CircleShape)
                 .background(palette.brandGradient),
             contentAlignment = Alignment.Center,
@@ -922,15 +943,22 @@ private fun PinnedAgentCard(
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
 
-    // Forest-slate highlight card: `cardHeroColor` fill (#253D31 dark), 1dp
-    // `borderGradient` edge, 20dp corners. The card has no verified/check state
-    // in this kit, so no `logoMint` badge is added.
+    // Forest-slate highlight card: `cardHeroColor` fill, 1dp `borderGradient`
+    // edge, 20dp corners, resting glass shadow and a 0.98 press lift. The card
+    // has no verified/check state in this kit, so no `logoMint` badge is added.
     val palette = teamilyPalette()
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .teamilyPressScale(interactionSource)
+            .teamilyRestingShadow(palette, TeamilyShapes.card)
             .clip(TeamilyShapes.card)
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            ),
         shape = TeamilyShapes.card,
         color = palette.cardHeroColor,
         border = BorderStroke(1.dp, palette.borderGradient),

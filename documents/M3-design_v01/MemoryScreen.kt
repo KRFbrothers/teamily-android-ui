@@ -90,6 +90,7 @@ import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.teamilyPalette
+import ai.duagenai.design.theme.teamilyRestingShadow
 
 /* ============================================================================
  *  Memory — M3 components used:
@@ -950,6 +951,8 @@ private fun MemoryCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            // Resting glass shadow (`--nv-shadow-resting`).
+            .teamilyRestingShadow(teamilyPalette(), TeamilyShapes.card)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongPress,
