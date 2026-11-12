@@ -87,6 +87,9 @@ enum class DrawerDestination(val label: String) {
     Images("Images"),
     Computer("Computer"),
     Videos("Videos"),
+    /** Switches Home to Dua mode — the way back from Agent home, whose header
+     *  has no Dua | Agent toggle. */
+    Dua("Dua"),
     Agent("Agent"),
 }
 

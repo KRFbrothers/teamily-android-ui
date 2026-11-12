@@ -242,6 +242,15 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
+                        // Dua is a MODE too: Agent home has no toggle, so this
+                        // row is the way back to Dua's home.
+                        DrawerDestination.Dua -> {
+                            mode = HomeMode.Dua
+                            navController.navigate(DuaGenAIRoutes.HOME) {
+                                popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                         // Agent is a MODE, not a screen: it switches the
                         // composer and leaves the user on Home.
                         DrawerDestination.Agent -> {
@@ -292,11 +301,10 @@ fun DuaGenAINavHost(
                     // in Agent mode, so the two callbacks are separate.
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
-                    // Every tab now has a destination. `Managed` is the
-                    // reference's second tab, relabelled for the product model:
-                    // Agent controls other agents, so the tab lists the agents it
-                    // controls and opens the same AgentsScreen. Memory and
-                    // Artifacts open their own placeholder screens.
+                    // Every tab has a destination. `HomeTab.Managed` is shown
+                    // as "Agents" (the reference dock's label) and still opens
+                    // the agents route. Memory and Artifacts open their own
+                    // placeholder screens.
                     onSelectTab = { tab ->
                         // Record the selection FIRST, so the indicator moves
                         // immediately, then navigate.

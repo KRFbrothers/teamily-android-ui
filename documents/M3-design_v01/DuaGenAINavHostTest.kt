@@ -2,6 +2,7 @@ package ai.duagenai.design.nav
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -189,13 +190,18 @@ private const val COMPOSER_PLACEHOLDER = "Type a message"
 private const val AGENT_COMPOSER_HINT = "Message $AGENT_CHAT_TITLE\u2026"
 
 /**
- * The pinned Agent card's role line.
+ * The Agent-home hero card's title (the user's personal agent).
  *
- * Used to FIND the card: the text "Agent" also appears in the mode toggle, so
- * clicking that would switch modes instead of opening Agent's thread. The role
- * line is unique to the card.
+ * Used to FIND the card: it is the one filled card on Agent home and tapping
+ * it opens Agent's thread. The title is unique to the card.
  */
-private const val AGENT_ROLE_LINE = "Multitasks, controls agents, creates new ones"
+private const val AGENT_ROLE_LINE = "fareed's Personal Agent"
+
+/** Agent home's section headers and header brand. */
+private const val PINNED_HEADER = "Pinned \u00b7 1"
+private const val CHATS_HEADER = "Chats \u00b7 5"
+private const val APP_NAME_TEXT = "Dua Gen AI"
+private const val DUA_AGENT_ROW = "Dua Agent"
 
 /* The composer's controls, by their TalkBack descriptions. */
 private const val ATTACH_LABEL = "Attach"
@@ -443,8 +449,11 @@ private const val EDIT_PROFILE_LABEL = "Edit profile"
 private const val SIGN_OUT_LABEL = "Sign out"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
-/** The three agents Agent controls (`sampleAgents` in AgentsScreen.kt). */
-private val MANAGED_AGENTS = listOf("Slides Assistant", "Market Research", "Accounting Assistant")
+/**
+ * Agent home's "Chats · 5" rows that are on screen above the floating dock.
+ * The fifth ("Frontend Developer") sits under the dock, as in the reference.
+ */
+private val MANAGED_AGENTS = listOf("Code Reviewer", "Backend Architect", "DevOps Automator", "API Tester")
 
 /**
  * How many cubes ChatScreen draws for one conversation.
@@ -706,15 +715,26 @@ class DuaGenAINavHostTest {
     private fun currentRoute(): String? =
         navController.currentBackStackEntry?.destination?.route
 
-    /** Opens the sidebar drawer from Home's hamburger. */
+    /**
+     * Opens the sidebar drawer: Dua home's hamburger or Agent home's avatar —
+     * both are labelled "Open menu".
+     */
     private fun openDrawer() {
         compose.onNodeWithContentDescription("Open menu").performClick()
         compose.waitForIdle()
     }
 
-    /** Switches mode through the toggle's own labelled cell. */
+    /**
+     * Switches mode the way a user does. Dua home has the toggle; Agent home
+     * has none, so going back to Dua uses the drawer's "Dua" row.
+     */
     private fun switchTo(mode: HomeMode) {
-        compose.onNodeWithContentDescription("${mode.label} mode").performClick()
+        if (visibleDescCount("${mode.label} mode") > 0) {
+            compose.onNodeWithContentDescription("${mode.label} mode").performClick()
+        } else {
+            openDrawer()
+            compose.onNode(hasText(mode.label) and hasClickAction()).performClick()
+        }
         compose.waitForIdle()
     }
 
@@ -736,7 +756,9 @@ class DuaGenAINavHostTest {
 
         // …and nothing agent-related is. No section header, no search row, no
         // bottom navigation, no agent row, no chat row.
-        assertNotVisible("AGENTS \u00b7 3")
+        assertNotVisible(CHATS_HEADER)
+        assertNotVisible(PINNED_HEADER)
+        assertNotVisible(APP_NAME_TEXT)
         assertNotVisible("CHATS \u00b7 7")
         assertNotVisible("Search")
         assertNotVisible(HomeTab.Managed.label)
@@ -787,23 +809,28 @@ class DuaGenAINavHostTest {
     // ------------------------------------------- Agent mode is the agent surface
 
     @Test
-    fun agentModeShowsTheManagedAgentsAndTheManagedTab() {
+    fun agentModeShowsTheChatListAndTheAgentsTab() {
         launch()
         switchTo(HomeMode.Agent)
 
-        // The agent surface: header, search row, the managed agents, the nav.
-        // `sampleAgents` is the three agents Agent controls — the featured agent
-        // belongs to AgentsScreen, not to Agent's home.
-        assertVisible("AGENTS \u00b7 3")
+        // The reference's chat-list home: search row, hero card, Pinned · 1
+        // with Dua Agent, Chats · 5 with its rows, and the floating dock.
         assertVisible("Search")
+        assertVisible(AGENT_ROLE_LINE)
+        assertVisible(PINNED_HEADER)
+        assertVisible(DUA_AGENT_ROW)
+        assertVisibleDescCount("Verified", 1)
+        assertVisible(CHATS_HEADER)
         for (agent in MANAGED_AGENTS) {
             assertVisible(agent)
         }
+        // The old heavy agent list is gone.
+        assertNotVisible("AGENTS \u00b7 3")
 
-        // The second tab is "Managed" — Agent controls other agents, so the tab
-        // lists the agents it controls. "Agents" must not be a tab label.
+        // The second tab reads "Agents", as in the reference dock.
         assertVisible(HomeTab.Managed.label)
-        assertNotVisible("Agents")
+        assertVisible("Agents")
+        assertNotVisible("Managed")
 
         // Agent's HOME has no composer: the Dua pill belongs to a conversation,
         // and this is the agent surface.
@@ -815,19 +842,71 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Settings", 0)
     }
 
+    /** Agent home's header: avatar (opens the drawer) · "Dua Gen AI" · plus. No toggle. */
     @Test
-    fun theToggleSwitchesBothWays() {
+    fun agentHomeHeaderIsAvatarBrandAndPlusWithNoToggle() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        assertVisible(APP_NAME_TEXT)
+        assertNotVisible("Teamily AI")
+        assertVisibleDescCount("Open menu", 1)
+        assertVisibleDescCount("New chat", 1)
+        assertVisibleDescCount("Dua mode", 0)
+        assertVisibleDescCount("Agent mode", 0)
+
+        // The avatar opens the existing drawer.
+        openDrawer()
+        assertVisibleDescCount("Close menu", 1)
+    }
+
+    /** Dua home is unchanged: hamburger, the toggle, the gear and the composer. */
+    @Test
+    fun duaHomeKeepsTheToggleAndTheComposer() {
         launch()
 
-        // Dua -> Agent
+        assertVisibleDescCount("Open menu", 1)
+        assertVisibleDescCount("Dua mode", 1)
+        assertVisibleDescCount("Agent mode", 1)
+        assertVisibleDescCount("Settings", 1)
+        assertVisible(DUA_ASK_HINT)
+    }
+
+    @Test
+    fun theModeSwitchesBothWays() {
+        launch()
+
+        // Dua -> Agent, through the toggle.
         switchTo(HomeMode.Agent)
-        assertVisible("AGENTS \u00b7 3")
+        assertVisible(CHATS_HEADER)
         assertNotVisible(DUA_ASK_HINT)
 
-        // Agent -> Dua
+        // Agent -> Dua, through the drawer's "Dua" row (Agent home has no toggle).
         switchTo(HomeMode.Dua)
         assertVisible(DUA_ASK_HINT)
-        assertNotVisible("AGENTS \u00b7 3")
+        assertNotVisible(CHATS_HEADER)
+        assertVisibleDescCount("Dua mode", 1)
+    }
+
+    /** The Pinned and Chats section headers collapse and expand their rows. */
+    @Test
+    fun theSectionHeadersCollapseAndExpand() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        compose.onNodeWithText(PINNED_HEADER).performClick()
+        compose.waitForIdle()
+        assertNotVisible(DUA_AGENT_ROW)
+        compose.onNodeWithText(PINNED_HEADER).performClick()
+        compose.waitForIdle()
+        assertVisible(DUA_AGENT_ROW)
+
+        compose.onNodeWithText(CHATS_HEADER).performClick()
+        compose.waitForIdle()
+        for (agent in MANAGED_AGENTS) assertNotVisible(agent)
+        compose.onNodeWithText(CHATS_HEADER).performClick()
+        compose.waitForIdle()
+        assertVisible(MANAGED_AGENTS.first())
     }
 
     @Test
@@ -839,7 +918,7 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         assertEquals(
-            "the Managed tab must open the agents screen",
+            "the Agents tab must open the agents screen",
             DuaGenAIRoutes.AGENTS,
             currentRoute(),
         )
@@ -2673,9 +2752,8 @@ class DuaGenAINavHostTest {
      * SAME `chat/{chatId}` route every other conversation uses \u2014 with Agent's
      * own stable id. No new route was invented for it.
      *
-     * The card is found by its ROLE LINE, not by the text "Agent": that word is
-     * also the mode toggle's label, so clicking it would switch modes instead of
-     * opening the thread.
+     * The card is Agent home's one filled hero card (the personal agent), found
+     * by its title.
      */
     @Test
     fun tappingThePinnedAgentCardOpensAgentsOwnThread() {
@@ -2889,7 +2967,7 @@ class DuaGenAINavHostTest {
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
         // Agent's home, not Dua's: the agent surface is back and the Dua pill is
         // not. The mode is hoisted in the host, so it survives the round trip.
-        assertVisible("AGENTS \u00b7 3")
+        assertVisible(CHATS_HEADER)
         assertNotVisible(DUA_ASK_HINT)
     }
 

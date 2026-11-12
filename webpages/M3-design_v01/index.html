@@ -1284,6 +1284,71 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 /* The taller --text-* line-heights must not squeeze swipe rows inside the
    flex list (overflow:hidden would clip the chip / title row). */
 .mem-swipe,.art-swipe{flex-shrink:0}
+
+/* ==========================================================================
+   Agent home — the Teamily chat-list reference (HomeScreen.kt AgentHomeTopBar,
+   SearchRow, PersonalAgentHeroCard, CanvasChatRow, SectionHeader, HomeBottomNav).
+   ========================================================================== */
+.phone{--tm-bottomnav:#f8faf8;--tm-chrome:#eef2ef;--tm-recessed:#f2f4f3;--tm-ink2:#5c6d63;--tm-ink:#182b23}
+.phone.dark{--tm-bottomnav:#1f2521;--tm-chrome:#323b36;--tm-recessed:#181d1b;--tm-ink2:#b4bfb8;--tm-ink:#f7f9f7}
+.phone[data-mode="agent"] .hdr{justify-content:space-between;padding:20px 16px 10px}
+.ah-avatar{width:48px;height:48px;flex:0 0 48px;border-radius:50%;border:0;padding:0;overflow:hidden;cursor:pointer;background:var(--tm-chrome)}
+.ah-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.ah-brand{display:flex;align-items:center;gap:8px;min-width:0}
+.ah-badge{width:30px;height:30px;border-radius:8px;display:block;object-fit:cover}
+.ah-brand span{font:700 24px/32px "Lato",system-ui,sans-serif;color:var(--tm-ink);white-space:nowrap}
+.cb.ah-plus{box-shadow:none}
+.cb.ah-plus svg{width:24px;height:24px}
+.ah-search{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 16px 16px}
+.ah-filter{width:48px;height:48px;flex:0 0 48px;border-radius:50%;border:1px solid var(--tm-border);background:var(--tm-chrome);color:var(--tm-ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ah-filter.on{background:var(--brand-soft);color:var(--primary-ink)}
+.ah-filterbars{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ah-filterbars i{display:block;height:2px;border-radius:2px;background:currentColor}
+.ah-filterbars i:nth-child(1){width:18px}.ah-filterbars i:nth-child(2){width:12px}.ah-filterbars i:nth-child(3){width:6px}
+.ah-pill{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;height:48px;padding:0 16px;border-radius:999px;background:var(--tm-recessed);border:1px solid var(--tm-border);color:var(--tm-ink2);font:400 16px/24px "Lato",system-ui,sans-serif;cursor:default}
+.ah-pill svg{width:20px;height:20px;flex:0 0 20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.ah-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 0 112px;-webkit-overflow-scrolling:touch}
+.ah-hero{display:flex;align-items:center;gap:12px;margin:0 8px;padding:14px;border-radius:20px;cursor:pointer;
+  border:1px solid transparent;
+  background:linear-gradient(var(--tm-card-hero),var(--tm-card-hero)) padding-box,var(--tm-border-grad) border-box;
+  box-shadow:var(--nv-shadow-resting);transition:transform .24s cubic-bezier(.4,.1,.2,1)}
+.ah-hero:active{transform:scale(.98)}
+.ah-av{position:relative;width:52px;height:52px;flex:0 0 52px}
+.ah-av-img,.ah-tile{position:absolute;left:0;top:0;width:48px;height:48px;border-radius:50%;display:block;object-fit:cover}
+.ah-tile{background:linear-gradient(color-mix(in srgb,var(--tile) 38%,transparent),color-mix(in srgb,var(--tile) 38%,transparent)),#fff;display:flex;align-items:center;justify-content:center}
+.ah-tile svg{width:26px;height:26px;stroke:#17201b;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ah-mini{position:absolute;right:0;bottom:0;width:20px;height:20px;border-radius:50%;background:var(--ring);padding:2px}
+.ah-mini img{width:16px;height:16px;border-radius:50%;display:block}
+.ah-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+.ah-top{display:flex;align-items:center;gap:8px}
+.ah-title{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;font:400 17px/24px "Lato",system-ui,sans-serif;color:var(--tm-ink)}
+.ah-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ah-title.ah-bold{font-weight:700;font-size:16px}
+.ah-time{flex:0 0 auto;font:400 14px/20px "Lato",system-ui,sans-serif;color:var(--tm-ink2)}
+.ah-sub{font:400 15px/22px "Lato",system-ui,sans-serif;color:var(--tm-ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ah-hero .ah-sub{font-size:14px}
+.ah-verified{width:16px;height:16px;flex:0 0 16px}
+.ah-verified circle{fill:var(--mint)}
+.ah-verified path{fill:none;stroke:#17201b;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ah-sec{display:inline-flex;align-items:center;gap:4px;min-height:48px;margin:2px 8px 0;padding:0 8px;border:0;border-radius:999px;background:transparent;cursor:pointer;color:var(--tm-ink2);font:700 14px/20px "Lato",system-ui,sans-serif}
+.ah-sec svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ah-sec svg:last-child{width:14px;height:14px;transition:transform .2s ease}
+.ah-sec[aria-expanded="false"] svg:last-child{transform:rotate(-90deg)}
+.ah-row{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.ah-div{height:0;border-top:.5px solid var(--tm-border);margin:8px 0 4px}
+.ah-secbody[hidden]{display:none}
+.phone[data-mode="agent"] .dock{position:absolute;left:0;right:0;bottom:0;padding:0 16px 12px}
+.phone[data-mode="agent"] .tabbar{background:var(--tm-bottomnav);border:1px solid transparent;
+  background:linear-gradient(var(--tm-bottomnav),var(--tm-bottomnav)) padding-box,var(--tm-border-grad) border-box;
+  padding:6px 8px;gap:0}
+.phone[data-mode="agent"] .tab{min-height:60px;gap:3px;padding:6px 2px}
+.phone[data-mode="agent"] .tab .ic{width:24px;height:24px;flex:0 0 24px;color:var(--tm-ink)}
+.phone[data-mode="agent"] .tab .ic svg{width:24px;height:24px;stroke-width:1.8}
+.phone[data-mode="agent"] .tab .ic svg .dotfill{fill:currentColor;stroke:none}
+.phone[data-mode="agent"] .tab span{font:400 13px/16px "Lato",system-ui,sans-serif;color:var(--tm-ink)}
+.phone[data-mode="agent"] .tab.on span{font-weight:700;color:var(--tm-nav-selected-ink)}
+.phone[data-mode="agent"] .tab.on .ic{color:var(--tm-nav-selected-ink)}
+.dr-blank{display:block;width:20px;height:20px;flex:0 0 20px}
 </style>
 </head>
 <body>
@@ -1328,13 +1393,14 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   <div class="wrap">
     <h2>01 &middot; Home</h2>
     <p class="sub">
-      Chaar frames: Dua aur Agent mode, har ek light aur dark me. Toggle har frame me live hai.
-      Top bar dono modes me same teen element rakhta hai — circular hamburger, Dua|Agent toggle,
-      aur doosra circular button jo <b>Dua me gear</b> hai aur <b>Agent me plus</b>, bilkul jaisa
-      references me dikh raha hai. <b>Dua mode</b> me body khaali hai aur neeche sirf "Ask Dua ..."
-      composer — reference me bhi khaali hai; <b>Agent mode</b> me search row, uske neeche
-      <b>pinned Agent card</b>, phir "AGENTS · N" header + managed agents list (jo scroll hoti hai),
-      aur 5-item nav bar. Agent card ko scroll karke test karein — wo hilta nahi.
+      Chaar frames: Dua aur Agent mode, har ek light aur dark me. <b>Dua mode</b> ka top bar
+      wahi hai — circular hamburger, Dua|Agent toggle aur gear; body khaali hai aur neeche sirf
+      "Ask Dua ..." composer. <b>Agent mode</b> ka home Teamily chat-list reference jaisa hai:
+      avatar · green badge + "Dua Gen AI" · plus (toggle nahi), filter + Search pill, sirf ek
+      filled card (fareed's Personal Agent), phir canvas rows — "Pinned · 1" me Dua Agent ✓,
+      patli divider, "Chats · 5" — aur list ke upar floating 5-tab dock. Section header tap
+      karke collapse karein. Agent home se Dua par wapas: avatar se drawer kholein aur "Dua" row
+      tap karein.
       <b>Pinned card tap karein</b> — Agent ka apna chat khulta hai (neeche frame 04), jisme
       pain area me Agent aur user ki conversation hai aur neeche <b>wahi composer pill</b> jo Dua
       ke home par hai (hint: "Message Agent..."); back se Agent screen par wapas.
@@ -3422,16 +3488,11 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
         <li><b>Chats ab drawer history se khulte hain.</b> Dua home par rows nahi hain, isliye
         conversations drawer ke history section se khulte hain — wahi <code>sampleChats</code>,
         wahi per-chat cube, wahi <code>chat/{chatId}</code> route.</li>
-        <li><b>Agent mode me managed agents hain.</b> Agent khud agent hai aur doosre agents ko
-        control karta hai, isliye uska home wo agents hain jinhe wo manage karta hai — har ek apne
-        cube, status aur "Start a chat" entry point ke saath, "AGENTS · N" header ke neeche.
-        <code>AgentRow</code> aur <code>sampleAgents</code> <code>AgentsScreen.kt</code> se reuse
-        hote hain, duplicate nahi.</li>
-        <li><b>Bottom nav ka doosra tab "Managed" hai, "Agents" nahi.</b> Agent khud agent hai,
-        isliye "Agents" ambiguous tha — ye tab uske control wale agents dikhata hai, aur glyph
-        hierarchy hai (ek node upar, do neeche). Wahi <code>AgentsScreen</code> khulta hai.
-        Chats / Discover navigate karte hain; <b>Memory aur Artifacts inert hain</b> kyunki unke
-        screens is kit me nahi hain (request thi "koi naya screen add mat karo").</li>
+        <li><b>Agent home ab Teamily chat-list reference jaisa hai.</b> Header: avatar (drawer
+        kholta hai) · badge + "Dua Gen AI" · plus. Sirf personal agent ka hero card filled hai; Dua
+        Agent ✓ aur paanch chats canvas par seedhe rows hain. Purane <code>AgentRow</code> cards aur
+        "AGENTS · N" header hata diye. Dock ka doosra tab ab <b>"Agents"</b> dikhta hai
+        (<code>HomeTab.Managed</code>, wahi agents route).</li>
         <li><b>Agent khud screen par dikhta hai — pinned.</b> Agent ki apni presence uske home par honi chahiye. Card search row ke neeche <b>fixed</b> hai (Column ka
         child, LazyColumn ke bahar), aur baaki agents uske neeche scroll hote hain. Reference ka
         exact structure: brand-tinted card, white disc me wireframe cube glyph, naam, role line,
@@ -3637,6 +3698,18 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     { id: 'agent-accounting-assistant', cube: 'cube_18', name: 'Accounting Assistant', blurb: 'Reconciles invoices and flags anything that needs a human decision.', status: 'Idle', tag: 'Finance' }
   ];
 
+  // Agent home's chat list — HomeScreen.kt `agentHomeChats`, same order and
+  // copy as the reference. The fifth row sits under the floating dock.
+  var AGENT_HOME_CHATS = [
+    { id: 'chat_code_reviewer', title: 'Code Reviewer', sub: 'You are now friends', time: '13:07', tile: '#9a7bff' },
+    { id: 'chat_backend_architect', title: 'Backend Architect', sub: 'You are now friends', time: '13:06', tile: '#3ec0ea' },
+    { id: 'chat_devops_automator', title: 'DevOps Automator', sub: 'You are now friends', time: '13:05', tile: '#f6c945' },
+    { id: 'chat_api_tester', title: 'API Tester', sub: 'You are now friends', time: '12:52', tile: '#9be3b8' },
+    { id: 'chat_frontend_developer', title: 'Frontend Developer', sub: 'You are now friends', time: '12:40', tile: '#3ec0ea' }
+  ];
+  var BADGE_SRC = 'assets/dua-bot-badge.png';
+  var AVATAR_SRC = 'assets/dua-user-avatar.jpg';
+
   // Agent's OWN thread — the conversation the pinned card opens. It is written
   // to Agent's role from the confirmed product model: Agent multitask, controls
   // other agents and can create new ones. `cube` is CubeCatalog.forEntity(
@@ -3663,7 +3736,14 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     stop: '<svg class="solid" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
     send: '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>',
     chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
-    chat: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4z"/></svg>',
+    chat: '<svg viewBox="0 0 24 24"><path d="M5.28 3.36h13.44a1.92 1.92 0 0 1 1.92 1.92v7.2a1.92 1.92 0 0 1-1.92 1.92h-3.84v6.72h-4.8V14.4H5.28a1.92 1.92 0 0 1-1.92-1.92v-7.2a1.92 1.92 0 0 1 1.92-1.92z"/><circle class="dotfill" cx="9.6" cy="8.88" r="1.2"/><circle class="dotfill" cx="14.88" cy="8.88" r="1.2"/></svg>',
+    // Agent home's dock "Agents" glyph: a robot — antenna, head, eyes, ears.
+    robot: '<svg viewBox="0 0 24 24"><path d="M12 2.88v4.32"/><rect x="4.8" y="7.2" width="14.4" height="12.48" rx="2.88"/><path d="M9.6 12v2.4M14.4 12v2.4M1.92 12.48v2.4M22.08 12.48v2.4"/></svg>',
+    brain: '<svg viewBox="0 0 24 24"><path d="M12 4.8C9.6 1.92 4.8 3.36 5.28 7.2 1.44 8.64 1.44 13.92 4.32 15.36 3.84 19.68 9.12 22.08 12 19.2c2.88 2.88 8.16.48 7.68-3.84 2.88-1.44 2.88-6.72-.96-8.16.48-3.84-4.32-5.28-6.72-2.4z"/><path d="M12 4.8v14.4M7.2 11.04l2.4 1.44M16.8 11.04l-2.4 1.44"/></svg>',
+    layers: '<svg viewBox="0 0 24 24"><path d="M12 2.88l9.6 4.8-9.6 4.8-9.6-4.8z"/><path d="M2.4 12l9.6 4.8 9.6-4.8M2.4 16.32l9.6 4.8 9.6-4.8"/></svg>',
+    pin: '<svg viewBox="0 0 24 24"><path d="M13.92 2.4l7.68 7.68-2.88 1.44-3.84 4.32v3.36L4.8 9.12h3.36l4.32-3.84z"/><path d="M9.6 14.4l-6.72 6.72"/></svg>',
+    bubble: '<svg viewBox="0 0 24 24"><circle cx="12.48" cy="11.52" r="9.6"/><path d="M5.28 17.28l-2.4 4.32"/></svg>',
+    verified: '<svg class="ah-verified" viewBox="0 0 16 16" role="img" aria-label="Verified"><circle cx="8" cy="8" r="8"/><path d="M4.8 8.32l2.4 2.24 4.16-4.48"/></svg>',
     agents: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M9 12h.01M15 12h.01"/></svg>',
     // Hierarchy: one node above, two below, joined — Agent over the agents it
     // controls. A single robot face would have said "agents in general".
@@ -3676,6 +3756,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     image: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>',
     monitor: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
     video: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="M15 10l6-3v10l-6-3z"/></svg>',
+    blank: '<i class="dr-blank"></i>',
     glyph: '<svg class="glyph" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/></svg>'
   };
 
@@ -3684,10 +3765,11 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   // source of truth for the indicator instead of a flag baked into the list.
   var TABS = [
     { id: 'chats', label: 'Chats', icon: 'chat' },
-    { id: 'managed', label: 'Managed', icon: 'managed' },
+    // HomeTab.Managed — same destination, visible label "Agents".
+    { id: 'managed', label: 'Agents', icon: 'robot' },
     { id: 'discover', label: 'Discover', icon: 'discover' },
-    { id: 'memory', label: 'Memory', icon: 'memory' },
-    { id: 'artifacts', label: 'Artifacts', icon: 'artifacts' }
+    { id: 'memory', label: 'Memory', icon: 'brain' },
+    { id: 'artifacts', label: 'Artifacts', icon: 'layers' }
   ];
 
   var NAV = [
@@ -3696,6 +3778,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     { id: 'images', label: 'Images', icon: 'image' },
     { id: 'computer', label: 'Computer', icon: 'monitor' },
     { id: 'videos', label: 'Videos', icon: 'video' },
+    // Switches Home to Dua mode — the way back from Agent home (no toggle there).
+    { id: 'dua', label: 'Dua', icon: 'blank' },
     { id: 'agent', label: 'Agent', icon: 'glyph' }
   ];
 
@@ -3707,6 +3791,16 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   function cubeSrc(cube) { return 'icons/' + cube.replace(/-/g, '_') + '.svg'; }
 
   function headerHtml(mode) {
+    if (mode === 'agent') {
+      // Agent home (reference): avatar (opens the drawer) · badge + "Dua Gen AI"
+      // · plus. No Dua | Agent toggle — the drawer's "Dua" row switches back.
+      return '' +
+        '<button class="ah-avatar" type="button" data-open-drawer aria-label="Open menu">' +
+          '<img src="' + AVATAR_SRC + '" alt=""></button>' +
+        '<div class="ah-brand"><img class="ah-badge" src="' + BADGE_SRC + '" alt="">' +
+          '<span>Dua Gen AI</span></div>' +
+        '<button class="cb ah-plus" type="button" data-hdr-right aria-label="New chat">' + ICON.plus + '</button>';
+    }
     var right = mode === 'dua'
       ? { icon: ICON.gear, label: 'Settings' }
       : { icon: ICON.plus, label: 'New chat' };
@@ -3730,44 +3824,52 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       // chat list, no search row, no section header, and nothing agent-related.
       return '';
     }
-    // Agent controls other agents, so its home is the agents
-    // it manages — each with its own cube, its status and a "Start a chat"
-    // entry point, under an "AGENTS · N" header.
-    var html = '' +
-      '<div class="searchrow">' +
-        '<button class="cb" type="button" aria-label="Filter" aria-pressed="false" data-filter>' +
-          '<span class="filterbars"><i></i><i></i><i></i></span></button>' +
-        '<div class="searchpill" role="search" aria-disabled="true">' + ICON.search + '<span>Search</span></div>' +
-      '</div>' +
-      // Agent itself, PINNED. It is a sibling of the scrolling list, not a row
-      // inside it, so scrolling the managed agents never moves it.
-      '<div class="pincard" data-pinned-agent>' +
-        '<span class="disc">' + ICON.glyph + '</span>' +
-        '<span class="pmain">' +
-          '<span class="pname">Agent</span>' +
-          '<span class="prole">Multitasks, controls agents, creates new ones</span>' +
-        '</span>' +
-        '<span class="ptime">Fri</span>' +
-      '</div>' +
-      '<div class="chatshead">' +
-        '<span class="k">AGENTS · ' + AGENTS.length + '</span>' + ICON.chev +
-      '</div>' +
-      '<div class="chatlist">';
-
-    for (var i = 0; i < AGENTS.length; i++) {
-      var a = AGENTS[i];
-      html += '<div class="row agent-row" data-agent-id="' + esc(a.id) + '">' +
-        '<div class="av av-chat" data-cube="' + esc(a.cube) + '">' +
-          '<img src="' + cubeSrc(a.cube) + '" alt="' + esc(a.name) + ' avatar"></div>' +
-        '<div class="row-main">' +
-          '<div class="row-name"><span>' + esc(a.name) + '</span>' +
-            '<i class="live"></i></div>' +
-          '<div class="row-snip">' + esc(a.blurb) + '</div>' +
-        '</div>' +
-        '<span class="row-time">' + esc(a.status) + '</span>' +
-      '</div>';
+    // Agent home — the reference chat list: filter + Search, ONE filled hero
+    // card (the personal agent), then canvas rows: Pinned · 1 (Dua Agent ✓),
+    // a thin divider, Chats · 5. The floating dock is drawn over the list.
+    function avatar(inner, ring, mini) {
+      return '<span class="ah-av">' + inner +
+        (mini ? '<span class="ah-mini" style="--ring:' + ring + '"><img src="' + BADGE_SRC + '" alt=""></span>' : '') +
+        '</span>';
     }
-    return html + '</div>';
+    var badgeImg = '<img class="ah-av-img" src="' + BADGE_SRC + '" alt="">';
+    function section(id, icon, label) {
+      return '<button class="ah-sec" type="button" data-sec="' + id + '" aria-expanded="true">' +
+        ICON[icon] + '<span>' + label + '</span>' + ICON.chev + '</button>';
+    }
+    function row(title, sub, time, av, verified) {
+      return '<div class="ah-row">' + av +
+        '<span class="ah-main"><span class="ah-top"><span class="ah-title"><span>' + esc(title) + '</span>' +
+        (verified ? ICON.verified : '') + '</span>' +
+        '<span class="ah-time">' + esc(time) + '</span></span>' +
+        '<span class="ah-sub">' + esc(sub) + '</span></span></div>';
+    }
+    var html = '' +
+      '<div class="ah-search">' +
+        '<button class="ah-filter" type="button" aria-label="Filter" aria-pressed="false" data-filter>' +
+          '<span class="ah-filterbars"><i></i><i></i><i></i></span></button>' +
+        '<div class="ah-pill" role="search" aria-disabled="true">' + ICON.search + '<span>Search</span></div>' +
+      '</div>' +
+      '<div class="ah-list">' +
+        '<div class="ah-hero" data-pinned-agent role="button" tabindex="0">' +
+          avatar(badgeImg, 'var(--tm-card-hero)', true) +
+          '<span class="ah-main"><span class="ah-top"><span class="ah-title ah-bold"><span>fareed\'s Personal Agent</span></span>' +
+          '<span class="ah-time">Wed</span></span>' +
+          '<span class="ah-sub">Delete ka option agent ki chat ke andar hai, \u2026</span></span>' +
+        '</div>' +
+        section('pinned', 'pin', 'Pinned \u00b7 1') +
+        '<div class="ah-secbody" data-secbody="pinned">' +
+          row('Dua Agent', "I'm Dua Agent \u2014 the official agent of Dua Gen AI", '15:19', avatar(badgeImg, '', false), true) +
+        '</div>' +
+        '<div class="ah-div"></div>' +
+        section('chats', 'bubble', 'Chats \u00b7 ' + AGENT_HOME_CHATS.length) +
+        '<div class="ah-secbody" data-secbody="chats">';
+    for (var i = 0; i < AGENT_HOME_CHATS.length; i++) {
+      var c = AGENT_HOME_CHATS[i];
+      var tile = '<span class="ah-tile" style="--tile:' + c.tile + '">' + ICON.glyph + '</span>';
+      html += row(c.title, c.sub, c.time, avatar(tile, 'var(--tm-solid)', true), false);
+    }
+    return html + '</div></div>';
   }
 
   /* The composer's data — mirrors ComposerSheets.kt. Skill ids, titles and
@@ -5261,6 +5363,16 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
         // Audit fix #7: the filter button is a real toggle. The state lives on
         // the button's own aria-pressed, and the `.on` class is derived from it,
         // so the visual and the announced state can never disagree.
+        // Agent home: a section header collapses / expands its rows.
+        var sec = t.closest ? t.closest('[data-sec]') : null;
+        if (sec) {
+          var open = sec.getAttribute('aria-expanded') !== 'true';
+          sec.setAttribute('aria-expanded', open ? 'true' : 'false');
+          var sb = body.querySelector('[data-secbody="' + sec.getAttribute('data-sec') + '"]');
+          if (sb) sb.hidden = !open;
+          return;
+        }
+
         var fb = t.closest ? t.closest('[data-filter]') : null;
         if (fb) {
           var on = fb.getAttribute('aria-pressed') !== 'true';
@@ -5569,6 +5681,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
           for (var i = 0; i < items.length; i++) items[i].classList.toggle('on', items[i] === item);
           // Agent is a MODE, not a screen — switch the surface, then close.
           if (dest === 'agent') paintMode('agent');
+          // Dua is a MODE too — the way back from Agent home.
+          if (dest === 'dua') paintMode('dua');
           closeDrawer();
           return;
         }
