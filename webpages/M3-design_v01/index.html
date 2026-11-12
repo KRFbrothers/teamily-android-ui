@@ -255,26 +255,35 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
 /* ---------- dock: composer (Dua) / tab bar (Agent) ---------- */
 .dock{flex:0 0 auto;padding:8px 16px 14px;background:var(--canvas)}
 .ask-pill{
-  display:flex;align-items:center;gap:8px;height:52px;padding:0 8px 0 14px;
+  display:flex;align-items:center;gap:0;min-height:52px;padding:0 4px;
   border-radius:28px;background:var(--surface);border:1px solid var(--field-edge);
   box-shadow:0 1px 2px rgba(24,43,35,.08),0 8px 18px -10px rgba(24,43,35,.35)
 }
 .phone.dark .ask-pill{box-shadow:0 1px 2px rgba(0,0,0,.5),0 10px 22px -12px rgba(0,0,0,.9)}
 .ask-pill .ph{flex:1 1 auto;font-size:14.5px;color:var(--ink3);min-width:0}
 .ask-pill svg{width:20px;height:20px;stroke:var(--ink2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 20px}
-.voice{
-  width:40px;height:40px;flex:0 0 40px;border-radius:50%;background:var(--grad);
-  display:flex;align-items:center;justify-content:center;gap:2px;
-  /* Audit fix #10: the disc stays 40px visually, but the ::after below expands
-     the tappable area to the 48px M3 minimum. */
-  position:relative
+/* The ONE trailing control — Send / Stop / Voice (SendStopVoiceButton in
+   Compose): a 48px touch target wrapping a 42px brand-gradient disc. Voice is
+   a four-bar waveform; voice capture is not wired, so that state is
+   aria-disabled. */
+.svbtn{
+  width:48px;height:48px;flex:0 0 48px;border:0;padding:0;background:transparent;
+  display:flex;align-items:center;justify-content:center;cursor:pointer
 }
-.voice::after{content:"";position:absolute;inset:-4px;border-radius:50%}
-.voice i{display:block;width:2px;border-radius:2px;background:var(--canvas)}
-html[data-theme="dark"] .phone .voice i{background:#17201b}
-.voice i:nth-child(1){height:8px}
-.voice i:nth-child(2){height:14px}
-.voice i:nth-child(3){height:8px}
+.svbtn .svdisc{
+  width:42px;height:42px;border-radius:50%;background:var(--nv-primary-fill,var(--grad));
+  color:var(--tm-send-ink,#fff);display:flex;align-items:center;justify-content:center;gap:2px
+}
+.svbtn .svdisc svg{width:20px;height:20px;flex:0 0 20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.svbtn .svdisc svg.solid{fill:currentColor;stroke:none}
+.svbtn .svdisc i{display:block;width:2px;border-radius:2px;background:currentColor}
+.svbtn .svdisc i:nth-child(1){height:8px}
+.svbtn .svdisc i:nth-child(2){height:14px}
+.svbtn .svdisc i:nth-child(3){height:10px}
+.svbtn .svdisc i:nth-child(4){height:6px}
+/* The voice state is unwired: announced disabled and not tappable, but the
+   disc keeps its full colour (the waveform is the empty-state visual). */
+.svbtn[data-sv="voice"]{opacity:1;filter:none}
 
 /* The chat composer is the SAME `.ask-pill`, made LIVE: the static hint becomes
    a real input and a send button appears. Dua's home keeps the static pill, so
@@ -289,14 +298,29 @@ html[data-theme="dark"] .phone .voice i{background:#17201b}
   display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2)
 }
 .ask-pill .ic-btn svg{width:20px;height:20px;flex:0 0 20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.sendbtn{
-  width:48px;height:48px;flex:0 0 48px;border-radius:50%;border:0;padding:0;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  background:var(--grad);color:var(--canvas)
+/* Skills / MCP Tools: logoMint tint + a small active dot while on. */
+.ask-pill .ic-btn.tool{position:relative;border-radius:50%}
+.ask-pill .ic-btn svg.tool-ic{width:22px;height:22px;flex:0 0 22px}
+.ask-pill .ic-btn.tool.on{color:var(--mint)}
+.ask-pill .ic-btn .tool-dot{
+  position:absolute;top:11px;right:11px;width:8px;height:8px;border-radius:50%;
+  background:var(--mint);box-shadow:0 0 0 1.5px var(--surface)
 }
-html[data-theme="dark"] .phone .sendbtn{color:#17201b}
-.sendbtn svg{width:18px;height:18px;flex:0 0 18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.sendbtn[disabled]{background:var(--surface2);color:var(--ink3);cursor:default}
+
+/* Composer sheets (+ / Skills / MCP Tools) — the Artifacts filter sheet's own
+   `.art-sheet` / `.art-sheet-card`, with the Notifications `.st-row` +
+   `.st-switch` rows. Rendered only while open, so they are always visible. */
+.art-sheet.cmp-sheet{display:flex}
+.cmp-sheet .art-sheet-card{max-height:86%;overflow-y:auto;gap:4px}
+.cmp-sheet .st-kicker{padding:12px 16px 4px}
+.cmp-sheet .st-row{border-bottom:0;min-height:56px;padding:8px 16px}
+.cmp-sheet .st-row svg{width:22px;height:22px;flex:0 0 22px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cmp-sheet .cmp-sum{display:block;font-size:12.5px;font-weight:400;color:var(--ink3);margin-top:2px}
+.cmp-sheet .cmp-sub{font-size:11.5px;font-weight:700;color:var(--ink3);padding:4px 16px}
+.cmp-sheet .cmp-none{font-size:13px;color:var(--ink3);padding:2px 16px 6px}
+.cmp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 4px}
+.cmp-chip{font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--brand-soft);color:var(--primary-ink)}
+.cmp-caps.off{opacity:.45}
 .typing{display:flex;gap:4px;align-items:center}
 .typing i{display:block;width:6px;height:6px;border-radius:50%;background:var(--agent-ink);opacity:.45}
 
@@ -1171,8 +1195,8 @@ body{background:var(--nv-atmosphere);background-attachment:fixed}
   box-shadow:var(--nv-focus-halo),var(--nv-shadow-floating);
 }
 /* Send: brandGradient with a light glyph, mirroring SendButton in Compose. */
-.sendbtn:not([disabled]),
-html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-primary-fill);color:var(--tm-send-ink)}
+.svbtn .svdisc,
+html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);color:var(--tm-send-ink)}
 
 /* Header "+" (New chat) — plusFill / plusIcon. Still 48px. */
 .cb[aria-label="New chat"]{background:var(--tm-plus-fill);color:var(--tm-plus-icon)}
@@ -1429,6 +1453,114 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
       hamburger tap karein — drawer slide-in hota hai, scrim ke saath; close X ya scrim tap se band.
       History rows wahi 7 chats hain, har ek apne per-chat cube ke saath.
     </p>
+
+    <div class="screen-block" data-composer-block>
+      <div class="screen-head">
+        <span class="screen-num">04b</span>
+        <h3 class="screen-title">Agent chat composer &mdash; Attach, Skills, MCP Tools &amp; Send/Voice</h3>
+        <p class="screen-note">left: <b>+</b> Attach &rarr; Quick Actions sheet &middot; right: <b>Skills</b> &middot; <b>MCP Tools</b> &middot; ek hi Send/Stop/Voice button &middot; har control 48px &middot; mic hata diya</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" data-phone data-mode="agent" data-chat-on-load data-cmp-draft-on-load="Book the venue for the launch">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Typed text &middot; Send &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" data-phone data-mode="agent" data-chat-on-load data-cmp-draft-on-load="Book the venue for the launch">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Typed text &middot; Send &middot; dark</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone" data-phone data-mode="agent" data-chat-on-load data-cmp-sheet-on-load="plus">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Attach &rarr; Quick Actions sheet &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone" data-phone data-mode="agent" data-chat-on-load data-cmp-sheet-on-load="skills">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Skills sheet &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" data-phone data-mode="agent" data-chat-on-load data-cmp-sheet-on-load="skills">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Skills sheet &middot; dark</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone" data-phone data-mode="agent" data-chat-on-load data-cmp-sheet-on-load="mcp">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">MCP Tools sheet &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" data-phone data-mode="agent" data-chat-on-load data-cmp-sheet-on-load="mcp">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">MCP Tools sheet &middot; dark</span>
+        </div>
+      </div>
+    </div>
 
     <div class="screen-block">
       <div class="screen-head">
@@ -3331,8 +3463,15 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
         <code>aria-disabled="true"</code>.</li>
         <li><b>Touch targets 48dp hain (v24, fix #10).</b> Header/filter circles 44dp dikhte hain par
         <code>minimumInteractiveComponentSize()</code> se touch area 48dp hai. Preview me composer ke
-        attach/mic/send buttons, chat back, tab back, profile back, drawer gear aur bottom-nav tabs
+        attach/skills/MCP/send-voice buttons, chat back, tab back, profile back, drawer gear aur bottom-nav tabs
         sab <code>min-height/width:48px</code> par hain — visual size same, sirf hit area bada.</li>
+        <li><b>Composer: Attach, Skills, MCP Tools aur ek Send/Stop/Voice button.</b> Dead mic hata diya.
+        Thread composer me <b>+</b> Attach ab <code>ComposerPlusSheet</code> kholta hai; right side par
+        <b>Skills</b> (<code>Build</code>) aur <b>MCP Tools</b> (<code>Extension</code>) — logoMint tint +
+        active dot — apne sheets kholte hain; phir ek hi 48dp button (42dp gradient disc): reply pending
+        par Stop, text par Send, warna 4-bar voice waveform (voice wired nahi, isliye disabled announce).
+        Skills ke ids/titles Dua-ai ke <code>DuaAgentSkills</code> se; <code>ADK_MCP_SERVERS</code> ki
+        koi client list nahi, isliye &ldquo;None configured&rdquo;. Dua home par agent tools nahi dikhte.</li>
       </ul>
     </div>
 
@@ -3479,7 +3618,11 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
     search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
     chevR: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
     moon: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
-    mic: '<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+    // Material "Build" (wrench) and "Extension" (puzzle piece), outlined — the
+    // glyphs ComposerIconButton draws for Skills and MCP Tools.
+    build: '<svg class="tool-ic" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L3.6 17.1a1.4 1.4 0 0 0 0 2l1.3 1.3a1.4 1.4 0 0 0 2 0l5.7-5.7a4 4 0 0 0 5.1-5.4l-2.6 2.6-2.3-.4-.4-2.3z"/></svg>',
+    extension: '<svg class="tool-ic" viewBox="0 0 24 24"><path d="M10 4.5a2 2 0 0 1 4 0V6h3a1 1 0 0 1 1 1v3h-1.5a2 2 0 0 0 0 4H18v3a1 1 0 0 1-1 1h-3v-1.5a2 2 0 0 0-4 0V18H7a1 1 0 0 1-1-1v-3h1.5a2 2 0 0 0 0-4H6V7a1 1 0 0 1 1-1h3z"/></svg>',
+    stop: '<svg class="solid" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
     send: '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>',
     chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
     chat: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4z"/></svg>',
@@ -3589,31 +3732,112 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
     return html + '</div>';
   }
 
-  function askPillHtml(hint) {
-    // Audit fix #9: the attach and mic glyphs are not wired in this kit, so they
-    // are marked disabled (dimmed, no pointer, announced) instead of looking like
-    // live actions. The pill's layout is unchanged.
-    return '<div class="ask-pill">' +
-      '<span class="is-disabled" aria-disabled="true" aria-label="Add attachment">' + ICON.plus + '</span>' +
-      '<span class="ph">' + esc(hint) + '</span>' +
-      '<span class="is-disabled" aria-disabled="true" aria-label="Voice input">' + ICON.mic + '</span>' +
-      '<span class="voice"><i></i><i></i><i></i></span></div>';
+  /* The composer's data — mirrors ComposerSheets.kt. Skill ids, titles and
+     summaries are Dua-ai's `DuaAgentSkills`; the tool ids are the plan's
+     built-in list. ADK_MCP_SERVERS is empty: in Dua-ai it is a server-side env
+     var with no client list of names, so the sheet shows the none state. */
+  var DUA_AGENT_SKILLS = [
+    { id: 'frontend-developer', title: 'Frontend Developer', summary: 'UI, screens, design implementation, web pages' },
+    { id: 'backend-architect', title: 'Backend Architect', summary: 'API design, data model, server-side architecture' },
+    { id: 'api-tester', title: 'API Tester', summary: 'Endpoint testing, contract verification, edge cases' },
+    { id: 'devops-automator', title: 'DevOps Automator', summary: 'CI/CD, builds, deploys, release automation' },
+    { id: 'code-reviewer', title: 'Code Reviewer', summary: 'Code review, correctness, blockers, PR feedback' }
+  ];
+  var ADK_MCP_SERVERS = [];
+  var ADK_BUILT_IN_TOOLS = ['google_search', 'fetch_url', 'run_python', 'generate_image',
+    'save_note', 'search_notes', 'remember', 'recall', 'search_documents'];
+
+  /* The ONE trailing control (SendStopVoiceButton): 'send' | 'stop' | 'voice'. */
+  function svBtnHtml(mode) {
+    if (mode === 'stop') {
+      return '<button class="svbtn" type="button" data-sv="stop" data-chat-stop aria-label="Stop">' +
+        '<span class="svdisc">' + ICON.stop + '</span></button>';
+    }
+    if (mode === 'send') {
+      return '<button class="svbtn" type="button" data-sv="send" data-chat-send aria-label="Send message">' +
+        '<span class="svdisc">' + ICON.send + '</span></button>';
+    }
+    // Voice capture is not wired in this kit: announced disabled, not tappable.
+    return '<button class="svbtn" type="button" data-sv="voice" aria-label="Voice input" aria-disabled="true" tabindex="-1">' +
+      '<span class="svdisc"><i></i><i></i><i></i><i></i></span></button>';
+  }
+  function svMode(c) {
+    if (c.sending) return 'stop';
+    return (c.draft || '').trim() ? 'send' : 'voice';
   }
 
-  /* The chat composer: the SAME `.ask-pill`, made LIVE. The static hint becomes
-     a real input and a send button appears. Dua's home keeps `askPillHtml`, so
-     its pill is untouched — one component, two call sites, exactly like the
-     Kotlin `DuaComposer`. */
-  function chatComposerHtml(hint) {
+  /* Dua's home pill (DuaComposer with no handlers): Attach has no sheet to open
+     here, so it stays aria-disabled (audit fix #9); no agent tools on Dua's
+     home; the trailing control is the unwired voice waveform. No mic glyph. */
+  function askPillHtml(hint) {
     return '<div class="ask-pill">' +
-      '<button class="ic-btn is-disabled" type="button" aria-label="Add attachment" aria-disabled="true">' + ICON.plus + '</button>' +
+      '<button class="ic-btn" type="button" aria-label="Attach" aria-disabled="true" tabindex="-1">' + ICON.plus + '</button>' +
+      '<span class="ph">' + esc(hint) + '</span>' +
+      svBtnHtml('voice') + '</div>';
+  }
+
+  /* The thread composer: the SAME `.ask-pill`, made LIVE — exactly like the
+     Kotlin `DuaComposer` with handlers. Left to right: Attach `+` (opens the
+     plus sheet) · field · Skills · MCP Tools · Send/Stop/Voice. `c` is the
+     phone's hoisted composer state: { draft, sending, skills, mcp }. */
+  function chatComposerHtml(hint, c) {
+    var skillsOn = c.skills.length > 0;
+    return '<div class="ask-pill">' +
+      '<button class="ic-btn" type="button" data-cmp-open="plus" aria-label="Attach">' + ICON.plus + '</button>' +
       '<input class="ph-input" type="text" data-chat-input placeholder="' + esc(hint) + '"' +
-        ' aria-label="' + esc(hint) + '">' +
-      '<button class="ic-btn is-disabled" type="button" aria-label="Voice input" aria-disabled="true">' + ICON.mic + '</button>' +
-      '<span class="voice"><i></i><i></i><i></i></span>' +
-      '<button class="sendbtn" type="button" data-chat-send aria-label="Send message" disabled>' +
-        ICON.send + '</button>' +
+        ' aria-label="' + esc(hint) + '" value="' + esc(c.draft || '') + '">' +
+      '<button class="ic-btn tool' + (skillsOn ? ' on' : '') + '" type="button" data-cmp-open="skills" aria-label="Skills">' +
+        ICON.build + (skillsOn ? '<span class="tool-dot"></span>' : '') + '</button>' +
+      '<button class="ic-btn tool' + (c.mcp ? ' on' : '') + '" type="button" data-cmp-open="mcp" aria-label="MCP Tools">' +
+        ICON.extension + (c.mcp ? '<span class="tool-dot"></span>' : '') + '</button>' +
+      svBtnHtml(svMode(c)) +
       '</div>';
+  }
+
+  /* The composer sheets — ComposerPlusSheet / ComposerSkillsSheet /
+     ComposerMcpSheet. Same `.art-sheet` scrim + card as the Artifacts filter
+     sheet; rows are the Notifications `.st-row` + `.st-switch`. */
+  function composerSheetHtml(which, c) {
+    var body = '';
+    var title = '';
+    if (which === 'plus') {
+      title = 'Quick Actions';
+      body = '<div class="st-kicker">Agent tools</div>' +
+        '<button class="st-row" type="button" data-cmp-open="skills" aria-label="Skills">' + ICON.build +
+          '<span class="st-label">Skills</span></button>' +
+        '<button class="st-row" type="button" data-cmp-open="mcp" aria-label="MCP Tools">' + ICON.extension +
+          '<span class="st-label">MCP Tools</span></button>';
+    } else if (which === 'skills') {
+      title = 'Skills';
+      for (var i = 0; i < DUA_AGENT_SKILLS.length; i++) {
+        var sk = DUA_AGENT_SKILLS[i];
+        var on = c.skills.indexOf(sk.id) !== -1;
+        body += '<button class="st-row' + (on ? ' on' : '') + '" type="button" role="switch"' +
+          ' aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(sk.title) + '" data-skill-toggle="' + sk.id + '">' +
+          '<span class="st-label">' + esc(sk.title) + '<span class="cmp-sum">' + esc(sk.summary) + '</span></span>' +
+          '<span class="st-switch"></span></button>';
+      }
+    } else {
+      title = 'MCP Tools';
+      var chips = function (ids) {
+        var h = '<div class="cmp-chips">';
+        for (var j = 0; j < ids.length; j++) h += '<span class="cmp-chip">' + esc(ids[j]) + '</span>';
+        return h + '</div>';
+      };
+      body = '<button class="st-row' + (c.mcp ? ' on' : '') + '" type="button" role="switch"' +
+          ' aria-checked="' + (c.mcp ? 'true' : 'false') + '" aria-label="MCP Tools" data-mcp-toggle>' +
+          '<span class="st-label">MCP Tools</span><span class="st-switch"></span></button>' +
+        '<div class="st-kicker">Server &amp; MCP Capabilities</div>' +
+        '<div class="cmp-caps' + (c.mcp ? '' : ' off') + '">' +
+          '<div class="cmp-sub">ADK_MCP_SERVERS</div>' +
+          (ADK_MCP_SERVERS.length ? chips(ADK_MCP_SERVERS) : '<div class="cmp-none">None configured</div>') +
+          '<div class="cmp-sub">Built-in tools</div>' + chips(ADK_BUILT_IN_TOOLS) +
+        '</div>';
+    }
+    return '<div class="art-sheet cmp-sheet" data-cmp-scrim aria-hidden="false">' +
+      '<div class="art-sheet-card" role="dialog" aria-label="' + esc(title) + '">' +
+        '<h4>' + esc(title) + '</h4>' + body +
+      '</div></div>';
   }
 
   /* `selectedTab` is passed IN, not read from a flag on TABS: the active tab is
@@ -3664,7 +3888,7 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
     return html;
   }
 
-  function chatHtml(thread, typing) {
+  function chatHtml(thread, typing, c, sheet) {
     return '' +
       '<div class="chatbar">' +
         '<button class="back" type="button" data-chat-back aria-label="Back">' +
@@ -3674,7 +3898,8 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
         '<span class="ctitle">' + esc(AGENT_CHAT.title) + '</span>' +
       '</div>' +
       '<div class="chatbody" data-chat-body>' + threadHtml(thread, typing) + '</div>' +
-      '<div class="chatdock">' + chatComposerHtml('Message ' + AGENT_CHAT.title + '\u2026') + '</div>';
+      '<div class="chatdock">' + chatComposerHtml('Message ' + AGENT_CHAT.title + '\u2026', c) + '</div>' +
+      (sheet ? composerSheetHtml(sheet, c) : '');
   }
 
   /* The PROFILE screen — the drawer gear's destination. It mirrors
@@ -4396,6 +4621,15 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
       var thread = AGENT_THREAD.slice();
       var typing = false;
       var replyTimer = null;
+      // The thread composer's state, hoisted per phone like `thread` — the
+      // preview's stand-in for ChatScreen's `rememberSaveable` draft and the nav
+      // host's skills / MCP state. The draft is re-applied on every render, so a
+      // re-render (Agent's reply landing, a sheet opening) never loses typed text.
+      var chatDraft = '';
+      var enabledSkills = DUA_AGENT_SKILLS.map(function (k) { return k.id; });
+      var mcpEnabled = true;
+      // Which composer sheet is open: null | 'plus' | 'skills' | 'mcp'.
+      var composerSheet = null;
       // Which bottom-nav item is active. HOISTED here (per phone) rather than
       // toggled as a class on the dock DOM, so the indicator is derived from
       // state and survives a dock re-render — the same hoist the Kotlin host
@@ -4491,7 +4725,16 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
 
       function renderThread() {
         if (!chatview) return;
-        chatview.innerHTML = chatHtml(thread, typing);
+        // Keep the caret in the field across a re-render (e.g. Agent's reply
+        // landing while the user is typing).
+        var hadFocus = document.activeElement &&
+          document.activeElement.hasAttribute && document.activeElement.hasAttribute('data-chat-input') &&
+          chatview.contains(document.activeElement);
+        chatview.innerHTML = chatHtml(thread, typing, composerState(), composerSheet);
+        if (hadFocus && !composerSheet) {
+          var inp = chatview.querySelector('[data-chat-input]');
+          if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+        }
         var bodyEl = chatview.querySelector('[data-chat-body]');
         if (bodyEl) bodyEl.scrollTop = bodyEl.scrollHeight;
       }
@@ -4505,12 +4748,24 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
         return h + ':' + (m < 10 ? '0' + m : m) + ' ' + ap;
       }
 
+      function composerState() {
+        return { draft: chatDraft, sending: typing, skills: enabledSkills, mcp: mcpEnabled };
+      }
+
+      /* Re-renders ONLY the trailing Send/Stop/Voice control, so typing never
+         rebuilds the input (and never drops focus). */
+      function paintSendControl() {
+        var btn = chatview ? chatview.querySelector('.chatdock .svbtn') : null;
+        if (btn) btn.outerHTML = svBtnHtml(svMode(composerState()));
+      }
+
       function sendMessage() {
-        var input = chatview ? chatview.querySelector('[data-chat-input]') : null;
-        if (!input) return;
-        var text = input.value.trim();
-        if (!text) return;
+        var text = chatDraft.trim();
+        // Guarded twice over, like the Kotlin composer: blank text, or a reply
+        // still in flight.
+        if (!text || typing) return;
         thread = thread.concat([{ who: 'user', text: text, time: nowLabel() }]);
+        chatDraft = '';
         typing = true;
         renderThread();
         if (replyTimer) clearTimeout(replyTimer);
@@ -4523,6 +4778,15 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
           }]);
           renderThread();
         }, 900);
+      }
+
+      /* Stop: cancel the pending reply — the user's message stays, Agent does
+         not answer it. Mirrors ChatScreen's `stop()`. */
+      function stopReply() {
+        if (replyTimer) clearTimeout(replyTimer);
+        replyTimer = null;
+        typing = false;
+        renderThread();
       }
 
       drawer.innerHTML = buildDrawer();
@@ -5240,6 +5504,25 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
         // Send: the composer's own button. The input is read from the DOM, so
         // the message lands in THIS phone's thread and nowhere else.
         if (t.closest && t.closest('[data-chat-send]')) { sendMessage(); return; }
+        if (t.closest && t.closest('[data-chat-stop]')) { stopReply(); return; }
+        // Composer sheets: Attach / Skills / MCP Tools open theirs (the plus
+        // sheet's rows hand off to the Skills / MCP sheets); a switch row
+        // toggles; a tap on the scrim outside the card dismisses.
+        var cmpOpen = t.closest ? t.closest('[data-cmp-open]') : null;
+        if (cmpOpen && chatview && chatview.contains(cmpOpen)) {
+          composerSheet = cmpOpen.getAttribute('data-cmp-open');
+          renderThread(); return;
+        }
+        var skTog = t.closest ? t.closest('[data-skill-toggle]') : null;
+        if (skTog) {
+          var skId = skTog.getAttribute('data-skill-toggle');
+          enabledSkills = enabledSkills.indexOf(skId) !== -1
+            ? enabledSkills.filter(function (x) { return x !== skId; })
+            : enabledSkills.concat([skId]);
+          renderThread(); return;
+        }
+        if (t.closest && t.closest('[data-mcp-toggle]')) { mcpEnabled = !mcpEnabled; renderThread(); return; }
+        if (t.hasAttribute && t.hasAttribute('data-cmp-scrim')) { composerSheet = null; renderThread(); return; }
 
         var item = t.closest ? t.closest('.dr-item') : null;
         if (item) {
@@ -5281,8 +5564,8 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
       phone.addEventListener('input', function (ev) {
         var el = ev.target;
         if (!el || !el.hasAttribute || !el.hasAttribute('data-chat-input')) return;
-        var btn = chatview ? chatview.querySelector('[data-chat-send]') : null;
-        if (btn) btn.disabled = el.value.trim().length === 0;
+        chatDraft = el.value;
+        paintSendControl();
       });
       /* The picker's search field is rebuilt on every open, so its listener is
          delegated on the phone too. Typing filters the grid live. */
@@ -5510,6 +5793,16 @@ html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-prim
       // The drawer section shows the open state without a click.
       if (phone.hasAttribute('data-open-on-load')) openDrawer();
       if (phone.hasAttribute('data-chat-on-load')) openChat();
+      // Frames can pin a composer state so the sheets / Send state are visible
+      // without interaction.
+      if (phone.hasAttribute('data-cmp-draft-on-load')) {
+        chatDraft = phone.getAttribute('data-cmp-draft-on-load');
+        renderThread();
+      }
+      if (phone.hasAttribute('data-cmp-sheet-on-load')) {
+        composerSheet = phone.getAttribute('data-cmp-sheet-on-load');
+        renderThread();
+      }
       if (phone.hasAttribute('data-profile-on-load')) openProfile();
       if (phone.hasAttribute('data-picker-on-load')) {
         openProfile();

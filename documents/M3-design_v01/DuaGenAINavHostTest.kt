@@ -7,6 +7,8 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.isOff
+import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -194,6 +196,29 @@ private const val AGENT_COMPOSER_HINT = "Message $AGENT_CHAT_TITLE\u2026"
  * line is unique to the card.
  */
 private const val AGENT_ROLE_LINE = "Multitasks, controls agents, creates new ones"
+
+/* The composer's controls, by their TalkBack descriptions. */
+private const val ATTACH_LABEL = "Attach"
+private const val SKILLS_LABEL = "Skills"
+private const val MCP_LABEL = "MCP Tools"
+private const val SEND_LABEL = "Send message"
+private const val STOP_LABEL = "Stop"
+private const val VOICE_LABEL = "Voice input"
+
+/** The Skills sheet's rows — Dua-ai's `DuaAgentSkills` titles, in order. */
+private val DUA_AGENT_SKILL_TITLES = listOf(
+    "Frontend Developer",
+    "Backend Architect",
+    "API Tester",
+    "DevOps Automator",
+    "Code Reviewer",
+)
+
+/** The MCP sheet's built-in tool chips. */
+private val BUILT_IN_TOOLS = listOf(
+    "google_search", "fetch_url", "run_python", "generate_image", "save_note",
+    "search_notes", "remember", "recall", "search_documents",
+)
 
 /** Dua mode's collapsed composer placeholder — the marker for "this is Dua home". */
 private const val DUA_ASK_HINT = "Ask Dua ..."
@@ -619,11 +644,13 @@ class DuaGenAINavHostTest {
     /**
      * Asserts the thread HAS a composer, with [placeholder] as its hint.
      *
-     * The composer is the shared `DuaComposer` pill, so it is identified by the
-     * three things it always draws: the placeholder text, the attach control and
-     * the mic control. The green voice button is drawn as shapes, not an icon, so
-     * it carries no content description of its own \u2014 the mic beside it is the
-     * stable marker for that end of the pill.
+     * The composer is the shared `DuaComposer` pill. A thread's pill is
+     * identified by what it draws, left to right: the "Attach" `+`, the field
+     * (exactly one editable node, showing the placeholder), then the agent tools
+     * "Skills" and "MCP Tools", then the single Send/Stop/Voice control. With an
+     * empty field that control is the voice waveform ("Voice input"), so no
+     * "Send message" node exists yet — Send appears only once text is typed.
+     * There is no separate mic glyph any more.
      *
      * The old generic placeholder must be gone: a thread's hint is
      * `"Message <title>..."`, so seeing `"Type a message"` would mean the
@@ -632,11 +659,11 @@ class DuaGenAINavHostTest {
     private fun assertComposer(placeholder: String) {
         assertVisible(placeholder)
         assertNotVisible(COMPOSER_PLACEHOLDER)
-        assertVisibleDescCount("Add attachment", 1)
-        assertVisibleDescCount("Voice input", 1)
-        // The composer is LIVE, not a static pill: it carries a send control and
-        // exactly one field that accepts text.
-        assertVisibleDescCount("Send message", 1)
+        assertVisibleDescCount(ATTACH_LABEL, 1)
+        assertVisibleDescCount(SKILLS_LABEL, 1)
+        assertVisibleDescCount(MCP_LABEL, 1)
+        assertVisibleDescCount(VOICE_LABEL, 1)
+        assertVisibleDescCount(SEND_LABEL, 0)
         assertEquals(
             "the composer must have exactly one editable field",
             1,
@@ -649,13 +676,12 @@ class DuaGenAINavHostTest {
      *
      * Used for Agent's HOME, which must not draw the Dua pill: the composer
      * belongs to a conversation, and Agent's home is the agent surface. Checks
-     * the three things a composer would leave behind rather than trusting one
-     * string:
+     * the things a composer would leave behind rather than trusting one string:
      *
      *   1. no node accepts text input (`hasSetTextAction`);
      *   2. no composer placeholder is on screen;
-     *   3. the composer's own controls ("Add attachment", "Voice input") are
-     *      absent \u2014 they would only exist inside a composer.
+     *   3. the composer's own controls ("Attach", "Voice input", "Skills",
+     *      "MCP Tools") are absent — they would only exist inside a composer.
      */
     private fun assertNoComposer() {
         val editable = compose.onAllNodes(hasSetTextAction())
@@ -663,8 +689,18 @@ class DuaGenAINavHostTest {
         assertEquals("this surface must have no text input", 0, editable)
 
         assertNotVisible(COMPOSER_PLACEHOLDER)
-        assertVisibleDescCount("Add attachment", 0)
-        assertVisibleDescCount("Voice input", 0)
+        assertVisibleDescCount(ATTACH_LABEL, 0)
+        assertVisibleDescCount(VOICE_LABEL, 0)
+        assertVisibleDescCount(SKILLS_LABEL, 0)
+        assertVisibleDescCount(MCP_LABEL, 0)
+    }
+
+    /** Opens Agent's own thread the way a user does: Agent mode -> pinned card. */
+    private fun openAgentThread() {
+        launch()
+        switchTo(HomeMode.Agent)
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.waitForIdle()
     }
 
     private fun currentRoute(): String? =
@@ -729,6 +765,23 @@ class DuaGenAINavHostTest {
         // The top bar's right button is the gear, not the plus.
         assertVisibleDescCount("Settings", 1)
         assertVisibleDescCount("New chat", 0)
+
+        // Dua's pill carries no agent tools: Skills and MCP are Dua Agent
+        // capabilities, so they are drawn only under a thread. Its Attach has no
+        // sheet to open here, so it is announced unavailable, and its voice
+        // waveform is not wired either. There is no separate mic glyph.
+        assertVisibleDescCount(SKILLS_LABEL, 0)
+        assertVisibleDescCount(MCP_LABEL, 0)
+        assertEquals(
+            1,
+            compose.onAllNodes(hasContentDescription(ATTACH_LABEL) and isNotEnabled())
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        assertEquals(
+            1,
+            compose.onAllNodes(hasContentDescription(VOICE_LABEL) and isNotEnabled())
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
     }
 
     // ------------------------------------------- Agent mode is the agent surface
@@ -2691,9 +2744,13 @@ class DuaGenAINavHostTest {
         compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
 
-        // Type into the composer's field and send.
+        // Type into the composer's field: the trailing control turns from the
+        // voice waveform into Send. Then send.
         compose.onNode(hasSetTextAction()).performTextInput("Book the venue for the launch")
-        compose.onNodeWithContentDescription("Send message").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(VOICE_LABEL, 0)
+        assertVisibleDescCount(SEND_LABEL, 1)
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
         compose.waitForIdle()
 
         // The user's message is in the thread\u2026
@@ -2709,6 +2766,112 @@ class DuaGenAINavHostTest {
                 .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
         }
         assertVisibleSubstring("I've picked that up")
+    }
+
+    /**
+     * The right side of the thread composer is Skills, MCP Tools, then the
+     * Send/Voice control — in that order, left to right — and every one of
+     * them, plus Attach, is at least the 48dp M3 touch target.
+     */
+    @Test
+    fun theComposerRightSideIsSkillsThenMcpThenSendAndAllAre48dp() {
+        openAgentThread()
+        compose.onNode(hasSetTextAction()).performTextInput("Hi")
+        compose.waitForIdle()
+
+        fun bounds(desc: String) =
+            compose.onNodeWithContentDescription(desc).fetchSemanticsNode().boundsInRoot
+        val attach = bounds(ATTACH_LABEL)
+        val skills = bounds(SKILLS_LABEL)
+        val mcp = bounds(MCP_LABEL)
+        val send = bounds(SEND_LABEL)
+        assertTrue("Attach sits left of Skills", attach.right <= skills.left)
+        assertTrue("Skills sits left of MCP Tools", skills.right <= mcp.left + 1f)
+        assertTrue("MCP Tools sits left of Send", mcp.right <= send.left + 1f)
+        val min = 48f * compose.density.density - 1f
+        for (b in listOf(attach, skills, mcp, send)) {
+            assertTrue("composer control must be >= 48dp wide", b.width >= min)
+            assertTrue("composer control must be >= 48dp tall", b.height >= min)
+        }
+    }
+
+    /** Skills opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
+    @Test
+    fun theSkillsIconOpensTheSkillsSheetAndTogglesASkill() {
+        openAgentThread()
+        compose.onNodeWithContentDescription(SKILLS_LABEL).performClick()
+        compose.waitForIdle()
+
+        for (title in DUA_AGENT_SKILL_TITLES) {
+            compose.onNode(hasContentDescription(title) and isOn()).assertExists()
+        }
+        compose.onNode(hasContentDescription(DUA_AGENT_SKILL_TITLES.first())).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription(DUA_AGENT_SKILL_TITLES.first()) and isOff())
+            .assertExists()
+    }
+
+    /**
+     * MCP Tools opens the MCP sheet: the master switch (on by default), no
+     * invented external servers, and the built-in tool ids as status chips.
+     */
+    @Test
+    fun theMcpIconOpensTheMcpSheetWithTheBuiltInTools() {
+        openAgentThread()
+        compose.onNodeWithContentDescription(MCP_LABEL).performClick()
+        compose.waitForIdle()
+
+        compose.onNode(hasContentDescription(MCP_LABEL) and isOn()).assertExists()
+        compose.onNodeWithText("None configured").assertExists()
+        for (tool in BUILT_IN_TOOLS) compose.onNodeWithText(tool).assertExists()
+
+        compose.onNode(hasContentDescription(MCP_LABEL) and isOn()).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription(MCP_LABEL) and isOff()).assertExists()
+    }
+
+    /** Attach `+` opens the plus sheet, which hands off to the Skills sheet. */
+    @Test
+    fun theAttachButtonOpensThePlusSheet() {
+        openAgentThread()
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Quick Actions").assertExists()
+        compose.onNodeWithText("Agent tools").assertExists()
+        // The sheet's Skills row (the composer's Skills icon carries no text).
+        compose.onNode(hasText(SKILLS_LABEL) and hasContentDescription(SKILLS_LABEL)).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasContentDescription(DUA_AGENT_SKILL_TITLES.first())).assertExists()
+    }
+
+    /**
+     * While Agent's reply is pending the trailing control is Stop; tapping it
+     * cancels the reply, so Agent never answers and the control returns to the
+     * voice waveform.
+     */
+    @Test
+    fun stopCancelsThePendingReply() {
+        openAgentThread()
+        compose.mainClock.autoAdvance = false
+        compose.onNode(hasSetTextAction()).performTextInput("Cancel this one")
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
+        compose.mainClock.advanceTimeByFrame()
+
+        compose.onNodeWithContentDescription(STOP_LABEL).performClick()
+        compose.mainClock.advanceTimeBy(5_000)
+        compose.mainClock.autoAdvance = true
+        compose.waitForIdle()
+
+        assertVisibleSubstring("Cancel this one")
+        assertEquals(
+            0,
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().size,
+        )
+        assertVisibleDescCount(STOP_LABEL, 0)
+        assertVisibleDescCount(VOICE_LABEL, 1)
     }
 
     /** Back from Agent's thread lands on Agent's home, not on Dua's. */

@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
  *  The 48dp touch target (audit fix #10) — one shared definition.
  *
  *  The kit draws several controls SMALLER than the M3 48dp minimum because that
- *  is how the mockup draws them (a 44dp header circle, a 36dp send disc). The
+ *  is how the mockup draws them (a 44dp header circle, a 42dp send disc). The
  *  visual size is a design decision and stays; the TOUCH AREA must not. M3's
  *  `minimumInteractiveComponentSize()` does exactly that: it keeps the child's
  *  drawn size and expands the interactive box around it to 48dp.

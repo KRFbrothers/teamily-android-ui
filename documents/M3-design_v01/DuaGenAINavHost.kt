@@ -36,6 +36,7 @@ import ai.duagenai.design.screens.AGENT_CHAT_ID
 import ai.duagenai.design.screens.AGENT_CHAT_TITLE
 import ai.duagenai.design.screens.DiscoverScreen
 import ai.duagenai.design.screens.DrawerDestination
+import ai.duagenai.design.screens.DuaAgentSkills
 import ai.duagenai.design.screens.HomeMode
 import ai.duagenai.design.screens.HomeScreen
 import ai.duagenai.design.screens.HomeTab
@@ -193,6 +194,12 @@ fun DuaGenAINavHost(
 
     // Dua | Agent. rememberSaveable so rotation / theme change keeps the choice.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
+    // The thread composer's agent tools — which Dua Agent skills are on and
+    // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
+    // is one app-wide setting every thread's composer reads. Default: all five
+    // skills on, MCP on. Saved as an ArrayList so it survives rotation.
+    var enabledSkills by rememberSaveable { mutableStateOf(ArrayList(DuaAgentSkills.ids)) }
+    var mcpEnabled by rememberSaveable { mutableStateOf(true) }
 
     // Which bottom-nav item is highlighted. HOISTED out of HomeScreen and
     // rememberSaveable, so a tab tap survives a Home recomposition, a rotation
@@ -406,6 +413,14 @@ fun DuaGenAINavHost(
                     // normal flow. popBackStack() is a no-op if the stack is
                     // empty, so a deep link into a chat cannot crash on back.
                     onBack = { navController.popBackStack() },
+                    enabledSkillIds = enabledSkills.toSet(),
+                    onToggleSkill = { id ->
+                        enabledSkills = ArrayList(
+                            if (id in enabledSkills) enabledSkills - id else enabledSkills + id,
+                        )
+                    },
+                    mcpEnabled = mcpEnabled,
+                    onToggleMcp = { mcpEnabled = it },
                 )
             }
 

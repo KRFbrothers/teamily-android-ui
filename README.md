@@ -39,6 +39,7 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
 | `DuaGenAINavHost.kt` | Root nav host wiring all screens together |
 | `HomeScreen.kt` | Dua home screen |
 | `ChatScreen.kt` | Agent chat screen + composer |
+| `ComposerSheets.kt` | Composer sheets: Attach (+) Quick Actions, Skills (5 Dua Agent skills), MCP Tools (master toggle + built-in tools) |
 | `MemoryScreen.kt` | Memory list, filter chips, search, detail dialog (Open source / Copy text / Share / Close) |
 | `ArtifactsScreen.kt` | Artifacts grid, filter, pull-to-refresh, swipe-to-delete, context menu |
 | `CubePickerScreen.kt` | Cube picker with search/filter chips (48dp) + long-press tooltip |

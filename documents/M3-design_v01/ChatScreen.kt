@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -46,6 +47,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ai.duagenai.design.cube.CubeAvatar
@@ -75,10 +77,13 @@ import ai.duagenai.design.theme.teamilyPalette
  *  COMPOSER — now LIVE
  *  -------------------
  *  The thread's composer is NOT a new component: it is `DuaComposer` from
- *  HomeScreen.kt — the exact same pill Dua's home draws (plus · placeholder ·
- *  mic · green voice button), same tokens, same radius, same spacing. Dua's call
- *  site passes no value/change/send, so its rendering is unchanged; this screen
- *  passes all three, which is the single switch that makes the pill editable.
+ *  HomeScreen.kt — the exact same pill Dua's home draws, same tokens, same
+ *  28dp radius, same spacing. Dua's call site passes no value/change/send, so
+ *  its pill stays static; this screen passes them, which makes the field live,
+ *  plus the agent tools: Attach `+` (opens ComposerPlusSheet), Skills and MCP
+ *  Tools (open ComposerSkillsSheet / ComposerMcpSheet), and the single
+ *  Send/Stop/Voice control. While Agent's reply is pending (`agentTyping`) the
+ *  control is Stop, which cancels the reply.
  *
  *  The composer sits in `Scaffold`'s `bottomBar`, so the `inner` padding the
  *  LazyColumn consumes already includes its height — the last message can never
@@ -246,6 +251,13 @@ fun ChatScreen(
     chatTitle: String = "Webpage Developer",
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
+    // The composer's agent tools, hoisted by the nav host so the choice is one
+    // app-wide setting, not per thread. Defaults keep every existing caller (and
+    // the @Previews) compiling: with no handler the screen keeps its own copy.
+    enabledSkillIds: Set<String> = DEFAULT_DUA_SKILLS,
+    onToggleSkill: ((String) -> Unit)? = null,
+    mcpEnabled: Boolean = true,
+    onToggleMcp: ((Boolean) -> Unit)? = null,
 ) {
     // Agent's own thread is the one conversation whose content is not the
     // generic sample: it is Agent reporting on the agents it controls. Every
@@ -272,6 +284,18 @@ fun ChatScreen(
     // the meantime. It is a plain coroutine delay — no real model call.
     var agentTyping by rememberSaveable(chatId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // The pending reply, so Stop can cancel it.
+    var replyJob by remember { mutableStateOf<Job?>(null) }
+
+    // Local fallback for the agent tools when no caller hoists them (previews).
+    var localSkills by rememberSaveable { mutableStateOf(ArrayList(enabledSkillIds)) }
+    var localMcp by rememberSaveable { mutableStateOf(mcpEnabled) }
+    val skills: Set<String> = if (onToggleSkill != null) enabledSkillIds else localSkills.toSet()
+    val toggleSkill: (String) -> Unit = onToggleSkill ?: { id ->
+        localSkills = ArrayList(if (id in localSkills) localSkills - id else localSkills + id)
+    }
+    val mcp = if (onToggleMcp != null) mcpEnabled else localMcp
+    val toggleMcp: (Boolean) -> Unit = onToggleMcp ?: { localMcp = it }
     val listState = rememberLazyListState()
 
     // The list is the conversation plus, while Agent is "typing", one extra row.
@@ -285,17 +309,26 @@ fun ChatScreen(
 
     fun send() {
         val text = draft.trim()
-        if (text.isEmpty()) return
+        // Guarded twice over: blank text, or a reply still in flight.
+        if (text.isEmpty() || agentTyping) return
         messages = ArrayList(messages + SavedMessage(SavedMessage.USER, text, nowLabel()))
         draft = ""
         agentTyping = true
-        scope.launch {
+        replyJob = scope.launch {
             delay(AGENT_REPLY_DELAY_MS)
             agentTyping = false
             messages = ArrayList(
                 messages + SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()),
             )
         }
+    }
+
+    // Stop: cancel the pending reply and drop the typing indicator. The user's
+    // message stays in the thread; Agent simply does not answer it.
+    fun stop() {
+        replyJob?.cancel()
+        replyJob = null
+        agentTyping = false
     }
 
     // Forest-slate polish: the canvas gradient sits behind the whole thread;
@@ -357,6 +390,12 @@ fun ChatScreen(
                 value = draft,
                 onValueChange = { draft = it },
                 onSend = { send() },
+                sending = agentTyping,
+                onStop = { stop() },
+                enabledSkillIds = skills,
+                onToggleSkill = toggleSkill,
+                mcpEnabled = mcp,
+                onToggleMcp = toggleMcp,
             )
         },
     ) { inner ->

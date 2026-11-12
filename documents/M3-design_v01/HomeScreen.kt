@@ -25,10 +25,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -47,6 +50,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
@@ -84,8 +88,9 @@ import ai.duagenai.design.theme.teamilyPalette
  *        list, no search row, no "CHATS" header and no bottom navigation here.
  *        The reference's body is empty and so is this one — nothing is invented
  *        to fill it.
- *      • bottom: one collapsed "Ask Dua ..." pill (plus · placeholder · mic ·
- *        green voice button).
+ *      • bottom: one collapsed "Ask Dua ..." pill (plus · placeholder · green
+ *        voice button). The agent tools (Skills, MCP Tools, the `+` sheet) are
+ *        drawn only under a thread, never here.
  *      • NO agent-related entry point of any kind. Not a row, not a badge, not
  *        a tab. Dua does not manage agents.
  *
@@ -487,34 +492,58 @@ private fun ModeToggle(
 }
 
 /**
- * Dua mode's composer: one collapsed pill.
+ * The ONE composer pill — Dua's home and every thread draw it.
  *
- * plus · "Ask Dua ..." · mic · green voice button. The reference's voice button
- * is a light mint circle with three green bars; here it is the kit's brand
- * gradient with the same three-bar waveform, because the gradient is this app's
- * established "primary action" fill and the mockup's purple is not ours.
+ * Layout, left to right:
  *
- * `internal`, not `private`, and with a `placeholder` parameter, because
- * ChatScreen draws the SAME composer under Agent's thread. There is exactly one
- * composer implementation in this package: Dua's home and Agent's thread both
- * call this function, so the two can never drift apart visually. Dua's call site
- * passes no argument, so its rendering is unchanged.
+ *   Attach `+` · field (weight 1f) · [Skills · MCP Tools] · Send/Stop/Voice
+ *
+ * The field carries the row's `weight(1f)`, so it IS the flexible gap between
+ * the left group (Attach) and the right group — there is no separate weighted
+ * Spacer, which would split the free width with the field and squash it.
+ * Every control is a 48dp touch target (`minTouchTarget()` / `MinTouchTarget`).
+ *
+ * The old dead 20dp mic glyph is gone; voice lives in the single trailing
+ * Send/Stop/Voice control ([SendStopVoiceButton]).
+ *
+ * TWO CALL SITES, ONE COMPONENT
+ * -----------------------------
+ * `internal`, with optional parameters, because ChatScreen draws the SAME pill
+ * under every thread. Dua's home passes nothing: a static "Ask Dua ..." hint,
+ * an unavailable Attach and the (unwired) voice waveform. A thread passes the
+ * value / change / send handlers, which make the field live, and the skills /
+ * MCP state, which turns on the agent tools: the Skills and MCP Tools icons and
+ * a working Attach `+` that opens [ComposerPlusSheet].
+ *
+ * The agent tools are deliberately NOT drawn on Dua's home: Dua is the plain
+ * chatbot and its home has no agent entry point of any kind (see the header of
+ * this file). Skills and MCP are Dua Agent capabilities.
  */
 @Composable
 internal fun DuaComposer(
     placeholder: String = "Ask Dua ...",
-    // The three optional parameters below are what make the SAME pill usable as
-    // a real composer. Dua's call site passes none of them, so its rendering is
-    // byte-identical to before: a static hint, a mic and the voice button.
     value: String? = null,
     onValueChange: ((String) -> Unit)? = null,
     onSend: (() -> Unit)? = null,
+    // A reply is in flight. With [onStop] supplied the trailing control becomes
+    // Stop, and IME send is guarded so a second message cannot race the first.
+    sending: Boolean = false,
+    onStop: (() -> Unit)? = null,
+    // Agent tools. Both handlers must be supplied for the Skills / MCP icons and
+    // the `+` sheet to appear — Dua's home supplies neither.
+    enabledSkillIds: Set<String> = DEFAULT_DUA_SKILLS,
+    onToggleSkill: ((String) -> Unit)? = null,
+    mcpEnabled: Boolean = true,
+    onToggleMcp: ((Boolean) -> Unit)? = null,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // Editable only when a caller supplies a change handler. This is the single
     // switch between "Dua's presentational pill" and "a thread's live composer".
     val editable = onValueChange != null
-    val canSend = editable && !value.isNullOrBlank()
+    val canSend = editable && !value.isNullOrBlank() && !sending
+    val live = editable && onStop != null
+    val agentTools = onToggleSkill != null && onToggleMcp != null
+    var sheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
 
     Box(
         modifier = Modifier
@@ -540,22 +569,19 @@ internal fun DuaComposer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .sizeIn(minHeight = 52.dp)
-                    .padding(start = spacing.md, end = spacing.xs),
+                    .padding(horizontal = spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "Add attachment",
+                // LEFT — Attach. A real 48dp button wherever there is a sheet
+                // to open (a thread); on Dua's home there is no destination, so
+                // it keeps the audit-fix #9 guard: no click, announced disabled.
+                ComposerIconButton(
+                    icon = Icons.Outlined.Add,
+                    contentDescription = "Attach",
+                    enabled = agentTools,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // Audit fix #9: attachments are not wired in this kit, so the
-                    // glyph must not announce itself as an available action. It
-                    // carries no click modifier (no ripple) and publishes
-                    // `disabled()` so a screen reader says it is unavailable.
-                    modifier = Modifier
-                        .size(20.dp)
-                        .semantics { disabled() },
+                    onClick = { sheet = ComposerSheet.Plus },
                 )
-                Spacer(Modifier.width(spacing.sm))
                 if (editable) {
                     // The real input. Same text style and colour as the static
                     // hint it replaces, so the pill does not change shape when a
@@ -571,6 +597,7 @@ internal fun DuaComposer(
                         maxLines = 4,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(
+                            // Guarded: blank text or an in-flight reply never sends.
                             onSend = { if (canSend) onSend?.invoke() },
                         ),
                         decorationBox = { innerTextField ->
@@ -579,6 +606,8 @@ internal fun DuaComposer(
                                     text = placeholder,
                                     style = DuaGenAITextStyles.bubble,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                             innerTextField()
@@ -589,109 +618,192 @@ internal fun DuaComposer(
                         text = placeholder,
                         style = DuaGenAITextStyles.bubble,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                 }
-                Icon(
-                    Icons.Filled.Mic,
-                    contentDescription = "Voice input",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    // Audit fix #9: same guard as the attachment glyph above —
-                    // voice input is not wired, so it is announced as disabled
-                    // rather than as a control that does nothing.
-                    modifier = Modifier
-                        .size(20.dp)
-                        .semantics { disabled() },
-                )
-                Spacer(Modifier.width(spacing.sm))
-                VoiceActionButton()
-                if (editable) {
-                    Spacer(Modifier.width(spacing.xs))
-                    SendButton(enabled = canSend, onClick = { onSend?.invoke() })
+                // RIGHT — Skills, MCP Tools, then the one Send/Stop/Voice control.
+                if (agentTools) {
+                    ComposerIconButton(
+                        icon = Icons.Outlined.Build,
+                        contentDescription = "Skills",
+                        enabled = true,
+                        tint = if (enabledSkillIds.isNotEmpty()) palette.logoMint
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        activeDot = enabledSkillIds.isNotEmpty(),
+                        onClick = { sheet = ComposerSheet.Skills },
+                    )
+                    ComposerIconButton(
+                        icon = Icons.Outlined.Extension,
+                        contentDescription = "MCP Tools",
+                        enabled = true,
+                        tint = if (mcpEnabled) palette.logoMint
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        activeDot = mcpEnabled,
+                        onClick = { sheet = ComposerSheet.Mcp },
+                    )
                 }
+                SendStopVoiceButton(
+                    mode = when {
+                        sending && live -> SendMode.Stop
+                        editable && !value.isNullOrBlank() -> SendMode.Send
+                        else -> SendMode.Voice
+                    },
+                    onSend = { if (canSend) onSend?.invoke() },
+                    onStop = { onStop?.invoke() },
+                )
             }
+        }
+    }
+
+    // The sheets. Opened from the icons above; the `+` sheet hands off to the
+    // Skills / MCP sheets rather than duplicating them.
+    if (agentTools) {
+        when (sheet) {
+            ComposerSheet.Plus -> ComposerPlusSheet(
+                onOpenSkills = { sheet = ComposerSheet.Skills },
+                onOpenMcp = { sheet = ComposerSheet.Mcp },
+                onDismiss = { sheet = ComposerSheet.None },
+            )
+            ComposerSheet.Skills -> ComposerSkillsSheet(
+                enabledSkillIds = enabledSkillIds,
+                onToggleSkill = onToggleSkill!!,
+                onDismiss = { sheet = ComposerSheet.None },
+            )
+            ComposerSheet.Mcp -> ComposerMcpSheet(
+                mcpEnabled = mcpEnabled,
+                onToggleMcp = onToggleMcp!!,
+                onDismiss = { sheet = ComposerSheet.None },
+            )
+            ComposerSheet.None -> Unit
         }
     }
 }
 
 /**
- * The send control, drawn only in an editable composer.
- *
- * It reuses the voice button's own geometry (a 36dp circle) and the kit's brand
- * gradient for its enabled state, so it is the same visual language rather than
- * a new one. Disabled it drops to the surface variant with the muted ink \u2014 no
- * new colour is introduced.
+ * A 48dp composer icon button: a 24dp glyph centred in the M3 minimum target,
+ * with an optional small active dot (Skills / MCP). A disabled button takes no
+ * click and publishes `disabled()` (audit fix #9).
  */
 @Composable
-private fun SendButton(enabled: Boolean, onClick: () -> Unit) {
+private fun ComposerIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    tint: Color,
+    onClick: () -> Unit,
+    activeDot: Boolean = false,
+) {
+    val palette = teamilyPalette()
     Box(
         modifier = Modifier
-            // Audit fix #10: the disc is drawn at 36dp, but the touch area is
-            // raised to the M3 48dp minimum. `minTouchTarget()` comes FIRST so
-            // the 48dp box is the outer one and the 36dp disc stays centred
-            // inside it — the composer's look is unchanged.
-            .minTouchTarget()
-            .size(36.dp)
+            .size(MinTouchTarget)
             .clip(CircleShape)
-            .background(
-                if (enabled) teamilyPalette().brandGradient
-                else SolidColor(MaterialTheme.colorScheme.surfaceVariant),
-            )
             .then(
-                if (enabled) Modifier.clickable(onClick = onClick) else Modifier,
+                if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick)
+                else Modifier,
             )
             .semantics {
-                contentDescription = "Send message"
+                this.contentDescription = contentDescription
                 if (!enabled) disabled()
             },
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            Icons.AutoMirrored.Filled.Send,
+            icon,
             contentDescription = null,
-            // Light glyph on the green brandGradient (accentContrast), so the
-            // arrow stays legible in both themes.
-            tint = if (enabled) teamilyPalette().accentContrast
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
+            tint = if (enabled) tint else tint.copy(alpha = 0.45f),
+            modifier = Modifier.size(24.dp),
         )
+        if (activeDot) {
+            // 8dp logoMint dot at the glyph's top-end, ringed in the pill's own
+            // fill so it reads as a badge rather than part of the glyph.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(start = 18.dp, bottom = 18.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(palette.composerBg)
+                    .padding(1.5.dp)
+                    .clip(CircleShape)
+                    .background(palette.logoMint),
+            )
+        }
     }
 }
 
-/** The circular voice action — brand gradient, never the mockup's purple. */
+private enum class SendMode { Send, Stop, Voice }
+
+/**
+ * The single trailing control: a 48dp touch target wrapping a 42dp
+ * `brandGradient` disc, replacing the old separate 40dp voice disc + 36dp send
+ * disc.
+ *
+ *  • Stop  — a reply is in flight on a live thread; calls `onStop`.
+ *  • Send  — the field has text; calls `onSend`.
+ *  • Voice — otherwise: a four-bar waveform. Voice capture is NOT wired in this
+ *            kit, so this state is announced disabled and takes no click.
+ */
 @Composable
-private fun VoiceActionButton() {
-    val colors = DuaGenAITheme.colors
+private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -> Unit) {
+    val palette = teamilyPalette()
     Box(
         modifier = Modifier
-            // Audit fix #10: 40dp drawn, 48dp tappable — same rule as the send
-            // disc above, so the two composer controls match.
-            .minTouchTarget()
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(colors.primaryGradient)
-            // Audit fix #9: voice capture is not wired in this kit, so the disc
-            // is announced as disabled instead of looking like a live action.
+            .size(MinTouchTarget)
+            .then(
+                when (mode) {
+                    SendMode.Send -> Modifier.clickable(role = Role.Button, onClick = onSend)
+                    SendMode.Stop -> Modifier.clickable(role = Role.Button, onClick = onStop)
+                    SendMode.Voice -> Modifier
+                },
+            )
             .semantics {
-                contentDescription = "Voice input"
-                disabled()
+                contentDescription = when (mode) {
+                    SendMode.Send -> "Send message"
+                    SendMode.Stop -> "Stop"
+                    SendMode.Voice -> "Voice input"
+                }
+                if (mode == SendMode.Voice) disabled()
             },
         contentAlignment = Alignment.Center,
     ) {
-        // A three-bar waveform, drawn as shapes so no icon asset is needed and
-        // the button stays legible at 40dp.
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(palette.brandGradient),
+            contentAlignment = Alignment.Center,
         ) {
-            listOf(8.dp, 14.dp, 8.dp).forEach { h ->
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(h)
-                        .clip(CircleShape)
-                        .background(colors.onGradient),
+            when (mode) {
+                SendMode.Send -> Icon(
+                    Icons.AutoMirrored.Outlined.Send,
+                    contentDescription = null,
+                    tint = palette.accentContrast,
+                    modifier = Modifier.size(20.dp),
                 )
+                SendMode.Stop -> Icon(
+                    Icons.Filled.Stop,
+                    contentDescription = null,
+                    tint = palette.accentContrast,
+                    modifier = Modifier.size(20.dp),
+                )
+                SendMode.Voice -> Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Four bars, drawn as shapes so no icon asset is needed.
+                    listOf(8.dp, 14.dp, 10.dp, 6.dp).forEach { h ->
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(h)
+                                .clip(CircleShape)
+                                .background(palette.accentContrast),
+                        )
+                    }
+                }
             }
         }
     }
