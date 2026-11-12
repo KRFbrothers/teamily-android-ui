@@ -37,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,10 +66,12 @@ import kotlin.math.sin
  *      history row therefore lands on the same cube the row showed.
  *
  *  The "Agent" nav item's glyph is a WIREFRAME nav icon (hexagon + Y seam,
- *  stroke only, no fill). It is not a cube avatar and must not be drawn with
- *  [CubeAvatar]: the 42 cube assets are solid charcoal/orange fills, and this
- *  is a 1.5dp outline. Keeping it separate is what stops the two from being
- *  confused later.
+ *  stroke only, no fill). The "Dua" nav item's glyph is a front-facing
+ *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
+ *  and from Library's isometric box in the HTML preview. Neither is a cube
+ *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
+ *  solid charcoal/orange fills, and these are 1.5dp outlines. Keeping them
+ *  separate is what stops the two from being confused later.
  *
  *  Colours are the kit's own green tokens — no purple anywhere. The mockup's
  *  #7C3AED voice button and #2563EB avatar ring are NOT carried over.
@@ -325,6 +329,10 @@ private fun DrawerNavItem(
                 tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
             )
+            // Front-facing wireframe cube, NOT a cube avatar — see the file header.
+            DrawerDestination.Dua -> DuaCubeGlyph(
+                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             // A wireframe glyph, NOT a cube avatar — see the file header.
             DrawerDestination.Agent -> AgentCubeGlyph(
                 tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -375,6 +383,55 @@ private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/**
+ * The "Dua" nav glyph: a front-facing cube outline (square face, top and
+ * right planes), stroke only. Drawn with [Canvas] for the same reason as
+ * [AgentCubeGlyph] — it is a 1.5dp wireframe nav icon, not a catalogue avatar.
+ */
+@Composable
+internal fun DuaCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
+        val stroke = Stroke(
+            width = 1.5.dp.toPx(),
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+        )
+        val fl = size.width * 0.20f
+        val ft = size.height * 0.34f
+        val fr = size.width * 0.68f
+        val fb = size.height * 0.82f
+        val dx = size.width * 0.16f
+        val dy = size.height * 0.20f
+
+        val front = Path().apply {
+            moveTo(fl, ft)
+            lineTo(fr, ft)
+            lineTo(fr, fb)
+            lineTo(fl, fb)
+            close()
+        }
+        drawPath(front, color = tint, style = stroke)
+
+        val top = Path().apply {
+            moveTo(fl, ft)
+            lineTo(fl + dx, ft - dy)
+            lineTo(fr + dx, ft - dy)
+            lineTo(fr, ft)
+            close()
+        }
+        drawPath(top, color = tint, style = stroke)
+
+        val side = Path().apply {
+            moveTo(fr, ft)
+            lineTo(fr + dx, ft - dy)
+            lineTo(fr + dx, fb - dy)
+            lineTo(fr, fb)
+            close()
+        }
+        drawPath(side, color = tint, style = stroke)
     }
 }
 

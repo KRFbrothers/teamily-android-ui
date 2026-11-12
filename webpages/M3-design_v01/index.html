@@ -3757,6 +3757,9 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     monitor: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
     video: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="3"/><path d="M15 10l6-3v10l-6-3z"/></svg>',
     blank: '<i class="dr-blank"></i>',
+    // Front-facing wireframe cube for the Dua nav row — distinct from
+    // Agent's pointy hexagon (`glyph`) and Library's isometric box (`box`).
+    duaCube: '<svg viewBox="0 0 24 24"><path d="M5 8h11v11H5z"/><path d="M5 8l4-4h11l-4 4"/><path d="M16 8l4-4v11l-4 4"/></svg>',
     glyph: '<svg class="glyph" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/></svg>'
   };
 
@@ -3779,7 +3782,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     { id: 'computer', label: 'Computer', icon: 'monitor' },
     { id: 'videos', label: 'Videos', icon: 'video' },
     // Switches Home to Dua mode — the way back from Agent home (no toggle there).
-    { id: 'dua', label: 'Dua', icon: 'blank' },
+    { id: 'dua', label: 'Dua', icon: 'duaCube' },
     { id: 'agent', label: 'Agent', icon: 'glyph' }
   ];
 
