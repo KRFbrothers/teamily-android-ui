@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded",function(){sweep(document)});
 sweep(document)})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dua Gen AI — Home: Dua mode + Orhan mode</title>
+<title>Dua Gen AI — Home: Dua mode + Agent mode</title>
 <style>
 @font-face{font-family:Lato;src:url(fonts/lato-400.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:Lato;src:url(fonts/lato-700.woff2) format("woff2");font-weight:700;font-display:swap}
@@ -146,7 +146,7 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
   --grad:linear-gradient(180deg,#daf0df 0%,#cbe7d2 100%);
 }
 /* A deliberately short frame, so the managed-agent list actually overflows and
-   the pinned Orhan card can be proven to stay put while it scrolls. */
+   the pinned Agent card can be proven to stay put while it scrolls. */
 .phone.short{height:470px}
 
 /* status bar */
@@ -184,13 +184,13 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
 .seg button.on{background:var(--surface);color:var(--primary-ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 
 /* ---------- body ---------- */
-/* The body itself does NOT scroll: the search row, the pinned Orhan card and
+/* The body itself does NOT scroll: the search row, the pinned Agent card and
    the section header are its fixed children, and only .chatlist scrolls. That
-   is what keeps Orhan pinned while the managed agents move. */
+   is what keeps Agent pinned while the managed agents move. */
 .body{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .body.empty{overflow:hidden}
 
-/* orhan search row */
+/* agent search row */
 .searchrow{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 16px}
 /* Audit fix #7: the filter button is a real toggle now. `.on` is the active
    state, drawn with the same brand-soft / primary-ink pair the drawer's active
@@ -210,7 +210,7 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
 }
 .searchpill svg{width:18px;height:18px;flex:0 0 18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 
-/* pinned Orhan card — fixed under the search row, outside the scroll area */
+/* pinned Agent card — fixed under the search row, outside the scroll area */
 .pincard{
   flex:0 0 auto;display:flex;align-items:center;gap:12px;
   margin:0 16px 8px;padding:12px;border-radius:20px;
@@ -224,7 +224,7 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
 .pincard .disc svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .pincard .pmain{flex:1 1 auto;min-width:0}
 /* The name and the role are BLOCK-level so they stack. As inline spans they
-   flowed onto one line, merged ("OrhanMultitasks, ...") and ran past the card
+   flowed onto one line, merged ("AgentMultitasks, ...") and ran past the card
    edge. The role clamps to two lines so the whole sentence stays readable. */
 .pincard .pname{display:block;font-size:15.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pincard .prole{font-size:13.5px;color:var(--ink2);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
@@ -252,7 +252,7 @@ h2{font-size:22px;font-weight:900;letter-spacing:-.01em;margin:0 0 6px}
 .row-snip{font-size:13.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-time{font-size:11.5px;font-weight:700;color:var(--ink3);flex:0 0 auto}
 
-/* ---------- dock: composer (Dua) / tab bar (Orhan) ---------- */
+/* ---------- dock: composer (Dua) / tab bar (Agent) ---------- */
 .dock{flex:0 0 auto;padding:8px 16px 14px;background:var(--canvas)}
 .ask-pill{
   display:flex;align-items:center;gap:8px;height:52px;padding:0 8px 0 14px;
@@ -317,7 +317,7 @@ html[data-theme="dark"] .phone .sendbtn{color:#17201b}
 .tab.on .ic{color:var(--primary-ink)}
 .tab.on span{color:var(--primary-ink)}
 
-/* ---------- chat screen (opened from the pinned Orhan card) ----------
+/* ---------- chat screen (opened from the pinned Agent card) ----------
    The thread carries the SAME composer pill Dua's home draws — one component,
    two call sites — so `.chatdock` reuses `.ask-pill` verbatim and only adds the
    inset that keeps it off the conversation. `.chatview` is a flex column and
@@ -1027,6 +1027,201 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
   .body{overflow:visible}
   .chatlist{overflow:visible}
 }
+
+/* ==========================================================================
+   Teamily-grade Forest-Slate glass polish (Dua Gen AI v01)
+   --------------------------------------------------------------------------
+   CSS-only layer on top of the preview above: atmosphere glow, frosted glass
+   on the drawer / dialogs / sheets / floating tab dock / composer, 32px
+   composer capsule with a focus halo, hover lift on interactive cards, and
+   the Fira Code stack for code. No markup, copy or JS hooks change.
+   Token values follow ui_polish_complete.md §1.1 exactly; the card / nav /
+   plus / bubble tokens mirror TeamilyTokens.kt so the preview and the
+   Compose screens agree.
+   ========================================================================== */
+
+/* 1.1 — page-level tokens (follow the page's light/dark toggle) */
+:root,:root[data-theme='light']{
+  --nv-canvas:#eef2ef;
+  --nv-atmosphere-deep:#e8f3ec;
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,var(--nv-atmosphere-deep) 0,transparent 52%),#fafbfa;
+  --nv-pane:#ffffffbd;
+  --nv-pane-edge:#2847350f;
+  --nv-glass:#f0f5f394;
+  --nv-glass-blur:36px;
+  --nv-glass-filter:blur(var(--nv-glass-blur)) saturate(1.15);
+  --nv-glass-highlight:inset 0 1px 2px #ffffff59,inset 0 -1px 2px #ffffff1a;
+  --nv-user-bubble:#dde6e0;
+  --nv-agent-bubble:#ffffff;
+  --nv-shadow-resting:0 1px 2px #2847350a,0 6px 18px -10px #2847351f;
+  --nv-shadow-floating:0 0 0 .5px #2847351a,0 1px 2px #2847350d,0 12px 32px -14px #28473530;
+  --nv-card-hover-shadow:0 2px 4px #28473512,0 20px 44px -14px #28473540;
+  --nv-primary-fill:linear-gradient(180deg,#0b8249 0%,#087c45 100%);
+  --nv-focus-outline:2px solid #087c45;
+  --nv-focus-halo:0 0 0 3px #087c4533;
+  --nv-radius-3xl:32px;
+  --nv-ease:cubic-bezier(.4,.1,.2,1);
+}
+:root[data-theme='dark']{
+  --nv-canvas:#141816;
+  --nv-atmosphere-deep:#242b27;
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#242b27 0,transparent 48%),#171c19;
+  --nv-pane:#1f2521eb;
+  --nv-pane-edge:#aebbb133;
+  --nv-glass:#1f2521bd;
+  --nv-glass-blur:36px;
+  --nv-glass-filter:blur(var(--nv-glass-blur)) saturate(1.3);
+  --nv-glass-surface:linear-gradient(180deg,#29322ccc,#1d2520ad);
+  --nv-glass-highlight:inset 0 1px 2px #dbe5dd1c,inset 0 -1px 2px #0005;
+  --nv-user-bubble:#253d31;
+  --nv-agent-bubble:#303433;
+  --nv-shadow-resting:0 1px 2px #0005,0 7px 14px -7px #0008;
+  --nv-shadow-floating:0 1px 2px #0006,0 10px 22px -9px #000b;
+  --nv-card-hover-shadow:0 1px 2px #0007,0 13px 25px -9px #000c;
+  --nv-primary-fill:linear-gradient(180deg,#0b8249 0%,#087c45 100%);
+  --nv-focus-outline:2px solid #d9e1da;
+  --nv-focus-halo:0 0 0 3px #b8c3ba55;
+}
+
+/* Phone frames carry their OWN light/dark (a light and a dark phone sit side
+   by side), so the same §1.1 values are re-scoped per frame. */
+.phone{
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#e8f3ec 0,transparent 52%),#fafbfa;
+  --nv-pane:#ffffffbd;--nv-pane-edge:#2847350f;
+  --nv-glass-filter:blur(36px) saturate(1.15);
+  --nv-glass-highlight:inset 0 1px 2px #ffffff59,inset 0 -1px 2px #ffffff1a;
+  --nv-user-bubble:#dde6e0;--nv-agent-bubble:#ffffff;
+  --nv-shadow-resting:0 1px 2px #2847350a,0 6px 18px -10px #2847351f;
+  --nv-shadow-floating:0 0 0 .5px #2847351a,0 1px 2px #2847350d,0 12px 32px -14px #28473530;
+  --nv-card-hover-shadow:0 2px 4px #28473512,0 20px 44px -14px #28473540;
+  --nv-focus-halo:0 0 0 3px #087c4533;
+  /* TeamilyLightPalette mirrors (TeamilyTokens.kt) */
+  --tm-solid:#fafbfa;
+  --tm-card-hero:#ddf3e5;
+  --tm-card-grad:linear-gradient(180deg,#fafcfbbd,#f0f5f394);
+  --tm-border-grad:linear-gradient(145deg,#ffffff,#e8ede9,#cfd9d2);
+  --tm-border:#e1e7e2;
+  --tm-nav-selected:#ddf3e5;--tm-nav-selected-ink:#066a3b;
+  --tm-plus-fill:#0a8048;--tm-plus-icon:#ffffff;
+  --tm-send-ink:#ffffff;
+}
+.phone.dark{
+  --nv-atmosphere:radial-gradient(ellipse at 8% 92%,#242b27 0,transparent 48%),#171c19;
+  --nv-pane:#1f2521eb;--nv-pane-edge:#aebbb133;
+  --nv-glass-filter:blur(36px) saturate(1.3);
+  --nv-glass-highlight:inset 0 1px 2px #dbe5dd1c,inset 0 -1px 2px #0005;
+  --nv-user-bubble:#253d31;--nv-agent-bubble:#303433;
+  --nv-shadow-resting:0 1px 2px #0005,0 7px 14px -7px #0008;
+  --nv-shadow-floating:0 1px 2px #0006,0 10px 22px -9px #000b;
+  --nv-card-hover-shadow:0 1px 2px #0007,0 13px 25px -9px #000c;
+  --nv-focus-halo:0 0 0 3px #b8c3ba55;
+  /* TeamilyDarkPalette mirrors (TeamilyTokens.kt) */
+  --tm-solid:#171c19;
+  --tm-card-hero:#253d31;
+  --tm-card-grad:linear-gradient(180deg,#29322ccc,#1d2520ad);
+  --tm-border-grad:linear-gradient(145deg,#aebbb15c,#4c564f);
+  --tm-border:#323b36;
+  --tm-nav-selected:#545b56;--tm-nav-selected-ink:#f7f9f7;
+  --tm-plus-fill:#cbe7d2;--tm-plus-icon:#17201b;
+  --tm-send-ink:#ecffef;
+}
+
+/* 1.2.5 — typography */
+body{font-family:"Lato",system-ui,-apple-system,sans-serif}
+.phone{font-family:"Lato",system-ui,-apple-system,sans-serif}
+pre,code,kbd,samp,pre code,td code,th code,ul.clean code{
+  font-family:"Fira Code",ui-monospace,SFMono-Regular,monospace
+}
+
+/* 1.2.1 — atmosphere: the page and every phone canvas get the radial glow.
+   Header and docks go transparent so the glow runs behind them. */
+body{background:var(--nv-atmosphere);background-attachment:fixed}
+.phone,
+.chatview,.profileview,.tabview,.pickerview,.settingsview{background:var(--nv-atmosphere)}
+.hdr,.dock,.chatdock{background:transparent}
+
+/* 1.2.2 — frosted glass: drawer, dialogs / sheets / menus, floating tab dock */
+.drawer,
+.st-dialog-card,.art-dialog-card,.art-sheet-card,.art-menu,
+.tabbar{
+  backdrop-filter:var(--nv-glass-filter);
+  -webkit-backdrop-filter:var(--nv-glass-filter);
+  background:var(--nv-pane);
+  border:1px solid var(--nv-pane-edge);
+  box-shadow:var(--nv-shadow-floating),var(--nv-glass-highlight);
+}
+.phone.dark .tabbar{box-shadow:var(--nv-shadow-floating),var(--nv-glass-highlight)}
+.drawer{border-left:0}
+.art-sheet-card{border-bottom:0}
+/* Floating dock's active pill — navSelected, as in HomeBottomNav. */
+.tab.on{background:var(--tm-nav-selected)}
+.tab.on .ic,.tab.on span{color:var(--tm-nav-selected-ink)}
+
+/* 1.2.3 — composer capsule (the preview's `.box` is `.ask-pill`) */
+.ask-pill,.phone.dark .ask-pill{
+  backdrop-filter:var(--nv-glass-filter);
+  -webkit-backdrop-filter:var(--nv-glass-filter);
+  background:var(--nv-pane);
+  border-color:var(--nv-pane-edge);
+  border-radius:var(--nv-radius-3xl,32px);
+  box-shadow:var(--nv-shadow-floating),var(--nv-glass-highlight);
+  transition:box-shadow .24s cubic-bezier(.4,.1,.2,1);
+}
+.ask-pill:focus-within,.phone.dark .ask-pill:focus-within{
+  box-shadow:var(--nv-focus-halo),var(--nv-shadow-floating);
+}
+/* Send: brandGradient with a light glyph, mirroring SendButton in Compose. */
+.sendbtn:not([disabled]),
+html[data-theme="dark"] .phone .sendbtn:not([disabled]){background:var(--nv-primary-fill);color:var(--tm-send-ink)}
+
+/* Header "+" (New chat) — plusFill / plusIcon. Still 48px. */
+.cb[aria-label="New chat"]{background:var(--tm-plus-fill);color:var(--tm-plus-icon)}
+
+/* Cards — TeamilyTokens cardGradient + 1px borderGradient, 20px corners.
+   The solid middle layer keeps the translucent card opaque so the swipe-to-
+   delete background never shows through. */
+.row,.mem-card,.art-card,
+.phone.dark .row{
+  border:1px solid transparent;border-radius:20px;
+  background:
+    var(--tm-card-grad) padding-box,
+    linear-gradient(var(--tm-solid),var(--tm-solid)) padding-box,
+    var(--tm-border-grad) border-box;
+  box-shadow:var(--nv-shadow-resting);
+}
+/* Pinned Agent — cardHeroColor highlight with the same 1px border. No badge:
+   the card has no verified state in this kit. */
+.pincard,.phone.dark .pincard{
+  border:1px solid transparent;border-radius:20px;
+  background:
+    linear-gradient(var(--tm-card-hero),var(--tm-card-hero)) padding-box,
+    var(--tm-border-grad) border-box;
+  box-shadow:var(--nv-shadow-resting);
+}
+
+/* Chat bubbles — §1.1 bubble tokens; user 20px all round, agent + 1px border */
+.msg.user .bub{background:var(--nv-user-bubble);color:var(--ink);border-radius:20px}
+.msg.agent .bub{background:var(--nv-agent-bubble);color:var(--agent-ink);border:1px solid var(--tm-border)}
+.typing i{background:var(--agent-ink)}
+
+/* 1.2.4 — hover lift on interactive cards (desktop pointer only). Swipe rows
+   lift their wrapper so the card's own swipe transform is untouched. */
+.row,.pincard,.mem-swipe,.art-swipe,.file{
+  transition:transform .24s cubic-bezier(.4,.1,.2,1),box-shadow .24s cubic-bezier(.4,.1,.2,1);
+}
+.pincard{cursor:pointer}
+/* Room for the 4px lift inside the scrolling agent list (no layout shift). */
+.chatlist{padding-top:6px;margin-top:-6px}
+@media (hover:hover) and (pointer:fine){
+  .row:hover,.pincard:hover,.mem-swipe:hover,.art-swipe:hover,.file:hover{
+    transform:translateY(-4px);box-shadow:var(--nv-card-hover-shadow);
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  .row,.pincard,.mem-swipe,.art-swipe,.file,.ask-pill,.btn,.cb{transition:none}
+  .row:hover,.pincard:hover,.mem-swipe:hover,.art-swipe:hover,.file:hover,
+  .btn:hover,.cb:hover{transform:none}
+}
 </style>
 </head>
 <body>
@@ -1034,17 +1229,18 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 <header class="hero">
   <div class="wrap">
     <p class="eyebrow">Dua Gen AI · Android · Material 3</p>
-    <h1>Home — Orhan pinned, Dua plain chatbot</h1>
+    <h1>Home — Agent pinned, Dua plain chatbot</h1>
     <p class="lede">
-      Dua Gen AI ek complete package hai jisme do hisse hain. <b>Dua</b> ek chatbot hai —
-      simple chat, sawaal-jawaab, koi agent kaam nahi. <b>Orhan</b> ek Agent hai — multitask
+      Dua Gen AI — ek complete package: <b>Dua AI</b>, <b>Dua Agent</b> aur <b>Dua Workspace</b>.
+      UI mein do modes hain: <b>Dua</b> aur <b>Agent</b>. <b>Dua</b> ek chatbot hai —
+      simple chat, sawaal-jawaab, koi agent kaam nahi. <b>Agent</b> multitask
       karta hai, doosre agents ko control karta hai, aur naye agents bana sakta hai. Isliye
       <b>Dua mode bilkul plain hai</b> — khaali body + sirf "Ask Dua ..." composer, koi chat list
-      nahi, koi search nahi, koi bottom nav nahi, agent ki ek bhi cheez nahi. Aur <b>Orhan mode</b>
-      me wo agents hain jinhe Orhan control karta hai.
+      nahi, koi search nahi, koi bottom nav nahi, agent ki ek bhi cheez nahi. Aur <b>Agent mode</b>
+      me wo agents hain jinhe Agent control karta hai.
     </p>
     <p class="lede">
-      Neeche har frame me <b>Dua | Orhan toggle tap karein</b> — poora screen switch hota hai.
+      Neeche har frame me <b>Dua | Agent toggle tap karein</b> — poora screen switch hota hai.
       Palette Dua Gen AI ki hai: <b>#087C45</b> primary, <b>#42D982</b> mint, Lato.
       Reference ka purple <b>#7C3AED</b> aur blue <b>#2563EB</b> jaan-boojh kar nahi liye.
     </p>
@@ -1070,23 +1266,23 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
   <div class="wrap">
     <h2>01 &middot; Home</h2>
     <p class="sub">
-      Chaar frames: Dua aur Orhan mode, har ek light aur dark me. Toggle har frame me live hai.
-      Top bar dono modes me same teen element rakhta hai — circular hamburger, Dua|Orhan toggle,
-      aur doosra circular button jo <b>Dua me gear</b> hai aur <b>Orhan me plus</b>, bilkul jaisa
+      Chaar frames: Dua aur Agent mode, har ek light aur dark me. Toggle har frame me live hai.
+      Top bar dono modes me same teen element rakhta hai — circular hamburger, Dua|Agent toggle,
+      aur doosra circular button jo <b>Dua me gear</b> hai aur <b>Agent me plus</b>, bilkul jaisa
       references me dikh raha hai. <b>Dua mode</b> me body khaali hai aur neeche sirf "Ask Dua ..."
-      composer — reference me bhi khaali hai; <b>Orhan mode</b> me search row, uske neeche
-      <b>pinned Orhan card</b>, phir "AGENTS · N" header + managed agents list (jo scroll hoti hai),
-      aur 5-item nav bar. Orhan card ko scroll karke test karein — wo hilta nahi.
-      <b>Pinned card tap karein</b> — Orhan ka apna chat khulta hai (neeche frame 04), jisme
-      pain area me Orhan aur user ki conversation hai aur neeche <b>wahi composer pill</b> jo Dua
-      ke home par hai (hint: "Message Orhan..."); back se Orhan screen par wapas.
+      composer — reference me bhi khaali hai; <b>Agent mode</b> me search row, uske neeche
+      <b>pinned Agent card</b>, phir "AGENTS · N" header + managed agents list (jo scroll hoti hai),
+      aur 5-item nav bar. Agent card ko scroll karke test karein — wo hilta nahi.
+      <b>Pinned card tap karein</b> — Agent ka apna chat khulta hai (neeche frame 04), jisme
+      pain area me Agent aur user ki conversation hai aur neeche <b>wahi composer pill</b> jo Dua
+      ke home par hai (hint: "Message Agent..."); back se Agent screen par wapas.
     </p>
 
     <div class="screen-block">
       <div class="screen-head">
         <span class="screen-num">01</span>
-        <h3 class="screen-title">Light — Dua | Orhan</h3>
-        <p class="screen-note">left: Dua mode &middot; right: Orhan mode &middot; dono me toggle live</p>
+        <h3 class="screen-title">Light — Dua | Agent</h3>
+        <p class="screen-note">left: Dua mode &middot; right: Agent mode &middot; dono me toggle live</p>
       </div>
       <div class="pair">
         <div class="phone-col">
@@ -1105,7 +1301,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         </div>
 
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan">
+          <div class="phone" data-phone data-mode="agent">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1116,7 +1312,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Orhan mode &middot; light</span>
+          <span class="phone-label">Agent mode &middot; light</span>
         </div>
       </div>
     </div>
@@ -1144,7 +1340,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         </div>
 
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan">
+          <div class="phone dark" data-phone data-mode="agent">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1155,7 +1351,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Orhan mode &middot; dark</span>
+          <span class="phone-label">Agent mode &middot; dark</span>
         </div>
       </div>
     </div>
@@ -1163,12 +1359,12 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     <div class="screen-block">
       <div class="screen-head">
         <span class="screen-num">03</span>
-        <h3 class="screen-title">Orhan &mdash; scroll test (short viewport)</h3>
-        <p class="screen-note">list ko scroll karein &middot; Orhan card apni jagah tika rehta hai</p>
+        <h3 class="screen-title">Agent &mdash; scroll test (short viewport)</h3>
+        <p class="screen-note">list ko scroll karein &middot; Agent card apni jagah tika rehta hai</p>
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone short" data-phone data-mode="orhan">
+          <div class="phone short" data-phone data-mode="agent">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1179,7 +1375,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Orhan &middot; 560px &middot; list scrolls, card pinned</span>
+          <span class="phone-label">Agent &middot; 560px &middot; list scrolls, card pinned</span>
         </div>
       </div>
     </div>
@@ -1187,12 +1383,12 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     <div class="screen-block">
       <div class="screen-head">
         <span class="screen-num">04</span>
-        <h3 class="screen-title">Orhan chat &mdash; opened from the pinned card</h3>
-        <p class="screen-note">pinned card tap karein &middot; back se Orhan screen par wapas &middot; composer me type karke send karein &mdash; message thread me add hota hai aur Orhan reply karta hai</p>
+        <h3 class="screen-title">Agent chat &mdash; opened from the pinned card</h3>
+        <p class="screen-note">pinned card tap karein &middot; back se Agent screen par wapas &middot; composer me type karke send karein &mdash; message thread me add hota hai aur Agent reply karta hai</p>
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-chat-on-load>
+          <div class="phone" data-phone data-mode="agent" data-chat-on-load>
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1203,11 +1399,11 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Orhan chat &middot; light</span>
+          <span class="phone-label">Agent chat &middot; light</span>
         </div>
 
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-chat-on-load>
+          <div class="phone dark" data-phone data-mode="agent" data-chat-on-load>
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1218,7 +1414,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Orhan chat &middot; dark</span>
+          <span class="phone-label">Agent chat &middot; dark</span>
         </div>
       </div>
     </div>
@@ -1392,7 +1588,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1408,7 +1604,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         </div>
 
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1433,7 +1629,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="artifacts">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="artifacts">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1449,7 +1645,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         </div>
 
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="artifacts">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="artifacts">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1659,7 +1855,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loading">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loading">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1674,7 +1870,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Artifacts &middot; loading</span>
         </div>
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="empty">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="empty">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1691,7 +1887,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair" style="margin-top:18px">
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="error">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="error">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1716,7 +1912,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-sheet-on-load="1">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-sheet-on-load="1">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1731,7 +1927,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Filter sheet open &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-filter-on-load="Image">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-filter-on-load="Image">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1748,7 +1944,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair" style="margin-top:18px">
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-filter-on-load="Video">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-filter-on-load="Video">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1763,7 +1959,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Filtered grid + caption &middot; dark</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-filter-on-load="Link" data-art-empty-filter="1">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-filter-on-load="Link" data-art-empty-filter="1">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1788,7 +1984,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-cat-on-load="Preference">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-cat-on-load="Preference">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1803,7 +1999,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Chip &ldquo;Preference&rdquo; &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-query-on-load="invoice">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-query-on-load="invoice">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1818,7 +2014,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Search &ldquo;invoice&rdquo; &middot; dark</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-cat-on-load="Task">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-cat-on-load="Task">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1843,7 +2039,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-refresh-on-load="1">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-refresh-on-load="1">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1858,7 +2054,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Pull-to-refresh &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-swipe-on-load="art_brand_hero">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-swipe-on-load="art_brand_hero">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1873,7 +2069,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Swipe reveal &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-dialog-on-load="art_brand_hero">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-dialog-on-load="art_brand_hero">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1888,7 +2084,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Delete confirmation &middot; dark</span>
         </div>
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-snack-on-load="art_brand_hero">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-snack-on-load="art_brand_hero">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1913,7 +2109,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1928,7 +2124,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Context menu &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1953,7 +2149,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-refresh-on-load="1">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-refresh-on-load="1">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1968,7 +2164,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Refreshing &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-refresh-on-load="1" data-mem-cat-on-load="Project">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-refresh-on-load="1" data-mem-cat-on-load="Project">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -1993,7 +2189,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_brand_hero">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_brand_hero">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2008,7 +2204,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">4 items &middot; URL present &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_meeting_notes">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_meeting_notes">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2033,7 +2229,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-swipe-on-load="mem_brand_green">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-swipe-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2048,7 +2244,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Swipe reveal &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-dialog-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-dialog-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2065,7 +2261,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair" style="margin-top:18px">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-snack-on-load="mem_brand_green">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-snack-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2080,7 +2276,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Undo snackbar &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-cat-on-load="Preference" data-mem-snack-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-cat-on-load="Preference" data-mem-snack-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2105,7 +2301,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-menu-on-load="mem_launch_q3">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-menu-on-load="mem_launch_q3">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2120,7 +2316,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Menu &middot; URL present &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-menu-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-menu-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2137,7 +2333,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair" style="margin-top:18px">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2152,7 +2348,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Detail fallback (no URL) &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-dialog-on-load="mem_launch_q3">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-dialog-on-load="mem_launch_q3">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2177,7 +2373,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
+          <div class="phone" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_q3_deck">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2192,7 +2388,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Artifacts &middot; URL present &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-art-state-on-load="loaded" data-art-menu-on-load="art_meeting_notes">
+          <div class="phone dark" data-phone data-mode="agent" data-art-state-on-load="loaded" data-art-menu-on-load="art_meeting_notes">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2209,7 +2405,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair" style="margin-top:18px">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-menu-on-load="mem_launch_q3">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-menu-on-load="mem_launch_q3">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2224,7 +2420,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Memory &middot; URL present &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2249,7 +2445,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_launch_q3">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_launch_q3">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2264,7 +2460,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Detail &middot; URL present &rarr; Open source &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2289,7 +2485,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_launch_q3" data-mem-copied-on-load>
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_launch_q3" data-mem-copied-on-load>
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2304,7 +2500,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Detail &middot; Copy text + Copied &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green" data-mem-copied-on-load>
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-detail-on-load="mem_brand_green" data-mem-copied-on-load>
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2367,7 +2563,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="pair">
         <div class="phone-col">
-          <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-share-on-load="mem_launch_q3">
+          <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-share-on-load="mem_launch_q3">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2382,7 +2578,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <span class="phone-label">Detail &middot; Share sheet (URL present) &middot; light</span>
         </div>
         <div class="phone-col">
-          <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-share-on-load="mem_brand_green">
+          <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-share-on-load="mem_brand_green">
             <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
             <div class="hdr" data-hdr></div>
             <div class="body" data-body></div>
@@ -2408,7 +2604,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 
     <div class="pair">
       <div class="phone-col">
-        <div class="phone" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-state-on-load="loading">
+        <div class="phone" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-state-on-load="loading">
           <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
           <div class="hdr" data-hdr></div>
           <div class="body" data-body></div>
@@ -2423,7 +2619,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         <span class="phone-label">Memory &middot; loading &middot; light</span>
       </div>
       <div class="phone-col">
-        <div class="phone dark" data-phone data-mode="orhan" data-tab-on-load="memory" data-mem-state-on-load="error">
+        <div class="phone dark" data-phone data-mode="agent" data-tab-on-load="memory" data-mem-state-on-load="error">
           <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
           <div class="hdr" data-hdr></div>
           <div class="body" data-body></div>
@@ -2851,10 +3047,10 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <tr>
             <td><code>HomeScreen.kt</code></td>
             <td>
-              <b>Orhan mode me Orhan khud add hua — pinned.</b> Naya <code>PinnedOrhanCard</code>
+              <b>Agent mode me Agent khud add hua — pinned.</b> Naya <code>PinnedAgentCard</code>
               search row ke theek neeche, <b>Column me</b> (LazyColumn ke bahar), isliye agents
-              scroll karte hain par Orhan apni jagah tika rehta hai. Card = brand-soft fill, 1dp
-              brand border, 20dp radius, white 44dp disc me wireframe glyph, "Orhan" + role line +
+              scroll karte hain par Agent apni jagah tika rehta hai. Card = brand-soft fill, 1dp
+              brand border, 20dp radius, white 44dp disc me wireframe glyph, "Agent" + role line +
               trailing "Fri". <b>Dua mode byte-identical</b> — usme kuch nahi chhua.
               <br><br>
               <b>v17 fix:</b> naam aur role line ek doosre par chadh kar card se bahar nikal rahe the.
@@ -2877,7 +3073,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
               <b>Gear wired (v21).</b> Footer gear ka callback <code>onOpenSettings</code> se
               <code>onOpenProfile</code> hua aur uska a11y label <code>"Settings"</code> se
               <code>"Profile"</code> — kyunki ab wo PROFILE kholta hai. <b>Icon, size, colour, layout
-              — sab same.</b> Isse pehle <code>OrhanCubeGlyph</code> ko <code>private</code> se
+              — sab same.</b> Isse pehle <code>AgentCubeGlyph</code> ko <code>private</code> se
               <code>internal</code> kiya gaya tha, taaki pinned card wahi glyph reuse kare — koi
               duplicate glyph nahi. Baaki drawer (nav, history, footer layout) byte-identical.
             </td>
@@ -2885,14 +3081,14 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <tr>
             <td><code>ChatScreen.kt</code></td>
             <td>
-              <b>Orhan ka apna thread + LIVE composer.</b> Naya <code>ORHAN_CHAT_ID = "chat_orhan"</code>
-              aur <code>ORHAN_CHAT_TITLE = "Orhan"</code>; <code>chatId == ORHAN_CHAT_ID</code> par
-              <code>orhanThread</code> render hota hai (Orhan + user ki conversation), baaki ids par
+              <b>Agent ka apna thread + LIVE composer.</b> Naya <code>AGENT_CHAT_ID = "chat_agent"</code>
+              aur <code>AGENT_CHAT_TITLE = "Agent"</code>; <code>chatId == AGENT_CHAT_ID</code> par
+              <code>agentThread</code> render hota hai (Agent + user ki conversation), baaki ids par
               wahi purana sample thread. <b>Composer ab functional hai</b> — par naya component nahi:
               <code>bottomBar</code> me wahi shared <code>DuaComposer</code> hai jo Dua ka home draw karta
               hai, ab <code>value</code>/<code>onValueChange</code>/<code>onSend</code> ke saath. Type karke
               send karne par user bubble thread me add hota hai, field clear hota hai, list latest par
-              scroll karti hai, aur Orhan typing indicator ke baad reply karta hai. Message state
+              scroll karti hai, aur Agent typing indicator ke baad reply karta hai. Message state
               <code>rememberSaveable(chatId)</code> me hai — per-thread, isliye ek thread ka message
               doosre me nahi jaata. Cube <code>CubeCatalog.forEntity(chatId)</code> se hi aata hai.
             </td>
@@ -2900,10 +3096,10 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           <tr>
             <td><code>DuaGenAINavHost.kt</code></td>
             <td>
-              <b>Pinned card wired.</b> <code>onOpenOrhanChat</code> ab
-              <code>DuaGenAIRoutes.chat(ORHAN_CHAT_ID, ORHAN_CHAT_TITLE)</code> par navigate karta hai —
+              <b>Pinned card wired.</b> <code>onOpenAgentChat</code> ab
+              <code>DuaGenAIRoutes.chat(AGENT_CHAT_ID, AGENT_CHAT_TITLE)</code> par navigate karta hai —
               <b>wahi <code>chat/{chatId}</code> route</b>, koi naya route nahi. Back
-              <code>popBackStack()</code> se Orhan screen par wapas laata hai.
+              <code>popBackStack()</code> se Agent screen par wapas laata hai.
               <br><br>
               <b>Gear → PROFILE wired (v21).</b> Drawer ka <code>onOpenProfile</code> ab
               <code>navController.navigate(DuaGenAIRoutes.PROFILE)</code> karta hai — wahi
@@ -2977,7 +3173,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           </tr>
           <tr>
             <td><code>index.html</code></td>
-            <td>Naya preview: 4 Home frames (2 modes &times; 2 themes) + scroll-test frame + 2 Orhan chat frames + 2 drawer frames + <b>2 Profile frames</b> + <b>4 Memory/Artifacts frames</b>. Pinned card tap se chat khulta hai, back se band; chat me wahi composer pill neeche hai. <b>Drawer gear tap se PROFILE khulta hai</b>, back se wapas — wahi <code>profile</code> destination, koi naya screen nahi. <b>Memory tab tap se real list khulti hai</b> (5 cards), <b>Artifacts tab se real 2-column grid</b> (8 cards); back se wapas usi tab par. Filter button ab toggle hai (active state brand-soft), search pill inert + <code>aria-disabled</code>, aur saare touch targets 48px. <b>v29:</b> +2 context-menu frames (light/dark) aur +2 Memory pull-to-refresh frames (light/dark).</td>
+            <td>Naya preview: 4 Home frames (2 modes &times; 2 themes) + scroll-test frame + 2 Agent chat frames + 2 drawer frames + <b>2 Profile frames</b> + <b>4 Memory/Artifacts frames</b>. Pinned card tap se chat khulta hai, back se band; chat me wahi composer pill neeche hai. <b>Drawer gear tap se PROFILE khulta hai</b>, back se wapas — wahi <code>profile</code> destination, koi naya screen nahi. <b>Memory tab tap se real list khulti hai</b> (5 cards), <b>Artifacts tab se real 2-column grid</b> (8 cards); back se wapas usi tab par. Filter button ab toggle hai (active state brand-soft), search pill inert + <code>aria-disabled</code>, aur saare touch targets 48px. <b>v29:</b> +2 context-menu frames (light/dark) aur +2 Memory pull-to-refresh frames (light/dark).</td>
           </tr>
           <tr>
             <td><code>MemoryScreen.kt</code> <span class="pill mint">naya</span></td>
@@ -3035,11 +3231,11 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     </div>
 
     <div class="note">
-      <b>Reuse, koi duplicate nahi:</b> chat rows, drawer footer, drawer history aur Orhan chat ke
+      <b>Reuse, koi duplicate nahi:</b> chat rows, drawer footer, drawer history aur Agent chat ke
       bubbles — sab <code>CubeAvatar</code> se aate hain. History rows <code>ChatRow.cubeId</code>
       use karte hain — wahi <code>CubeCatalog.forEntity(chatId)</code> jo drawer history aur
-      ChatScreen use karte hain. Orhan ke thread ka cube bhi wahi mapping hai:
-      <code>forEntity("chat_orhan") = cube_24</code>, aur preview me bhi wahi value hai.
+      ChatScreen use karte hain. Agent ke thread ka cube bhi wahi mapping hai:
+      <code>forEntity("chat_agent") = cube_24</code>, aur preview me bhi wahi value hai.
       <code>CubeAvatar.kt</code>, <code>CubeStore.kt</code>, <code>CubePickerScreen.kt</code>,
       <code>CubeIcons.kt</code>, <code>Color.kt</code>, <code>Theme.kt</code>,
       <code>Shape.kt</code>, <code>Type.kt</code>, <code>DesignTokens.kt</code>,
@@ -3056,35 +3252,33 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         <li><b>Chats ab drawer history se khulte hain.</b> Dua home par rows nahi hain, isliye
         conversations drawer ke history section se khulte hain — wahi <code>sampleChats</code>,
         wahi per-chat cube, wahi <code>chat/{chatId}</code> route.</li>
-        <li><b>Orhan mode me managed agents hain.</b> Orhan khud agent hai aur doosre agents ko
+        <li><b>Agent mode me managed agents hain.</b> Agent khud agent hai aur doosre agents ko
         control karta hai, isliye uska home wo agents hain jinhe wo manage karta hai — har ek apne
         cube, status aur "Start a chat" entry point ke saath, "AGENTS · N" header ke neeche.
         <code>AgentRow</code> aur <code>sampleAgents</code> <code>AgentsScreen.kt</code> se reuse
         hote hain, duplicate nahi.</li>
-        <li><b>Bottom nav ka doosra tab "Managed" hai, "Agents" nahi.</b> Orhan khud agent hai,
+        <li><b>Bottom nav ka doosra tab "Managed" hai, "Agents" nahi.</b> Agent khud agent hai,
         isliye "Agents" ambiguous tha — ye tab uske control wale agents dikhata hai, aur glyph
         hierarchy hai (ek node upar, do neeche). Wahi <code>AgentsScreen</code> khulta hai.
         Chats / Discover navigate karte hain; <b>Memory aur Artifacts inert hain</b> kyunki unke
         screens is kit me nahi hain (request thi "koi naya screen add mat karo").</li>
-        <li><b>Orhan khud screen par dikhta hai — pinned.</b> Orhan ek agent hai, isliye uski apni
-        presence uske home par honi chahiye. Card search row ke neeche <b>fixed</b> hai (Column ka
+        <li><b>Agent khud screen par dikhta hai — pinned.</b> Agent ki apni presence uske home par honi chahiye. Card search row ke neeche <b>fixed</b> hai (Column ka
         child, LazyColumn ke bahar), aur baaki agents uske neeche scroll hote hain. Reference ka
         exact structure: brand-tinted card, white disc me wireframe cube glyph, naam, role line,
         trailing timestamp.</li>
-        <li><b>Orhan ki text line fix hui (v17).</b> Preview me <code>.pname</code> aur
+        <li><b>Agent ki text line fix hui (v17).</b> Preview me <code>.pname</code> aur
         <code>.prole</code> inline <code>&lt;span&gt;</code> the, isliye wo ek hi line par beh kar
-        merge ho gaye ("OrhanMultitasks, ...") aur card ke right edge se bahar nikal gaye. Ab dono
+        merge ho gaye ("AgentMultitasks, ...") aur card ke right edge se bahar nikal gaye. Ab dono
         <b>block-level</b> hain — naam ek line par ellipsize hota hai, role do lines me clamp hota
         hai. Kotlin me bhi role <code>maxLines = 2</code> hai. Text poori tarah card ke andar hai.</li>
         <li><b>Pinned card ka glyph cube avatar NAHI hai.</b> Wo wahi 1.5dp wireframe
-        <code>OrhanCubeGlyph</code> hai jo drawer ke "Orhan" nav item me hai — <code>internal</code>
+        <code>AgentCubeGlyph</code> hai jo drawer ke "Agent" nav item me hai — <code>internal</code>
         kiya gaya taaki dono ek hi implementation use karein. 42 cube assets solid charcoal/orange
         fills hain; ye stroke-only outline hai, isliye <code>CubeAvatar</code> galat hota.</li>
-        <li><b>Pinned card tap se Orhan ka apna chat khulta hai.</b> Orhan ek agent hai, isliye uski
-        apni conversation hai. Card tap par <code>chat/{chatId}</code> route hi khulta hai — Orhan ke
-        apne stable id <code>chat_orhan</code> ke saath. <b>Koi naya route invent nahi kiya.</b>
-        Back <code>popBackStack()</code> se Orhan screen par wapas laata hai.</li>
-        <li><b>Orhan chat ka composer ab LIVE hai — par duplicate nahi.</b> <code>DuaComposer</code>
+        <li><b>Pinned card tap se Agent ka apna chat khulta hai.</b> Agent ki apni conversation hai. Card tap par <code>chat/{chatId}</code> route hi khulta hai — Agent ke
+        apne stable id <code>chat_agent</code> ke saath. <b>Koi naya route invent nahi kiya.</b>
+        Back <code>popBackStack()</code> se Agent screen par wapas laata hai.</li>
+        <li><b>Agent chat ka composer ab LIVE hai — par duplicate nahi.</b> <code>DuaComposer</code>
         <code>private</code> se <code>internal</code> kiya aur teen optional parameters diye
         (<code>value</code>, <code>onValueChange</code>, <code>onSend</code>). Dua ka call site inme se
         koi nahi deta, isliye uska rendering byte-identical hai; <code>ChatScreen</code> teeno deta hai,
@@ -3096,7 +3290,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         <li><b>Message state per-thread hai.</b> <code>messages</code> aur <code>draft</code> dono
         <code>rememberSaveable(chatId)</code> me hain — key thread ke saath badalti hai, isliye ek thread
         me bheja gaya message doosre thread me kabhi nahi dikhta, aur rotation/back par bhi bacha rehta
-        hai. Orhan ka reply ek static string hai (koi real model call nahi), typing indicator ke saath
+        hai. Agent ka reply ek static string hai (koi real model call nahi), typing indicator ke saath
         ~900ms baad aata hai.</li>
         <li><b>Purple nahi liya.</b> Reference ka voice button #7C3AED aur avatar ring #2563EB
         doosre product ke tokens hain. Voice button brand gradient par hai.</li>
@@ -3155,13 +3349,13 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       chats kholta hai (Home par rows nahi hain), aur har assertion <b>display-aware</b> hai —
       kyunki <code>ModalNavigationDrawer</code> band hone par bhi apna content compose karta hai,
       isliye “tree me hai” ≠ “screen par hai”. Toggle cells ko ab
-      <code>contentDescription = "Dua mode" / "Orhan mode"</code> + <code>Role.Tab</code> +
+      <code>contentDescription = "Dua mode" / "Agent mode"</code> + <code>Role.Tab</code> +
       <code>selected</code> semantics mila hai, taaki test aur screen reader dono unambiguous hon.
       <b>Composer ke naye behaviour ke assertions bhi add hue:</b> <code>assertComposer</code> ab
       "Send message" control aur exactly ek editable field bhi check karta hai, aur naya test
-      <code>sendingAMessageAddsItToTheThreadAndOrhanReplies</code> composer me type karke send karta hai
-      aur thread me user message + Orhan ka reply dono assert karta hai. <code>assertNoComposer</code>
-      Orhan ke HOME par hi rehta hai (wahan composer hona hi nahi chahiye).
+      <code>sendingAMessageAddsItToTheThreadAndAgentReplies</code> composer me type karke send karta hai
+      aur thread me user message + Agent ka reply dono assert karta hai. <code>assertNoComposer</code>
+      Agent ke HOME par hi rehta hai (wahan composer hona hi nahi chahiye).
     </div>
 
     <div class="files" style="margin-top:20px">
@@ -3175,7 +3369,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="file">
         <span class="file-ic">KT</span>
-        <span><span class="file-name">ChatScreen.kt</span><br><span class="file-desc">Orhan thread · live composer</span></span>
+        <span><span class="file-name">ChatScreen.kt</span><br><span class="file-desc">Agent thread · live composer</span></span>
       </div>
       <div class="file">
         <span class="file-ic">KT</span>
@@ -3199,7 +3393,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       </div>
       <div class="file">
         <span class="file-ic">HT</span>
-        <span><span class="file-name">index.html</span><br><span class="file-desc">Home + Orhan chat + drawer</span></span>
+        <span><span class="file-name">index.html</span><br><span class="file-desc">Home + Agent chat + drawer</span></span>
       </div>
     </div>
   </div>
@@ -3207,7 +3401,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
 
 <footer>
   <div class="wrap">
-    Dua Gen AI &middot; Material 3 UI kit &middot; Home (Dua + Orhan) &middot; Sidebar drawer unchanged &middot;
+    Dua Gen AI &middot; Material 3 UI kit &middot; Home (Dua + Agent) &middot; Sidebar drawer unchanged &middot;
     Lato (SIL OFL 1.1) &middot; brand tokens unchanged.
   </div>
 </footer>
@@ -3237,7 +3431,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
  *  Home — one builder, two modes
  *
  *  Each frame's header, body and dock are BUILT from the same three functions.
- *  There is exactly one Dua composer and one Orhan surface in this page; the
+ *  There is exactly one Dua composer and one Agent surface in this page; the
  *  toggle swaps which one a frame shows. No hand-copied markup per frame.
  *
  *  CHATS is the single source of truth for the conversation list — the drawer
@@ -3257,22 +3451,22 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     { id: 'chat_family', title: 'Family · 8', snip: 'Mum: dinner at 8? Alex is bringing dessert', time: 'Sun', cube: 'cube_12', live: false }
   ];
 
-  // The agents Orhan controls — the SAME `sampleAgents` list AgentsScreen
+  // The agents Agent controls — the SAME `sampleAgents` list AgentsScreen
   // renders (three agents; the featured one belongs to AgentsScreen, not to
-  // Orhan's home), so the two can never disagree about a name or a cube.
+  // Agent's home), so the two can never disagree about a name or a cube.
   var AGENTS = [
     { id: 'agent-slides-assistant', cube: 'cube_07', name: 'Slides Assistant', blurb: 'Turns a chat into a branded deck — outline, design and export in minutes.', status: 'Working', tag: 'Slides' },
     { id: 'agent-market-research', cube: 'cube_12', name: 'Market Research', blurb: 'Researches competitors with cited sources and keeps the brief up to date.', status: 'Idle', tag: 'Research' },
     { id: 'agent-accounting-assistant', cube: 'cube_18', name: 'Accounting Assistant', blurb: 'Reconciles invoices and flags anything that needs a human decision.', status: 'Idle', tag: 'Finance' }
   ];
 
-  // Orhan's OWN thread — the conversation the pinned card opens. It is written
-  // to Orhan's role from the confirmed product model: Orhan multitask, controls
+  // Agent's OWN thread — the conversation the pinned card opens. It is written
+  // to Agent's role from the confirmed product model: Agent multitask, controls
   // other agents and can create new ones. `cube` is CubeCatalog.forEntity(
-  // 'chat_orhan') — the SAME mapping the Kotlin screen uses, so the avatar here
+  // 'chat_agent') — the SAME mapping the Kotlin screen uses, so the avatar here
   // and the avatar there are the same value by construction.
-  var ORHAN_CHAT = { id: 'chat_orhan', title: 'Orhan', cube: 'cube_24' };
-  var ORHAN_THREAD = [
+  var AGENT_CHAT = { id: 'chat_agent', title: 'Agent', cube: 'cube_24' };
+  var AGENT_THREAD = [
     { who: 'user', text: 'I need the Q3 launch handled \u2014 deck, competitor research and the invoice reconciliation.', time: '9:31 AM' },
     { who: 'agent', text: "On it. I've split that across three agents: Slides Assistant is building the deck, Market Research is pulling cited competitor data, and Accounting Assistant is reconciling the invoices.", time: '9:31 AM' },
     { who: 'user', text: 'Can you also spin up an agent for the launch email sequence?', time: '9:33 AM' },
@@ -3290,7 +3484,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
     chat: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4z"/></svg>',
     agents: '<svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="4"/><path d="M9 12h.01M15 12h.01"/></svg>',
-    // Hierarchy: one node above, two below, joined — Orhan over the agents it
+    // Hierarchy: one node above, two below, joined — Agent over the agents it
     // controls. A single robot face would have said "agents in general".
     managed: '<svg viewBox="0 0 24 24"><circle cx="12" cy="5.4" r="2.4"/><circle cx="5.6" cy="18.6" r="2.4"/><circle cx="18.4" cy="18.6" r="2.4"/><path d="M12 7.8v3.4M5.6 16.2v-2.6h12.8v2.6M5.6 13.6h12.8"/></svg>',
     discover: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 5-4 1 2-5z"/></svg>',
@@ -3321,7 +3515,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     { id: 'images', label: 'Images', icon: 'image' },
     { id: 'computer', label: 'Computer', icon: 'monitor' },
     { id: 'videos', label: 'Videos', icon: 'video' },
-    { id: 'orhan', label: 'Orhan', icon: 'glyph' }
+    { id: 'agent', label: 'Agent', icon: 'glyph' }
   ];
 
   function esc(s) {
@@ -3341,8 +3535,8 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       '<div class="seg" data-seg>' +
         '<button type="button" data-mode="dua" class="' + (mode === 'dua' ? 'on' : '') + '"' +
           ' aria-pressed="' + (mode === 'dua' ? 'true' : 'false') + '">Dua</button>' +
-        '<button type="button" data-mode="orhan" class="' + (mode === 'orhan' ? 'on' : '') + '"' +
-          ' aria-pressed="' + (mode === 'orhan' ? 'true' : 'false') + '">Orhan</button>' +
+        '<button type="button" data-mode="agent" class="' + (mode === 'agent' ? 'on' : '') + '"' +
+          ' aria-pressed="' + (mode === 'agent' ? 'true' : 'false') + '">Agent</button>' +
       '</div>' +
       '<button class="cb" type="button" data-hdr-right aria-label="' + right.label + '">' +
         right.icon + '</button>';
@@ -3355,7 +3549,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       // chat list, no search row, no section header, and nothing agent-related.
       return '';
     }
-    // Orhan is an agent that controls other agents, so its home is the agents
+    // Agent controls other agents, so its home is the agents
     // it manages — each with its own cube, its status and a "Start a chat"
     // entry point, under an "AGENTS · N" header.
     var html = '' +
@@ -3364,12 +3558,12 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           '<span class="filterbars"><i></i><i></i><i></i></span></button>' +
         '<div class="searchpill" role="search" aria-disabled="true">' + ICON.search + '<span>Search</span></div>' +
       '</div>' +
-      // Orhan itself, PINNED. It is a sibling of the scrolling list, not a row
+      // Agent itself, PINNED. It is a sibling of the scrolling list, not a row
       // inside it, so scrolling the managed agents never moves it.
-      '<div class="pincard" data-pinned-orhan>' +
+      '<div class="pincard" data-pinned-agent>' +
         '<span class="disc">' + ICON.glyph + '</span>' +
         '<span class="pmain">' +
-          '<span class="pname">Orhan</span>' +
+          '<span class="pname">Agent</span>' +
           '<span class="prole">Multitasks, controls agents, creates new ones</span>' +
         '</span>' +
         '<span class="ptime">Fri</span>' +
@@ -3441,7 +3635,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     return html + '</div>';
   }
 
-  /* Orhan's own thread. The composer is the SAME `.ask-pill` Dua's home draws,
+  /* Agent's own thread. The composer is the SAME `.ask-pill` Dua's home draws,
      with a thread-specific hint — one component, two call sites. The thread is
      rendered from the phone's OWN message list, so a sent message lands in this
      thread and nowhere else. */
@@ -3449,8 +3643,8 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
     var html = '';
     for (var i = 0; i < thread.length; i++) {
       var m = thread[i];
-      var av = '<span class="av av-chat" data-cube="' + esc(ORHAN_CHAT.cube) + '">' +
-        '<img src="' + cubeSrc(ORHAN_CHAT.cube) + '" alt="' + esc(ORHAN_CHAT.title) + '"></span>';
+      var av = '<span class="av av-chat" data-cube="' + esc(AGENT_CHAT.cube) + '">' +
+        '<img src="' + cubeSrc(AGENT_CHAT.cube) + '" alt="' + esc(AGENT_CHAT.title) + '"></span>';
       html += '<div class="msg ' + m.who + '" data-msg="' + m.who + '">' +
         (m.who === 'agent' ? av : '') +
         '<div class="msg-col">' +
@@ -3461,9 +3655,9 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       '</div>';
     }
     if (typing) {
-      var tav = '<span class="av av-chat" data-cube="' + esc(ORHAN_CHAT.cube) + '">' +
-        '<img src="' + cubeSrc(ORHAN_CHAT.cube) + '" alt="' + esc(ORHAN_CHAT.title) + '"></span>';
-      html += '<div class="msg agent" data-msg="typing" aria-label="Orhan is typing">' + tav +
+      var tav = '<span class="av av-chat" data-cube="' + esc(AGENT_CHAT.cube) + '">' +
+        '<img src="' + cubeSrc(AGENT_CHAT.cube) + '" alt="' + esc(AGENT_CHAT.title) + '"></span>';
+      html += '<div class="msg agent" data-msg="typing" aria-label="Agent is typing">' + tav +
         '<div class="msg-col"><div class="bub"><span class="typing">' +
         '<i></i><i></i><i></i></span></div></div></div>';
     }
@@ -3475,12 +3669,12 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       '<div class="chatbar">' +
         '<button class="back" type="button" data-chat-back aria-label="Back">' +
           '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>' +
-        '<span class="av av-chat" data-cube="' + esc(ORHAN_CHAT.cube) + '">' +
-          '<img src="' + cubeSrc(ORHAN_CHAT.cube) + '" alt="' + esc(ORHAN_CHAT.title) + ' avatar"></span>' +
-        '<span class="ctitle">' + esc(ORHAN_CHAT.title) + '</span>' +
+        '<span class="av av-chat" data-cube="' + esc(AGENT_CHAT.cube) + '">' +
+          '<img src="' + cubeSrc(AGENT_CHAT.cube) + '" alt="' + esc(AGENT_CHAT.title) + ' avatar"></span>' +
+        '<span class="ctitle">' + esc(AGENT_CHAT.title) + '</span>' +
       '</div>' +
       '<div class="chatbody" data-chat-body>' + threadHtml(thread, typing) + '</div>' +
-      '<div class="chatdock">' + chatComposerHtml('Message ' + ORHAN_CHAT.title + '\u2026') + '</div>';
+      '<div class="chatdock">' + chatComposerHtml('Message ' + AGENT_CHAT.title + '\u2026') + '</div>';
   }
 
   /* The PROFILE screen — the drawer gear's destination. It mirrors
@@ -4199,7 +4393,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
       // PER-PHONE thread state. Each frame owns its own copy of the seed, so a
       // message sent in one frame's thread can never appear in another's — the
       // same per-thread isolation the Kotlin screen gets from its `chatId` key.
-      var thread = ORHAN_THREAD.slice();
+      var thread = AGENT_THREAD.slice();
       var typing = false;
       var replyTimer = null;
       // Which bottom-nav item is active. HOISTED here (per phone) rather than
@@ -4486,7 +4680,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           body = '<div class="tv-body">' +
             '<span class="tv-glyph">' + MEMORY_GLYPH + '</span>' +
             '<span class="tv-head">Abhi koi memory nahi hai</span>' +
-            '<span class="tv-sub">Memories yahan dikhengi \u2014 jo cheezein Dua aur Orhan yaad rakhenge.</span></div>';
+            '<span class="tv-sub">Memories yahan dikhengi \u2014 jo cheezein Dua aur Agent yaad rakhenge.</span></div>';
         } else {
           body = memorySearchHtml(memoryQuery) + memoryChipsHtml(memoryCategory) +
             memoryBodyHtml(memoryVisible());
@@ -4636,7 +4830,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           return '<div class="tv-body">' +
             '<span class="tv-glyph">' + ARTIFACTS_GLYPH + '</span>' +
             '<span class="tv-head">Abhi koi artifact nahi hai</span>' +
-            '<span class="tv-sub">Artifacts yahan dikhengi \u2014 jo files, pages aur decks Dua aur Orhan banayenge.</span></div>';
+            '<span class="tv-sub">Artifacts yahan dikhengi \u2014 jo files, pages aur decks Dua aur Agent banayenge.</span></div>';
         }
         var vis = artifactsVisible();
         if (!vis.length) {
@@ -4743,7 +4937,7 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         body.innerHTML = bodyHtml(next);
         dock.innerHTML = dockHtml(next, selectedTab);
         // Dua's body is deliberately empty (a chatbot's home is the
-        // conversation); Orhan's is the agent list. `empty` stops the empty
+        // conversation); Agent's is the agent list. `empty` stops the empty
         // body from scrolling.
         if (next === 'dua') body.classList.add('empty');
         else body.classList.remove('empty');
@@ -5038,10 +5232,10 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
         // Back from a placeholder tab screen returns to the tab it was opened from.
         if (t.closest && t.closest('[data-tab-back]')) { closeTabView(); return; }
 
-        // The pinned Orhan card opens ORHAN'S OWN thread — the same
+        // The pinned Agent card opens AGENT'S OWN thread — the same
         // `chat/{chatId}` destination the Kotlin nav host navigates to.
-        if (t.closest && t.closest('[data-pinned-orhan]')) { openChat(); return; }
-        // Back returns to the Orhan screen.
+        if (t.closest && t.closest('[data-pinned-agent]')) { openChat(); return; }
+        // Back returns to the Agent screen.
         if (t.closest && t.closest('[data-chat-back]')) { closeChat(); return; }
         // Send: the composer's own button. The input is read from the DOM, so
         // the message lands in THIS phone's thread and nowhere else.
@@ -5052,8 +5246,8 @@ footer{padding:34px 0 56px;font-size:12.5px;color:var(--page-ink3)}
           var dest = item.getAttribute('data-dest');
           var items = drawer.querySelectorAll('.dr-item');
           for (var i = 0; i < items.length; i++) items[i].classList.toggle('on', items[i] === item);
-          // Orhan is a MODE, not a screen — switch the surface, then close.
-          if (dest === 'orhan') paintMode('orhan');
+          // Agent is a MODE, not a screen — switch the surface, then close.
+          if (dest === 'agent') paintMode('agent');
           closeDrawer();
           return;
         }

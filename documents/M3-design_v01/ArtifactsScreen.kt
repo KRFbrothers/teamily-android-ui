@@ -86,6 +86,8 @@ import kotlinx.coroutines.launch
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Artifacts — M3 components used:
@@ -988,7 +990,7 @@ private fun ArtifactCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(DuaGenAITheme.shapes.card)
+            .clip(TeamilyShapes.card)
             .combinedClickable(
                 onClick = onSelect,
                 onLongClick = onLongPress,
@@ -997,14 +999,24 @@ private fun ArtifactCard(
                 this.selected = selected
                 contentDescription = "${artifact.title}, ${artifact.type}"
             },
-        shape = DuaGenAITheme.shapes.card,
-        color = if (selected) colors.brandSoft else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            width = if (selected) 2.dp else 1.dp,
-            color = if (selected) colors.onBrandSoft else colors.fieldEdge,
-        ),
+        // Forest-slate card: `cardGradient` fill, 1dp `borderGradient` edge,
+        // 20dp corners. The selected (previewed) card keeps its existing
+        // brandSoft fill and 2dp onBrandSoft ring so selection stays visible.
+        shape = TeamilyShapes.card,
+        // Solid `bgCanvas` under the translucent gradient keeps the swipe-to-
+        // delete background from showing through the card.
+        color = if (selected) colors.brandSoft else teamilyPalette().bgCanvas,
+        border = if (selected) BorderStroke(2.dp, colors.onBrandSoft)
+        else BorderStroke(1.dp, teamilyPalette().borderGradient),
     ) {
-        Column(Modifier.padding(spacing.sm)) {
+        Column(
+            Modifier
+                .then(
+                    if (selected) Modifier
+                    else Modifier.background(teamilyPalette().cardGradient),
+                )
+                .padding(spacing.sm),
+        ) {
             // Thumbnail area: a square brand-soft tile holding the type glyph.
             Box(
                 modifier = Modifier
@@ -1193,7 +1205,7 @@ private fun ArtifactsEmptyState(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(spacing.sm))
             Text(
-                text = "Artifacts yahan dikhengi — jo files, pages aur decks Dua aur Orhan banayenge.",
+                text = "Artifacts yahan dikhengi — jo files, pages aur decks Dua aur Agent banayenge.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

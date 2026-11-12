@@ -63,7 +63,7 @@ import kotlin.math.sin
  *      `CubeCatalog.forEntity` the Home list and ChatScreen use. Opening a
  *      history row therefore lands on the same cube the row showed.
  *
- *  The "Orhan" nav item's glyph is a WIREFRAME nav icon (hexagon + Y seam,
+ *  The "Agent" nav item's glyph is a WIREFRAME nav icon (hexagon + Y seam,
  *  stroke only, no fill). It is not a cube avatar and must not be drawn with
  *  [CubeAvatar]: the 42 cube assets are solid charcoal/orange fills, and this
  *  is a 1.5dp outline. Keeping it separate is what stops the two from being
@@ -87,7 +87,7 @@ enum class DrawerDestination(val label: String) {
     Images("Images"),
     Computer("Computer"),
     Videos("Videos"),
-    Orhan("Orhan"),
+    Agent("Agent"),
 }
 
 /**
@@ -323,7 +323,7 @@ private fun DrawerNavItem(
                 modifier = Modifier.size(20.dp),
             )
             // A wireframe glyph, NOT a cube avatar — see the file header.
-            DrawerDestination.Orhan -> OrhanCubeGlyph(
+            DrawerDestination.Agent -> AgentCubeGlyph(
                 tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             else -> Box(Modifier.size(20.dp))
@@ -376,7 +376,7 @@ private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
 }
 
 /**
- * The "Orhan" nav glyph: a hexagon outline with a Y seam, stroke only.
+ * The "Agent" nav glyph: a hexagon outline with a Y seam, stroke only.
  *
  * Drawn with [Canvas] rather than added to `CubeIcons` on purpose. `CubeIcons`
  * is a generated catalogue of 42 solid-colour 24×24 cube avatars; this is a
@@ -385,7 +385,7 @@ private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
  * COUNT would silently re-map every entity's cube).
  */
 @Composable
-internal fun OrhanCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
+internal fun AgentCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.size(20.dp)) {
         val cx = size.width / 2f
         val cy = size.height / 2f

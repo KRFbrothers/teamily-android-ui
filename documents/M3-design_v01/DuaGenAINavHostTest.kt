@@ -45,8 +45,8 @@ import ai.duagenai.design.screens.RemoteArtifactsDataSource
 import ai.duagenai.design.screens.RemoteDataSource
 import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.demoArtifacts
-import ai.duagenai.design.screens.ORHAN_CHAT_ID
-import ai.duagenai.design.screens.ORHAN_CHAT_TITLE
+import ai.duagenai.design.screens.AGENT_CHAT_ID
+import ai.duagenai.design.screens.AGENT_CHAT_TITLE
 import ai.duagenai.design.theme.DuaGenAITheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -100,20 +100,20 @@ import org.robolectric.annotation.Config
  *
  *  THE COMPOSER ON A THREAD
  *  ------------------------
- *  ChatScreen draws a composer under the conversation again, so Orhan can be
+ *  ChatScreen draws a composer under the conversation again, so Agent can be
  *  talked to. It is the SAME `DuaComposer` pill Dua's home draws \u2014 one
  *  implementation, two call sites \u2014 and only its placeholder differs
  *  (`"Message <title>..."`). [assertComposer] therefore checks the placeholder
  *  text plus the composer's own controls, and [assertNoComposer] is kept for the
- *  one surface a composer must still be absent from: Orhan's HOME, which is the
+ *  one surface a composer must still be absent from: Agent's HOME, which is the
  *  agent surface, not a conversation.
  *
- *  ORHAN'S OWN THREAD
+ *  AGENT'S OWN THREAD
  *  ------------------
- *  Orhan is an agent, so it has a conversation of its own. The pinned card on
- *  Orhan's home opens it through the SAME `chat/{chatId}` route every other
- *  thread uses, with Orhan's own stable id ([ORHAN_CHAT_ID]) \u2014 no new route was
- *  invented. Its pain area holds Orhan's and the user's messages, and it carries
+ *  Agent has a conversation of its own. The pinned card on
+ *  Agent's home opens it through the SAME `chat/{chatId}` route every other
+ *  thread uses, with Agent's own stable id ([AGENT_CHAT_ID]) \u2014 no new route was
+ *  invented. Its pain area holds Agent's and the user's messages, and it carries
  *  the composer so the thread is usable.
  *
  *  THE MEMORY TAB, THE FILTER AND THE INERT GUARD
@@ -179,21 +179,21 @@ private const val CHAT_MARKER = "Agent \u00b7 always on"
 private const val COMPOSER_PLACEHOLDER = "Type a message"
 
 /**
- * The placeholder Orhan's own thread must show.
+ * The placeholder Agent's own thread must show.
  *
- * `ChatScreen` passes `"Message $chatTitle..."`, and Orhan's title is
- * [ORHAN_CHAT_TITLE], so this is the exact string the pill renders.
+ * `ChatScreen` passes `"Message $chatTitle..."`, and Agent's title is
+ * [AGENT_CHAT_TITLE], so this is the exact string the pill renders.
  */
-private const val ORHAN_COMPOSER_HINT = "Message $ORHAN_CHAT_TITLE\u2026"
+private const val AGENT_COMPOSER_HINT = "Message $AGENT_CHAT_TITLE\u2026"
 
 /**
- * The pinned Orhan card's role line.
+ * The pinned Agent card's role line.
  *
- * Used to FIND the card: the text "Orhan" also appears in the mode toggle, so
- * clicking that would switch modes instead of opening Orhan's thread. The role
+ * Used to FIND the card: the text "Agent" also appears in the mode toggle, so
+ * clicking that would switch modes instead of opening Agent's thread. The role
  * line is unique to the card.
  */
-private const val ORHAN_ROLE_LINE = "Multitasks, controls agents, creates new ones"
+private const val AGENT_ROLE_LINE = "Multitasks, controls agents, creates new ones"
 
 /** Dua mode's collapsed composer placeholder — the marker for "this is Dua home". */
 private const val DUA_ASK_HINT = "Ask Dua ..."
@@ -418,7 +418,7 @@ private const val EDIT_PROFILE_LABEL = "Edit profile"
 private const val SIGN_OUT_LABEL = "Sign out"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
-/** The three agents Orhan controls (`sampleAgents` in AgentsScreen.kt). */
+/** The three agents Agent controls (`sampleAgents` in AgentsScreen.kt). */
 private val MANAGED_AGENTS = listOf("Slides Assistant", "Market Research", "Accounting Assistant")
 
 /**
@@ -647,8 +647,8 @@ class DuaGenAINavHostTest {
     /**
      * Asserts a surface has NO composer at all.
      *
-     * Used for Orhan's HOME, which must not draw the Dua pill: the composer
-     * belongs to a conversation, and Orhan's home is the agent surface. Checks
+     * Used for Agent's HOME, which must not draw the Dua pill: the composer
+     * belongs to a conversation, and Agent's home is the agent surface. Checks
      * the three things a composer would leave behind rather than trusting one
      * string:
      *
@@ -720,7 +720,7 @@ class DuaGenAINavHostTest {
     fun duaModeHasNoAgentEntryPointAtAll() {
         launch()
 
-        // The three agents Orhan manages must not appear anywhere in Dua mode —
+        // The three agents Agent manages must not appear anywhere in Dua mode —
         // not as a row, not as a badge, not as a tab label.
         for (agent in MANAGED_AGENTS) {
             assertNotVisible(agent)
@@ -731,28 +731,28 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("New chat", 0)
     }
 
-    // ------------------------------------------- Orhan mode is the agent surface
+    // ------------------------------------------- Agent mode is the agent surface
 
     @Test
-    fun orhanModeShowsTheManagedAgentsAndTheManagedTab() {
+    fun agentModeShowsTheManagedAgentsAndTheManagedTab() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         // The agent surface: header, search row, the managed agents, the nav.
-        // `sampleAgents` is the three agents Orhan controls — the featured agent
-        // belongs to AgentsScreen, not to Orhan's home.
+        // `sampleAgents` is the three agents Agent controls — the featured agent
+        // belongs to AgentsScreen, not to Agent's home.
         assertVisible("AGENTS \u00b7 3")
         assertVisible("Search")
         for (agent in MANAGED_AGENTS) {
             assertVisible(agent)
         }
 
-        // The second tab is "Managed" — Orhan is itself an agent, so the tab
+        // The second tab is "Managed" — Agent controls other agents, so the tab
         // lists the agents it controls. "Agents" must not be a tab label.
         assertVisible(HomeTab.Managed.label)
         assertNotVisible("Agents")
 
-        // Orhan's HOME has no composer: the Dua pill belongs to a conversation,
+        // Agent's HOME has no composer: the Dua pill belongs to a conversation,
         // and this is the agent surface.
         assertNotVisible(DUA_ASK_HINT)
         assertNoComposer()
@@ -766,12 +766,12 @@ class DuaGenAINavHostTest {
     fun theToggleSwitchesBothWays() {
         launch()
 
-        // Dua -> Orhan
-        switchTo(HomeMode.Orhan)
+        // Dua -> Agent
+        switchTo(HomeMode.Agent)
         assertVisible("AGENTS \u00b7 3")
         assertNotVisible(DUA_ASK_HINT)
 
-        // Orhan -> Dua
+        // Agent -> Dua
         switchTo(HomeMode.Dua)
         assertVisible(DUA_ASK_HINT)
         assertNotVisible("AGENTS \u00b7 3")
@@ -780,7 +780,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theManagedTabOpensTheAgentsScreen() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         compose.onNodeWithText(HomeTab.Managed.label).performClick()
         compose.waitForIdle()
@@ -795,9 +795,9 @@ class DuaGenAINavHostTest {
     @Test
     fun theBottomNavSelectionIsHoistedAndMoves() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
-        // Chats is the default selection — the tab Orhan's home has always shown
+        // Chats is the default selection — the tab Agent's home has always shown
         // as active, now supplied by the host instead of hardcoded in HomeScreen.
         assertTabSelected(HomeTab.Chats.label)
 
@@ -823,7 +823,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryTabOpensTheMemoryScreen() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         compose.onNodeWithText(HomeTab.Memory.label).performClick()
         compose.waitForIdle()
@@ -853,7 +853,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryScreenRendersTheMemoryList() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Memory.label).performClick()
         compose.waitForIdle()
 
@@ -875,7 +875,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theFilterButtonTogglesItsSelectedState() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         // Off by default.
         assertEquals(
@@ -915,7 +915,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theSearchPillIsAnnouncedAsDisabled() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         val disabled = compose.onAllNodes(hasContentDescription("Search") and isNotEnabled())
             .fetchSemanticsNodes().count { isOnScreen(it) }
@@ -931,7 +931,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theArtifactsTabOpensTheArtifactsScreen() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
@@ -957,7 +957,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theArtifactsScreenRendersTheArtifactGrid() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -982,7 +982,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theArtifactsFilterButtonOpensTheSheetAndFiltersTheGrid() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1020,7 +1020,7 @@ class DuaGenAINavHostTest {
     @Test
     fun aFilterWithNoMatchesShowsTheNoMatchPanel() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1051,7 +1051,7 @@ class DuaGenAINavHostTest {
     @Test
     fun thePreviewCaptionFollowsTheSelectedArtifact() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1113,7 +1113,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryFilterChipNarrowsTheList() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Memory.label).performClick()
         compose.waitForIdle()
 
@@ -1141,7 +1141,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemorySearchFiltersTheList() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Memory.label).performClick()
         compose.waitForIdle()
 
@@ -1167,7 +1167,7 @@ class DuaGenAINavHostTest {
     @Test
     fun aMemoryFilterWithNoMatchesShowsTheNoMatchPanel() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Memory.label).performClick()
         compose.waitForIdle()
 
@@ -1196,7 +1196,7 @@ class DuaGenAINavHostTest {
     @Test
     fun swipingAnArtifactCardOpensTheDeleteConfirmation() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1227,7 +1227,7 @@ class DuaGenAINavHostTest {
     @Test
     fun undoingADeleteRestoresTheArtifact() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1252,7 +1252,7 @@ class DuaGenAINavHostTest {
     @Test
     fun cancellingTheDeleteConfirmationKeepsTheArtifact() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1313,7 +1313,7 @@ class DuaGenAINavHostTest {
     @Test
     fun longPressOpensTheContextMenuAndOpenUpdatesTheCaption() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1345,7 +1345,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theContextMenuShareItemIsDisabled() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -1373,7 +1373,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theContextMenuDeleteOpensTheConfirmation() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Artifacts.label).performClick()
         compose.waitForIdle()
 
@@ -2329,15 +2329,15 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The gear is reachable from Orhan's home too, and still opens Profile.
+     * The gear is reachable from Agent's home too, and still opens Profile.
      *
      * The drawer is a sibling of the NavHost, so it is the same sheet in both
      * modes. This pins that the wiring is not Dua-only.
      */
     @Test
-    fun theDrawerGearOpensProfileFromOrhanModeToo() {
+    fun theDrawerGearOpensProfileFromAgentModeToo() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
         openDrawer()
 
         compose.onNodeWithContentDescription("Profile").performClick()
@@ -2611,28 +2611,28 @@ class DuaGenAINavHostTest {
         assertNotVisible("Cube 01")
     }
 
-    // ------------------------------------------------- Orhan's own thread
+    // ------------------------------------------------- Agent's own thread
 
     /**
-     * The pinned Orhan card opens ORHAN'S OWN conversation.
+     * The pinned Agent card opens AGENT'S OWN conversation.
      *
-     * Orhan is an agent, so it has a thread of its own, and it goes through the
-     * SAME `chat/{chatId}` route every other conversation uses \u2014 with Orhan's
+     * Agent has a thread of its own, and it goes through the
+     * SAME `chat/{chatId}` route every other conversation uses \u2014 with Agent's
      * own stable id. No new route was invented for it.
      *
-     * The card is found by its ROLE LINE, not by the text "Orhan": that word is
+     * The card is found by its ROLE LINE, not by the text "Agent": that word is
      * also the mode toggle's label, so clicking it would switch modes instead of
      * opening the thread.
      */
     @Test
-    fun tappingThePinnedOrhanCardOpensOrhansOwnThread() {
+    fun tappingThePinnedAgentCardOpensAgentsOwnThread() {
         launch()
-        switchTo(HomeMode.Orhan)
+        switchTo(HomeMode.Agent)
 
-        // The card is on Orhan's home, under the search row.
-        assertVisible(ORHAN_ROLE_LINE)
+        // The card is on Agent's home, under the search row.
+        assertVisible(AGENT_ROLE_LINE)
 
-        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
 
         assertEquals(
@@ -2641,54 +2641,54 @@ class DuaGenAINavHostTest {
             currentRoute(),
         )
         val args = navController.currentBackStackEntry?.arguments
-        assertEquals(ORHAN_CHAT_ID, args?.getString("chatId"))
-        assertEquals(ORHAN_CHAT_TITLE, args?.getString("title"))
+        assertEquals(AGENT_CHAT_ID, args?.getString("chatId"))
+        assertEquals(AGENT_CHAT_TITLE, args?.getString("title"))
     }
 
     /**
-     * Orhan's thread shows the conversation AND the composer.
+     * Agent's thread shows the conversation AND the composer.
      *
-     * The pain area holds Orhan's and the user's messages, and the shared
+     * The pain area holds Agent's and the user's messages, and the shared
      * `DuaComposer` pill sits under them so the thread is usable. Both halves are
      * asserted, because "the composer is there" is only meaningful if the
      * conversation it belongs to is still there.
      */
     @Test
-    fun orhansThreadShowsTheConversationAndTheComposer() {
+    fun agentsThreadShowsTheConversationAndTheComposer() {
         launch()
-        switchTo(HomeMode.Orhan)
-        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        switchTo(HomeMode.Agent)
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
 
         // The thread is open\u2026
         assertVisible(CHAT_MARKER)
 
-        // \u2026it is Orhan's, so its top bar carries Orhan's name\u2026
-        assertVisible(ORHAN_CHAT_TITLE)
+        // \u2026it is Agent's, so its top bar carries Agent's name\u2026
+        assertVisible(AGENT_CHAT_TITLE)
 
         // \u2026and the pain area holds both sides of the conversation. These are
         // distinctive fragments of the first user line and the first agent line
-        // of `orhanThread`.
+        // of `agentThread`.
         assertVisibleSubstring("I need the Q3 launch handled")
         assertVisibleSubstring("I've split that across three agents")
 
-        // The composer is there, and its hint names Orhan.
-        assertComposer(ORHAN_COMPOSER_HINT)
+        // The composer is there, and its hint names Agent.
+        assertComposer(AGENT_COMPOSER_HINT)
     }
 
     /**
      * The composer is LIVE: typing and sending adds the user's message to the
-     * thread, clears the field, and Orhan replies.
+     * thread, clears the field, and Agent replies.
      *
      * This is the behaviour a static pill could not have. The message is typed
      * into the composer's own field and sent through its own send control, then
      * asserted in the pain area \u2014 the same path a user takes.
      */
     @Test
-    fun sendingAMessageAddsItToTheThreadAndOrhanReplies() {
+    fun sendingAMessageAddsItToTheThreadAndAgentReplies() {
         launch()
-        switchTo(HomeMode.Orhan)
-        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        switchTo(HomeMode.Agent)
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
 
         // Type into the composer's field and send.
@@ -2700,9 +2700,9 @@ class DuaGenAINavHostTest {
         assertVisibleSubstring("Book the venue for the launch")
 
         // \u2026the field is cleared, so the hint is showing again\u2026
-        assertVisible(ORHAN_COMPOSER_HINT)
+        assertVisible(AGENT_COMPOSER_HINT)
 
-        // \u2026and Orhan replies after the typing beat. The reply is a canned
+        // \u2026and Agent replies after the typing beat. The reply is a canned
         // string, so this waits for it rather than asserting it instantly.
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasText("I've picked that up", substring = true))
@@ -2711,12 +2711,12 @@ class DuaGenAINavHostTest {
         assertVisibleSubstring("I've picked that up")
     }
 
-    /** Back from Orhan's thread lands on Orhan's home, not on Dua's. */
+    /** Back from Agent's thread lands on Agent's home, not on Dua's. */
     @Test
-    fun backFromOrhansThreadReturnsToOrhansHome() {
+    fun backFromAgentsThreadReturnsToAgentsHome() {
         launch()
-        switchTo(HomeMode.Orhan)
-        compose.onNodeWithText(ORHAN_ROLE_LINE).performClick()
+        switchTo(HomeMode.Agent)
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
         assertVisible(CHAT_MARKER)
 
@@ -2724,7 +2724,7 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
-        // Orhan's home, not Dua's: the agent surface is back and the Dua pill is
+        // Agent's home, not Dua's: the agent surface is back and the Dua pill is
         // not. The mode is hoisted in the host, so it survives the round trip.
         assertVisible("AGENTS \u00b7 3")
         assertNotVisible(DUA_ASK_HINT)

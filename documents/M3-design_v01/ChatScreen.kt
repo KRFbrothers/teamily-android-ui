@@ -3,6 +3,7 @@ package ai.duagenai.design.screens
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,6 +54,8 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
+import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Chat — M3 components used:
@@ -83,8 +87,8 @@ import ai.duagenai.design.theme.DuaGenAITheme
  *  PER-THREAD STATE
  *  ----------------
  *  `messages` and `draft` are `rememberSaveable` KEYED ON `chatId`. The key is
- *  what makes the state per-thread: a message sent in Orhan's thread is stored
- *  under Orhan's key, so it can never appear in another conversation, and a
+ *  what makes the state per-thread: a message sent in Agent's thread is stored
+ *  under Agent's key, so it can never appear in another conversation, and a
  *  half-typed draft does not leak between threads. The key also means the state
  *  survives rotation and back-navigation.
  * ==========================================================================*/
@@ -103,21 +107,21 @@ import ai.duagenai.design.theme.DuaGenAITheme
 const val SAMPLE_CHAT_ID = "chat_webpage_developer"
 
 /**
- * Orhan's OWN conversation id.
+ * Agent's OWN conversation id.
  *
- * Orhan is an agent, so it has a thread of its own — the pinned card on Home
+ * Agent has a thread of its own — the pinned card on Home
  * opens it through the SAME `chat/{chatId}` route every other conversation uses.
  * No new route was invented for it.
  *
- * It is a stable id, so `CubeCatalog.forEntity` gives Orhan's thread a cube the
+ * It is a stable id, so `CubeCatalog.forEntity` gives Agent's thread a cube the
  * same way it gives every other thread one. It is deliberately NOT one of
- * `sampleChats`' ids: those are the conversations Orhan MANAGES, and Orhan's own
+ * `sampleChats`' ids: those are the conversations Agent MANAGES, and Agent's own
  * thread is a different thing.
  */
-const val ORHAN_CHAT_ID = "chat_orhan"
+const val AGENT_CHAT_ID = "chat_agent"
 
-/** The title Orhan's thread shows in its top bar. */
-const val ORHAN_CHAT_TITLE = "Orhan"
+/** The title Agent's thread shows in its top bar. */
+const val AGENT_CHAT_TITLE = "Agent"
 
 sealed interface Message {
     val text: String
@@ -177,30 +181,30 @@ private fun Message.toSaved(): SavedMessage = SavedMessage(
 )
 
 /**
- * Orhan's canned reply.
+ * Agent's canned reply.
  *
  * Deliberately static: this kit has no model behind it, and the brief asked for
- * a simple reply rather than a real call. It is written to Orhan's role — it
+ * a simple reply rather than a real call. It is written to Agent's role — it
  * reports on the agents it controls — so the thread stays in character.
  */
-private const val ORHAN_REPLY =
+private const val AGENT_REPLY =
     "Got it — I've picked that up and I'm on it. I'll report back here as soon as it's done."
 
-/** How long the typing indicator shows before Orhan's reply lands. */
-private const val ORHAN_REPLY_DELAY_MS = 900L
+/** How long the typing indicator shows before Agent's reply lands. */
+private const val AGENT_REPLY_DELAY_MS = 900L
 
 /** The clock label a freshly sent message carries, e.g. "9:41 AM". */
 private fun nowLabel(): String =
     java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date())
 
 /**
- * Orhan's own thread — the conversation the pinned card opens.
+ * Agent's own thread — the conversation the pinned card opens.
  *
- * It is written to Orhan's role from the confirmed product model: Orhan
+ * It is written to Agent's role from the confirmed product model: Agent
  * multitask, controls other agents and can create new ones. The user asks for
- * work, Orhan reports what it did across the agents it manages.
+ * work, Agent reports what it did across the agents it manages.
  */
-private val orhanThread = listOf(
+private val agentThread = listOf(
     Message.User(
         "I need the Q3 launch handled — deck, competitor research and the invoice reconciliation.",
         "9:31 AM",
@@ -243,10 +247,10 @@ fun ChatScreen(
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // Orhan's own thread is the one conversation whose content is not the
-    // generic sample: it is Orhan reporting on the agents it controls. Every
+    // Agent's own thread is the one conversation whose content is not the
+    // generic sample: it is Agent reporting on the agents it controls. Every
     // other id keeps the sample thread, so nothing else changes.
-    val seed = if (chatId == ORHAN_CHAT_ID) orhanThread else sampleThread
+    val seed = if (chatId == AGENT_CHAT_ID) agentThread else sampleThread
     // Derived, never accepted as a parameter: the conversation's cube is a pure
     // function of its stable id, so this screen cannot drift from the Home row
     // that opened it — and it is not the user's saved cube.
@@ -264,14 +268,14 @@ fun ChatScreen(
     // The composer's draft, saved the same way so a half-typed line survives a
     // rotation. Also keyed on `chatId`, so drafts do not leak between threads.
     var draft by rememberSaveable(chatId) { mutableStateOf("") }
-    // Orhan's reply is shown after a short beat, with the typing indicator up in
+    // Agent's reply is shown after a short beat, with the typing indicator up in
     // the meantime. It is a plain coroutine delay — no real model call.
-    var orhanTyping by rememberSaveable(chatId) { mutableStateOf(false) }
+    var agentTyping by rememberSaveable(chatId) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    // The list is the conversation plus, while Orhan is "typing", one extra row.
-    val rows = messages.size + if (orhanTyping) 1 else 0
+    // The list is the conversation plus, while Agent is "typing", one extra row.
+    val rows = messages.size + if (agentTyping) 1 else 0
 
     // Keep the newest message in view. Keyed on the row count so it fires when a
     // message is added (and when the typing row appears), not on every frame.
@@ -284,19 +288,21 @@ fun ChatScreen(
         if (text.isEmpty()) return
         messages = ArrayList(messages + SavedMessage(SavedMessage.USER, text, nowLabel()))
         draft = ""
-        orhanTyping = true
+        agentTyping = true
         scope.launch {
-            delay(ORHAN_REPLY_DELAY_MS)
-            orhanTyping = false
+            delay(AGENT_REPLY_DELAY_MS)
+            agentTyping = false
             messages = ArrayList(
-                messages + SavedMessage(SavedMessage.AGENT, ORHAN_REPLY, nowLabel()),
+                messages + SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()),
             )
         }
     }
 
+    // Forest-slate polish: the canvas gradient sits behind the whole thread;
+    // the Scaffold and top bar are transparent so it shows through.
     Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier.background(teamilyPalette().bgCanvasGradient),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -338,7 +344,7 @@ fun ChatScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = Color.Transparent,
                 ),
             )
         },
@@ -371,7 +377,7 @@ fun ChatScreen(
                     else -> UserBubble(msg, cubeId, chatTitle)
                 }
             }
-            if (orhanTyping) {
+            if (agentTyping) {
                 item { TypingBubble(cubeId, chatTitle) }
             }
         }
@@ -382,13 +388,13 @@ fun ChatScreen(
  * The typing indicator — the same agent bubble, with three dots instead of text.
  *
  * It reuses [AgentBubble]'s own geometry (28dp cube, same gap, same bubble fill
- * and radius) so the "Orhan is replying" state is the agent bubble mid-sentence
+ * and radius) so the "Agent is replying" state is the agent bubble mid-sentence
  * rather than a new component.
  */
 @Composable
 private fun TypingBubble(cubeId: String, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
     Row(verticalAlignment = Alignment.Bottom) {
         CubeAvatar(
             cubeId = cubeId,
@@ -400,9 +406,10 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
         Box(
             modifier = Modifier
                 .clip(DuaGenAITheme.shapes.agentBubble)
-                .background(colors.agentBubble)
+                .background(palette.bubbleAgent)
+                .border(1.dp, palette.border, DuaGenAITheme.shapes.agentBubble)
                 .padding(horizontal = 14.dp, vertical = 11.dp)
-                .semantics { contentDescription = "Orhan is typing" },
+                .semantics { contentDescription = "Agent is typing" },
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -413,7 +420,7 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(colors.agentBubbleInk.copy(alpha = 0.45f)),
+                            .background(palette.bubbleAgentText.copy(alpha = 0.45f)),
                     )
                 }
             }
@@ -424,7 +431,7 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
 @Composable
 private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
     Row(verticalAlignment = Alignment.Bottom) {
         // Same conversation cube as the header and the user's bubbles — the old
         // "W" letter box was a second avatar implementation living on this screen.
@@ -440,13 +447,15 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .clip(DuaGenAITheme.shapes.agentBubble)
-                    .background(colors.agentBubble)
+                    // Agent bubble: `bubbleAgent` fill with a 1dp `border` edge.
+                    .background(palette.bubbleAgent)
+                    .border(1.dp, palette.border, DuaGenAITheme.shapes.agentBubble)
                     .padding(horizontal = 14.dp, vertical = 11.dp),
             ) {
                 Text(
                     text = msg.text,
                     style = DuaGenAITextStyles.bubble,
-                    color = colors.agentBubbleInk,
+                    color = palette.bubbleAgentText,
                 )
             }
             Spacer(Modifier.height(spacing.xxs))
@@ -462,7 +471,7 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
 @Composable
 private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -472,14 +481,15 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
             Box(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
-                    .clip(DuaGenAITheme.shapes.userBubble)
-                    .background(colors.userBubble)
+                    // User bubble: `bubbleUser` in a 20dp rounded shape.
+                    .clip(TeamilyShapes.userBubble)
+                    .background(palette.bubbleUser)
                     .padding(horizontal = 14.dp, vertical = 11.dp),
             ) {
                 Text(
                     text = msg.text,
                     style = DuaGenAITextStyles.bubble,
-                    color = colors.userBubbleInk,
+                    color = palette.bubbleUserText,
                 )
             }
             Spacer(Modifier.height(spacing.xxs))
@@ -513,14 +523,14 @@ private fun ChatDark() = DuaGenAITheme(darkTheme = true) {
     ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
 }
 
-@Preview(name = "Orhan chat — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Agent chat — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun OrhanChatLight() = DuaGenAITheme(darkTheme = false) {
-    ChatScreen(chatId = ORHAN_CHAT_ID, chatTitle = ORHAN_CHAT_TITLE)
+private fun AgentChatLight() = DuaGenAITheme(darkTheme = false) {
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
 }
 
-@Preview(name = "Orhan chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Agent chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun OrhanChatDark() = DuaGenAITheme(darkTheme = true) {
-    ChatScreen(chatId = ORHAN_CHAT_ID, chatTitle = ORHAN_CHAT_TITLE)
+private fun AgentChatDark() = DuaGenAITheme(darkTheme = true) {
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
 }

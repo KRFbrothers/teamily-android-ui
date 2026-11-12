@@ -32,8 +32,8 @@ import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
 import ai.duagenai.design.screens.ArtifactsScreen
 import ai.duagenai.design.screens.ChatScreen
-import ai.duagenai.design.screens.ORHAN_CHAT_ID
-import ai.duagenai.design.screens.ORHAN_CHAT_TITLE
+import ai.duagenai.design.screens.AGENT_CHAT_ID
+import ai.duagenai.design.screens.AGENT_CHAT_TITLE
 import ai.duagenai.design.screens.DiscoverScreen
 import ai.duagenai.design.screens.DrawerDestination
 import ai.duagenai.design.screens.HomeMode
@@ -80,7 +80,7 @@ import kotlinx.coroutines.launch
  *  drawer is a sibling of the NavHost, not a child of Home: it must be able to
  *  cover the whole app surface, and it must survive a Home recomposition.
  *
- *  The Dua | Orhan mode is also hoisted here, with `rememberSaveable`, so a
+ *  The Dua | Agent mode is also hoisted here, with `rememberSaveable`, so a
  *  configuration change (rotation, dark-mode toggle) does not silently reset the
  *  user's chosen mode.
  *
@@ -191,7 +191,7 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Dua | Orhan. rememberSaveable so rotation / theme change keeps the choice.
+    // Dua | Agent. rememberSaveable so rotation / theme change keeps the choice.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
 
     // Which bottom-nav item is highlighted. HOISTED out of HomeScreen and
@@ -235,10 +235,10 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // Orhan is a MODE, not a screen: it switches the
+                        // Agent is a MODE, not a screen: it switches the
                         // composer and leaves the user on Home.
-                        DrawerDestination.Orhan -> {
-                            mode = HomeMode.Orhan
+                        DrawerDestination.Agent -> {
+                            mode = HomeMode.Agent
                             navController.navigate(DuaGenAIRoutes.HOME) {
                                 popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                                 launchSingleTop = true
@@ -282,12 +282,12 @@ fun DuaGenAINavHost(
                     mode = mode,
                     onModeChange = { mode = it },
                     // The top bar's right button is a gear in Dua mode and a plus
-                    // in Orhan mode, so the two callbacks are separate.
+                    // in Agent mode, so the two callbacks are separate.
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
                     // Every tab now has a destination. `Managed` is the
                     // reference's second tab, relabelled for the product model:
-                    // Orhan is itself an agent, so the tab lists the agents it
+                    // Agent controls other agents, so the tab lists the agents it
                     // controls and opens the same AgentsScreen. Memory and
                     // Artifacts open their own placeholder screens.
                     onSelectTab = { tab ->
@@ -303,13 +303,13 @@ fun DuaGenAINavHost(
                         }
                     },
                     selectedTab = selectedTab,
-                    // The pinned Orhan card opens ORHAN'S OWN thread. Orhan is an
+                    // The pinned Agent card opens AGENT'S OWN thread. Agent is an
                     // agent, so it has a conversation of its own — and it goes
                     // through the SAME `chat/{chatId}` route every other thread
-                    // uses, with Orhan's own stable id. No new route was invented.
-                    onOpenOrhanChat = {
+                    // uses, with Agent's own stable id. No new route was invented.
+                    onOpenAgentChat = {
                         navController.navigate(
-                            DuaGenAIRoutes.chat(ORHAN_CHAT_ID, ORHAN_CHAT_TITLE),
+                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, AGENT_CHAT_TITLE),
                         )
                     },
                 )

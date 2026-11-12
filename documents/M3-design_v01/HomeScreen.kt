@@ -63,20 +63,23 @@ import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Home — the two modes, per the confirmed product model
  *
- *  Dua Gen AI is one package with two halves:
+ *  Dua Gen AI is one package: Dua AI, Dua Agent, and Dua Workspace.
+ *  The Home UI has two modes:
  *
  *    DUA   = a chatbot. Simple chat, Q&A, no agent work.
- *    ORHAN = an Agent. Multitasks, controls other agents, can create new agents.
+ *    AGENT = multitasks, controls other agents, can create new agents.
  *
  *  That model decides what each home surface may contain, and the two
  *  references agree with it:
  *
  *    DUA MODE (reference 1) — deliberately PLAIN
- *      • top bar: circular white hamburger · Dua|Orhan toggle · circular white gear
+ *      • top bar: circular white hamburger · Dua|Agent toggle · circular white gear
  *      • body: EMPTY. Dua is a chatbot, not an agent host, so there is no chat
  *        list, no search row, no "CHATS" header and no bottom navigation here.
  *        The reference's body is empty and so is this one — nothing is invented
@@ -86,23 +89,23 @@ import ai.duagenai.design.theme.LocalDuaGenAISpacing
  *      • NO agent-related entry point of any kind. Not a row, not a badge, not
  *        a tab. Dua does not manage agents.
  *
- *    ORHAN MODE (reference 2) — the agent surface
- *      • top bar: circular white hamburger · toggle (Orhan selected) · circular
+ *    AGENT MODE (reference 2) — the agent surface
+ *      • top bar: circular white hamburger · toggle (Agent selected) · circular
  *        white plus
  *      • search row: circular filter button + "Search" pill
- *      • PINNED ORHAN CARD: Orhan itself, directly under the search row and
+ *      • PINNED AGENT CARD: Agent itself, directly under the search row and
  *        OUTSIDE the scrolling list, so it stays put while the agents below
- *        scroll. Orhan is an agent, so it has to be visible on its own surface
+ *        scroll. Agent has to be visible on its own surface
  *        — the reference draws it as a brand-tinted card with a white disc
  *        holding the wireframe cube glyph, its name, a one-line role and a
  *        trailing timestamp.
- *      • agent list: the agents Orhan CONTROLS — each with its own cube, its
+ *      • agent list: the agents Agent CONTROLS — each with its own cube, its
  *        status and a "Start a chat" entry point, under an "AGENTS · N" header.
- *        Orhan is an agent that controls other agents, so its home is the agents
+ *        Agent controls other agents, so its home is the agents
  *        it manages.
  *      • bottom: floating 5-item navigation pill. Its second item is "Managed",
- *        not "Agents": Orhan is itself an agent, so a tab called "Agents" would
- *        be ambiguous — the tab lists the agents Orhan controls, and its glyph
+ *        not "Agents": Agent controls other agents, so a tab called "Agents" would
+ *        be ambiguous — the tab lists the agents Agent controls, and its glyph
  *        is a hierarchy (one node over two) rather than a single robot face.
  *
  *  Everything visual comes from the kit's own tokens — the green palette, Lato,
@@ -134,7 +137,7 @@ import ai.duagenai.design.theme.LocalDuaGenAISpacing
  */
 enum class HomeMode(val label: String) {
     Dua("Dua"),
-    Orhan("Orhan"),
+    Agent("Agent"),
 }
 
 data class ChatRow(
@@ -168,7 +171,7 @@ internal val sampleChats = listOf(
  * The bottom navigation destinations, in the reference's order.
  *
  * [Managed] is the reference's second item, relabelled for the product model:
- * Orhan is itself an agent, so the tab that lists the agents it controls is
+ * Agent controls other agents, so the tab that lists the agents it controls is
  * called "Managed" and carries a hierarchy glyph. It opens the same
  * `AgentsScreen` the kit already ships.
  *
@@ -193,23 +196,23 @@ fun HomeScreen(
     onModeChange: (HomeMode) -> Unit = {},
     /** The top bar's right button in Dua mode (the gear). */
     onOpenSettings: () -> Unit = {},
-    /** The top bar's right button in Orhan mode (the plus) — starts a new chat. */
+    /** The top bar's right button in Agent mode (the plus) — starts a new chat. */
     onNewChat: () -> Unit = {},
     /** Bottom navigation. Only Chats / Managed / Discover have screens. */
     onSelectTab: (HomeTab) -> Unit = {},
     /**
      * Which bottom-nav item is highlighted. HOISTED, not local: the host owns
      * the selection so it survives a Home recomposition and a configuration
-     * change, exactly like [mode]. Defaults to [HomeTab.Chats] — the tab Orhan's
+     * change, exactly like [mode]. Defaults to [HomeTab.Chats] — the tab Agent's
      * home has always shown as active.
      */
     selectedTab: HomeTab = HomeTab.Chats,
     /**
-     * Opens ORHAN'S OWN thread. The pinned Orhan card is the entry point: Orhan
+     * Opens AGENT'S OWN thread. The pinned Agent card is the entry point: Agent
      * is an agent, so it has a conversation of its own, and tapping its card
      * opens it through the same `chat/{chatId}` route every other thread uses.
      */
-    onOpenOrhanChat: () -> Unit = {},
+    onOpenAgentChat: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // The search row's filter toggle. Screen-local UI state, saved so it
@@ -221,7 +224,9 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            // Forest-slate polish: the canvas is the palette's vertical
+            // gradient (#1E2522 -> #1D2220 -> #171C19 in dark).
+            .background(teamilyPalette().bgCanvasGradient),
     ) {
         Column(Modifier.fillMaxSize()) {
 
@@ -244,10 +249,10 @@ fun HomeScreen(
                 Spacer(Modifier.weight(1f).fillMaxWidth())
                 DuaComposer()
             } else {
-                /* ================= ORHAN MODE =================
-                 * Orhan is an agent that controls other agents, so its home is
+                /* ================= AGENT MODE =================
+                 * Agent controls other agents, so its home is
                  * the agents it manages — each with its own cube, its status and
-                 * a "Start a chat" entry point. Search row on top, then ORHAN
+                 * a "Start a chat" entry point. Search row on top, then AGENT
                  * ITSELF pinned (outside the scroller), then the agent list under
                  * an "AGENTS · N" header, then the floating navigation pill. No
                  * composer. */
@@ -262,11 +267,11 @@ fun HomeScreen(
                     ),
                 )
 
-                // Orhan itself, pinned. It sits in the Column — NOT inside the
+                // Agent itself, pinned. It sits in the Column — NOT inside the
                 // LazyColumn below — so scrolling the managed agents never moves
                 // it. This is the whole point of the reference's layout.
-                PinnedOrhanCard(
-                    onClick = onOpenOrhanChat,
+                PinnedAgentCard(
+                    onClick = onOpenAgentChat,
                     modifier = Modifier.padding(
                         start = LocalDuaGenAISpacing.current.gutter,
                         end = LocalDuaGenAISpacing.current.gutter,
@@ -307,13 +312,13 @@ fun HomeScreen(
 /**
  * The top bar.
  *
- * Three elements, vertically centred: a circular white button, the Dua|Orhan
+ * Three elements, vertically centred: a circular white button, the Dua|Agent
  * toggle, and a second circular white button. The two side buttons are 44dp
  * circles with a soft shadow — the reference's "floating chip" look — and the
  * toggle takes the remaining width between them.
  *
  * The right button changes with the mode, as the references show: a gear in Dua
- * mode, a plus in Orhan mode. The hamburger's line count differs between the two
+ * mode, a plus in Agent mode. The hamburger's line count differs between the two
  * references (2 lines vs 3); that is a drawing detail of the same control, so one
  * icon serves both rather than two near-identical glyphs.
  */
@@ -357,14 +362,19 @@ private fun HomeTopBar(
             modifier = Modifier.weight(1f),
         )
 
+        // Agent mode's "+" (New chat) is the polish's header pill: plusFill
+        // with a plusIcon glyph. Dua mode's gear keeps the neutral circle.
+        val isPlus = mode == HomeMode.Agent
         CircleIconButton(
             onClick = if (mode == HomeMode.Dua) onOpenSettings else onNewChat,
             contentDescription = if (mode == HomeMode.Dua) "Settings" else "New chat",
+            fill = if (isPlus) teamilyPalette().plusFill else null,
         ) {
             Icon(
                 if (mode == HomeMode.Dua) Icons.Filled.Settings else Icons.Filled.Add,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
+                tint = if (isPlus) teamilyPalette().plusIcon
+                else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -389,6 +399,8 @@ private fun CircleIconButton(
     onClick: () -> Unit,
     contentDescription: String,
     active: Boolean = false,
+    /** Optional fill override (the Agent-mode "+" uses `plusFill`). */
+    fill: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val colors = DuaGenAITheme.colors
@@ -404,7 +416,7 @@ private fun CircleIconButton(
                 if (active) selected = true
             },
         shape = CircleShape,
-        color = if (active) colors.brandSoft else MaterialTheme.colorScheme.surface,
+        color = fill ?: if (active) colors.brandSoft else MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp,
         content = {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -415,7 +427,7 @@ private fun CircleIconButton(
 }
 
 /**
- * The Dua | Orhan segmented control.
+ * The Dua | Agent segmented control.
  *
  * A two-cell pill: `surfaceVariant` track, `surface` selected cell, brand ink for
  * the active label. The reference's track is a light grey and the selected cell
@@ -446,9 +458,9 @@ private fun ModeToggle(
                     .background(if (active) MaterialTheme.colorScheme.surface else Color.Transparent)
                     .clickable { onModeChange(entry) }
                     // A stable, unique label per cell. The visible text is just
-                    // "Dua" / "Orhan", which also appears in the drawer's nav
+                    // "Dua" / "Agent", which also appears in the drawer's nav
                     // list; this makes the control unambiguous to a screen
-                    // reader ("Orhan mode, selected") and to a test.
+                    // reader ("Agent mode, selected") and to a test.
                     .semantics {
                         contentDescription = "${entry.label} mode"
                         role = Role.Tab
@@ -483,8 +495,8 @@ private fun ModeToggle(
  * established "primary action" fill and the mockup's purple is not ours.
  *
  * `internal`, not `private`, and with a `placeholder` parameter, because
- * ChatScreen draws the SAME composer under Orhan's thread. There is exactly one
- * composer implementation in this package: Dua's home and Orhan's thread both
+ * ChatScreen draws the SAME composer under Agent's thread. There is exactly one
+ * composer implementation in this package: Dua's home and Agent's thread both
  * call this function, so the two can never drift apart visually. Dua's call site
  * passes no argument, so its rendering is unchanged.
  */
@@ -499,7 +511,6 @@ internal fun DuaComposer(
     onSend: (() -> Unit)? = null,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
     // Editable only when a caller supplies a change handler. This is the single
     // switch between "Dua's presentational pill" and "a thread's live composer".
     val editable = onValueChange != null
@@ -515,11 +526,14 @@ internal fun DuaComposer(
                 bottom = spacing.md,
             ),
     ) {
+        // Forest-slate composer capsule: 28dp pill on `composerBg`, 1dp
+        // `borderGradient` edge, soft floating shadow.
+        val palette = teamilyPalette()
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = DuaGenAITheme.shapes.composer,
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, colors.fieldEdge),
+            shape = TeamilyShapes.composer,
+            color = palette.composerBg,
+            border = BorderStroke(1.dp, palette.borderGradient),
             shadowElevation = 2.dp,
         ) {
             Row(
@@ -610,7 +624,6 @@ internal fun DuaComposer(
  */
 @Composable
 private fun SendButton(enabled: Boolean, onClick: () -> Unit) {
-    val colors = DuaGenAITheme.colors
     Box(
         modifier = Modifier
             // Audit fix #10: the disc is drawn at 36dp, but the touch area is
@@ -621,7 +634,7 @@ private fun SendButton(enabled: Boolean, onClick: () -> Unit) {
             .size(36.dp)
             .clip(CircleShape)
             .background(
-                if (enabled) colors.primaryGradient
+                if (enabled) teamilyPalette().brandGradient
                 else SolidColor(MaterialTheme.colorScheme.surfaceVariant),
             )
             .then(
@@ -636,7 +649,9 @@ private fun SendButton(enabled: Boolean, onClick: () -> Unit) {
         Icon(
             Icons.AutoMirrored.Filled.Send,
             contentDescription = null,
-            tint = if (enabled) colors.onGradient
+            // Light glyph on the green brandGradient (accentContrast), so the
+            // arrow stays legible in both themes.
+            tint = if (enabled) teamilyPalette().accentContrast
             else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(18.dp),
         )
@@ -683,7 +698,7 @@ private fun VoiceActionButton() {
 }
 
 /**
- * Orhan mode's search row: a circular filter button and a "Search" pill.
+ * Agent mode's search row: a circular filter button and a "Search" pill.
  *
  * FILTER (audit fix #7) — the button used to be `onClick = {}`, i.e. it looked
  * pressable and did nothing. It is now a real toggle: [filterActive] is the
@@ -773,35 +788,40 @@ private fun SearchRow(
 }
 
 /**
- * Orhan itself, pinned under the search row.
+ * Agent itself, pinned under the search row.
  *
- * The reference draws Orhan as a brand-tinted card: a white disc holding the
+ * The reference draws Agent as a brand-tinted card: a white disc holding the
  * wireframe cube glyph, the name, a one-line role and a trailing timestamp.
  *
  * Two deliberate choices:
- *  • The glyph is [OrhanCubeGlyph] — the SAME 1.5dp wireframe the drawer's
- *    "Orhan" nav item draws, made `internal` for this reuse. It is NOT a
+ *  • The glyph is [AgentCubeGlyph] — the SAME 1.5dp wireframe the drawer's
+ *    "Agent" nav item draws, made `internal` for this reuse. It is NOT a
  *    [CubeAvatar]: the 42 cube assets are solid charcoal/orange fills and this
  *    is a stroke-only outline, so drawing it as a cube avatar would be wrong.
- *  • The card is tappable: it opens ORHAN'S OWN thread through the same
- *    `chat/{chatId}` route every other conversation uses. Orhan is an agent, so
- *    it has a conversation of its own — the card is its entry point.
+ *  • The card is tappable: it opens AGENT'S OWN thread through the same
+ *    `chat/{chatId}` route every other conversation uses. Agent has a
+ *    conversation of its own — the card is its entry point.
  */
 @Composable
-private fun PinnedOrhanCard(
+private fun PinnedAgentCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
 
+    // Forest-slate highlight card: `cardHeroColor` fill (#253D31 dark), 1dp
+    // `borderGradient` edge, 20dp corners. The card has no verified/check state
+    // in this kit, so no `logoMint` badge is added.
+    val palette = teamilyPalette()
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .clip(TeamilyShapes.card)
             .clickable(onClick = onClick),
-        shape = DuaGenAITheme.shapes.card,
-        color = colors.brandSoft,
-        border = BorderStroke(1.dp, colors.onBrandSoft.copy(alpha = 0.35f)),
+        shape = TeamilyShapes.card,
+        color = palette.cardHeroColor,
+        border = BorderStroke(1.dp, palette.borderGradient),
     ) {
         Row(
             modifier = Modifier.padding(spacing.md),
@@ -815,7 +835,7 @@ private fun PinnedOrhanCard(
                     .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center,
             ) {
-                OrhanCubeGlyph(
+                AgentCubeGlyph(
                     tint = colors.onBrandSoft,
                     modifier = Modifier.size(24.dp),
                 )
@@ -823,14 +843,14 @@ private fun PinnedOrhanCard(
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Orhan",
+                    text = "Agent",
                     style = DuaGenAITextStyles.rowTitle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    // Orhan's role, straight from the confirmed product model.
+                    // Agent's role, straight from the confirmed product model.
                     // Two lines so the whole role stays readable inside the card
                     // instead of being clipped to a single truncated line.
                     text = "Multitasks, controls agents, creates new ones",
@@ -850,7 +870,7 @@ private fun PinnedOrhanCard(
     }
 }
 
-/** "AGENTS · N" with the reference's trailing chevron — Orhan's managed agents. */
+/** "AGENTS · N" with the reference's trailing chevron — Agent's managed agents. */
 @Composable
 private fun AgentsHeader(count: Int) {
     val spacing = LocalDuaGenAISpacing.current
@@ -898,7 +918,7 @@ private fun AgentsHeader(count: Int) {
  * open their own placeholder screens.
  *
  * Each item carries a real glyph rather than a placeholder dot, because the
- * second item's meaning had to change: it is "Managed" — the agents Orhan
+ * second item's meaning had to change: it is "Managed" — the agents Agent
  * controls — and a hierarchy glyph (one node over two) says that, where a single
  * robot face would have said "agents in general".
  */
@@ -908,7 +928,6 @@ private fun HomeBottomNav(
     onSelect: (HomeTab) -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
 
     Box(
         modifier = Modifier
@@ -921,9 +940,14 @@ private fun HomeBottomNav(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        // Floating dock: 999dp capsule on `bottomnavBg` with a 1dp
+        // `borderGradient` edge. Compose has no backdrop blur, so the fill
+        // stands in for the web's frosted glass.
+        val palette = teamilyPalette()
         Surface(
-            shape = DuaGenAITheme.shapes.pill,
-            color = MaterialTheme.colorScheme.surface,
+            shape = TeamilyShapes.capsule,
+            color = palette.bottomnavBg,
+            border = BorderStroke(1.dp, palette.borderGradient),
             shadowElevation = 6.dp,
         ) {
             Row(
@@ -933,11 +957,13 @@ private fun HomeBottomNav(
             ) {
                 HomeTab.entries.forEach { tab ->
                     val active = tab == selected
-                    val tint = if (active) colors.onBrandSoft
+                    val tint = if (active) palette.navSelectedContent
                     else MaterialTheme.colorScheme.onSurfaceVariant
                     Column(
                         modifier = Modifier
-                            .clip(DuaGenAITheme.shapes.pill)
+                            .clip(TeamilyShapes.capsule)
+                            // Active pill indicator: `navSelected`.
+                            .background(if (active) palette.navSelected else Color.Transparent)
                             .clickable { onSelect(tab) }
                             .sizeIn(minWidth = 56.dp, minHeight = 48.dp)
                             .padding(horizontal = spacing.xs, vertical = spacing.xs)
@@ -998,7 +1024,7 @@ private fun TabGlyph(tab: HomeTab, tint: Color) {
                 drawPath(p, color = tint, style = stroke)
             }
 
-            // Hierarchy: one node above, two below, joined — Orhan over the
+            // Hierarchy: one node above, two below, joined — Agent over the
             // agents it controls.
             HomeTab.Managed -> {
                 drawCircle(tint, radius = w * 0.11f, center = Offset(w * 0.5f, h * 0.22f), style = stroke)
@@ -1064,14 +1090,14 @@ private fun HomeDuaLight() = DuaGenAITheme(darkTheme = false) { HomeScreen() }
 @Composable
 private fun HomeDuaDark() = DuaGenAITheme(darkTheme = true) { HomeScreen() }
 
-@Preview(name = "Home Orhan — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Agent — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun HomeOrhanLight() = DuaGenAITheme(darkTheme = false) {
-    HomeScreen(mode = HomeMode.Orhan)
+private fun HomeAgentLight() = DuaGenAITheme(darkTheme = false) {
+    HomeScreen(mode = HomeMode.Agent)
 }
 
-@Preview(name = "Home Orhan — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Agent — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
-private fun HomeOrhanDark() = DuaGenAITheme(darkTheme = true) {
-    HomeScreen(mode = HomeMode.Orhan)
+private fun HomeAgentDark() = DuaGenAITheme(darkTheme = true) {
+    HomeScreen(mode = HomeMode.Agent)
 }

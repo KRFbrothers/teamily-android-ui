@@ -88,6 +88,8 @@ import kotlinx.coroutines.launch
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Memory — M3 components used:
@@ -956,12 +958,17 @@ private fun MemoryCard(
             // several nodes, so a test (and a screen reader) needs one node that
             // IS the row.
             .semantics { contentDescription = "Memory: ${memory.title}" },
-        shape = DuaGenAITheme.shapes.card,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, colors.fieldEdge),
+        // Forest-slate card: `cardGradient` fill, 1dp `borderGradient` edge,
+        // 20dp corners. The Surface itself is the solid `bgCanvas` so the
+        // translucent gradient never lets the swipe-to-delete red show through.
+        shape = TeamilyShapes.card,
+        color = teamilyPalette().bgCanvas,
+        border = BorderStroke(1.dp, teamilyPalette().borderGradient),
     ) {
         Row(
-            modifier = Modifier.padding(spacing.md),
+            modifier = Modifier
+                .background(teamilyPalette().cardGradient)
+                .padding(spacing.md),
             verticalAlignment = Alignment.Top,
         ) {
             // Category indicator: a soft brand tile holding the memory glyph.
@@ -1090,7 +1097,7 @@ private fun MemoryEmptyState(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(spacing.sm))
             Text(
-                text = "Memories yahan dikhengi — jo cheezein Dua aur Orhan yaad rakhenge.",
+                text = "Memories yahan dikhengi — jo cheezein Dua aur Agent yaad rakhenge.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

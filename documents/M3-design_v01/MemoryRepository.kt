@@ -125,7 +125,7 @@ interface MemoryDataSource : RemoteDataSource<MemoryItem> {
  *
  * This is a design kit, so the entries are realistic sample data rather than a
  * live store — the same choice `sampleChats` and `sampleAgents` make. They are
- * written to the product model: things Dua and Orhan would actually remember
+ * written to the product model: things Dua and Agent would actually remember
  * about this user.
  */
 internal val sampleMemories = listOf(

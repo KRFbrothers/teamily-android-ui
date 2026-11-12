@@ -143,7 +143,7 @@ interface ArtifactsDataSource : RemoteDataSource<ArtifactItem> {
  *
  * This is a design kit, so the entries are realistic sample data rather than a
  * live store — the same choice `sampleMemories` and `sampleChats` make. They are
- * written to the product model: files, pages and decks Dua and Orhan would
+ * written to the product model: files, pages and decks Dua and Agent would
  * actually have produced for this user.
  */
 val demoArtifacts: List<ArtifactItem> = listOf(

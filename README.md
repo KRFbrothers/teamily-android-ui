@@ -10,6 +10,18 @@ file is a pixel-accurate, clickable preview of the same UI.
 
 ---
 
+## Overview
+
+Dua Gen AI — ek complete package: Dua AI, Dua Agent aur Dua Workspace.
+
+## Project parts
+
+- **Dua AI**
+- **Dua Agent**
+- **Dua Workspace**
+
+---
+
 ## What's in here
 
 ```
@@ -26,7 +38,7 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
 |---|---|
 | `DuaGenAINavHost.kt` | Root nav host wiring all screens together |
 | `HomeScreen.kt` | Dua home screen |
-| `ChatScreen.kt` | Orhan chat screen + composer |
+| `ChatScreen.kt` | Agent chat screen + composer |
 | `MemoryScreen.kt` | Memory list, filter chips, search, detail dialog (Open source / Copy text / Share / Close) |
 | `ArtifactsScreen.kt` | Artifacts grid, filter, pull-to-refresh, swipe-to-delete, context menu |
 | `CubePickerScreen.kt` | Cube picker with search/filter chips (48dp) + long-press tooltip |
@@ -42,6 +54,7 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets, 46 files
 | `ApiConfig.kt` | Shared base URL / API config |
 | `UrlOpener.kt` | Shared URL-opening helper |
 | `TouchTargets.kt` | 48dp minimum touch-target helper |
+| `TeamilyTokens.kt` | Forest-slate glass palette (light/dark) and card / composer / dock shapes |
 | `SettingsStore.kt` | Settings persistence |
 | `DuaGenAINavHostTest.kt` | Compose UI test suite for the nav host and screens |
 
