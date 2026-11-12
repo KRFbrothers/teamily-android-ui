@@ -87,6 +87,7 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
 
@@ -835,7 +836,7 @@ private fun DeleteGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val bar = 2.dp.toPx()
+        val bar = TeamilyStroke.icon.toPx()
         // Lid.
         drawLine(color = tint, start = Offset(w * 0.16f, h * 0.28f), end = Offset(w * 0.84f, h * 0.28f), strokeWidth = bar, cap = StrokeCap.Round)
         // Handle.
@@ -1111,7 +1112,7 @@ private fun FilterGlyph(tint: Color, modifier: Modifier = Modifier) {
 @Composable
 private fun ArtifactTypeGlyph(type: String, tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         val w = size.width
         val h = size.height
 
@@ -1161,9 +1162,9 @@ private fun ArtifactTypeGlyph(type: String, tint: Color, modifier: Modifier = Mo
                     cornerRadius = CornerRadius(w * 0.08f, w * 0.08f),
                     style = stroke,
                 )
-                drawLine(color = tint, start = Offset(w * 0.10f, h * 0.30f), end = Offset(w * 0.90f, h * 0.30f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
-                drawLine(color = tint, start = Offset(w * 0.24f, h * 0.46f), end = Offset(w * 0.76f, h * 0.46f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
-                drawLine(color = tint, start = Offset(w * 0.24f, h * 0.60f), end = Offset(w * 0.60f, h * 0.60f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.10f, h * 0.30f), end = Offset(w * 0.90f, h * 0.30f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.24f, h * 0.46f), end = Offset(w * 0.76f, h * 0.46f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.24f, h * 0.60f), end = Offset(w * 0.60f, h * 0.60f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
             }
             // Document (default): a page with folded corner and two lines.
             else -> {
@@ -1177,9 +1178,9 @@ private fun ArtifactTypeGlyph(type: String, tint: Color, modifier: Modifier = Mo
                     close()
                 }
                 drawPath(path = p, color = tint, style = stroke)
-                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.30f), end = Offset(w * 0.70f, h * 0.30f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
-                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.44f), end = Offset(w * 0.70f, h * 0.44f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
-                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.58f), end = Offset(w * 0.70f, h * 0.58f), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.30f), end = Offset(w * 0.70f, h * 0.30f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.44f), end = Offset(w * 0.70f, h * 0.44f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
+                drawLine(color = tint, start = Offset(w * 0.30f, h * 0.58f), end = Offset(w * 0.70f, h * 0.58f), strokeWidth = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
             }
         }
     }
@@ -1226,7 +1227,7 @@ private fun ArtifactsEmptyState(modifier: Modifier = Modifier) {
 @Composable
 private fun ArtifactsGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
         val w = size.width
         val h = size.height
 

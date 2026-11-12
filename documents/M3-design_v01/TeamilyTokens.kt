@@ -1,11 +1,15 @@
 package ai.duagenai.design.theme
 
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -16,17 +20,20 @@ import androidx.compose.ui.unit.dp
  *  The ONLY place the forest-slate polish colours live. Screens read them via
  *  [teamilyPalette] and never declare their own `Color(0x...)`.
  *
- *  Values follow the Teamily 1:1 match spec, whose source of truth is the
- *  `--nv-*` tokens of teamily.zip (styles-T3LtfMsY.css):
+ *  Source of truth: the `--nv-*` tokens of teamily.zip (styles-T3LtfMsY.css,
+ *  `:root[data-ui="2.0"]` and `.dark`). Where the earlier pasted 1:1 spec
+ *  disagreed with the zip, the zip value is used.
  *    brand   logoMint #42D982 · signalGreen #00D95A · accent #087C45
  *            accentHover #118A51 · accentPressed #066A3B · accentSoft #EEF8F2
- *            brandGradient #118A51 -> #087C45
- *    light   bgCanvas #FFFFFF + atmosphere #E8F3EC (ellipse at 8% 92%)
+ *            brandGradient (--nv-primary-fill) #0B8249 -> #087C45
+ *    light   atmosphere: #E8F3EC ellipse at 8% 92%, transparent at 52%, over #FAFBFA
  *            bgElevated #F6F8F5 · chromeFill/composerBg #EEF2EF
  *            border #DDE6E0 · borderStrong #C9D5CD · textPrimary #182B23
- *    dark    bgCanvasGradient #1E2522 -> #1D2220 -> #171C19
+ *            borderGradient (--nv-edge) 145deg #FFF 0% / #E8EDE9 35% / #CFD9D2 100%
+ *    dark    atmosphere: #242B27 ellipse at 8% 92%, transparent at 48%, over #171C19
  *            bgSurface/bottomnavBg #1F2521 · composerBg #29322C
- *            border / rim #D1DAD3 @ 0x38 · borderGradient -> #4C564F
+ *            border / rim #D1DAD3 @ 0x38 · borderGradient (--nv-edge) #AEBBB1 @ 0x5C -> #4B5750
+ *            primary fill #CBE7D2 with #17201B ink, no shadow
  *            bubbleUser #505752 · bubbleAgent #303433
  *
  *  Compose has no backdrop blur, so the "frosted" dock is the opaque-ish
@@ -89,8 +96,18 @@ data class TeamilyPalette(
     val tileViolet: Color,
     val tileMint: Color,
     val tileInk: Color,
-    /** Light-mode `--nv-atmosphere-deep` radial glow; null in dark (gradient canvas). */
-    val atmosphereDeep: Color?,
+    /** `--nv-atmosphere-deep`: the radial glow colour at 8% / 92%. */
+    val atmosphereDeep: Color,
+    /** The solid colour under the glow in `--nv-atmosphere`. */
+    val atmosphereBase: Color,
+    /** Where the glow reaches transparent, as a fraction of the CSS farthest-corner ellipse. */
+    val atmosphereStop: Float,
+    /** Active Skills / MCP Tools glyph in the composer. Light `--nv-green-700`; dark keeps logoMint. */
+    val toolActive: Color,
+    /** Unread dot on the dock's Memory tab (measured on agent-home-reference.jpg: #A2E4B6 = dark `--nv-green-700`). */
+    val notificationDot: Color,
+    /** `--nv-notification-outline`: the ring around [notificationDot]. */
+    val notificationOutline: Color,
     /** `--nv-shadow-resting` for glass cards. */
     val restingShadowElevation: Dp,
     val restingShadowAmbient: Color,
@@ -105,6 +122,8 @@ val TeamilyDarkPalette = TeamilyPalette(
     bgCanvas = Color(0xFF1D2220),
     bgCanvasTop = Color(0xFF1E2522),
     bgCanvasBottom = Color(0xFF171C19),
+    // Device-measured vertical canvas. Not in the zip and no longer drawn by
+    // `teamilyCanvas`, which now paints the zip `--nv-atmosphere` (see below).
     bgCanvasGradient = Brush.verticalGradient(
         listOf(Color(0xFF1E2522), Color(0xFF1D2220), Color(0xFF171C19)),
     ),
@@ -112,11 +131,9 @@ val TeamilyDarkPalette = TeamilyPalette(
     bgSurface = Color(0xFF1F2521),
     // --nv-glass-2-surface dark
     surfaceGradient = Brush.verticalGradient(
-        listOf(
-            Color(0xBD2F3932),
-            Color(0xA3232C26),
-            Color(0x941B231E),
-        ),
+        0f to Color(0xBD2F3932),
+        0.48f to Color(0xA3232C26),
+        1f to Color(0x941B231E),
     ),
     // Elevated surface (dark).
     bgElevated = Color(0xFF272E2B),
@@ -127,11 +144,11 @@ val TeamilyDarkPalette = TeamilyPalette(
             Color(0xAD1D2520),
         ),
     ),
-    // --nv-glass-rim dark: #d1dad338 -> #4C564F
+    // --nv-edge dark: linear-gradient(145deg, #aebbb15c, #4b5750)
     borderGradient = Brush.linearGradient(
         listOf(
-            Color(0x38D1DAD3),
-            Color(0xFF4C564F),
+            Color(0x5CAEBBB1),
+            Color(0xFF4B5750),
         ),
     ),
     // Hero pinned card fill (dark).
@@ -160,41 +177,51 @@ val TeamilyDarkPalette = TeamilyPalette(
     navSelectedContent = Color(0xFFF7F9F7),
     iconIdle = Color(0xFFEDF1ED),
     accent = Color(0xFF087C45),
-    accentHover = Color(0xFF118A51),
-    accentPressed = Color(0xFF066A3B),
-    accentSoft = Color(0xFFEEF8F2),
-    accentContrast = Color(0xFFECFFEF),
+    // Dark --nv-green-600 / -800 / -50 (same ramp steps as the light values).
+    accentHover = Color(0xFF91D9A8),
+    accentPressed = Color(0xFFC0F0CD),
+    accentSoft = Color(0xFF183826),
+    // Dark --action-primary-text.
+    accentContrast = Color(0xFF17201B),
     // --nv-brand-product / --nv-signal
     logoMint = Color(0xFF42D982),
     signalGreen = Color(0xFF00D95A),
-    gradientStart = Color(0xFF118A51),
-    gradientEnd = Color(0xFF087C45),
-    // --nv-green-600 -> --nv-green-700
-    brandGradient = Brush.verticalGradient(
-        listOf(Color(0xFF118A51), Color(0xFF087C45)),
-    ),
+    // Dark --nv-primary-fill is a flat #cbe7d2 (no gradient, --nv-primary-shadow none).
+    gradientStart = Color(0xFFCBE7D2),
+    gradientEnd = Color(0xFFCBE7D2),
+    brandGradient = SolidColor(Color(0xFFCBE7D2)),
     // --nv-user-bubble / --nv-agent-bubble
     bubbleUser = Color(0xFF505752),
     bubbleUserText = Color(0xFFFFFFFF),
     bubbleAgent = Color(0xFF303433),
     bubbleAgentText = Color(0xFFEAF0EC),
-    sendButton = Color(0xFF235039),
-    sendButtonIcon = Color(0xFFECFFEF),
+    sendButton = Color(0xFFCBE7D2),
+    sendButtonIcon = Color(0xFF17201B),
     // Blank chat page. Right side stays #171C19. Lower left lifts to #222926.
     chatCanvas = Color(0xFF171C19),
     chatGlow = Color(0xFF222926),
-    danger = Color(0xFFF2B8B5),
-    dangerSoft = Color(0xFF4A2320),
-    dangerInk = Color(0xFFF2B8B5),
+    // Dark --nv-error-600 / -50 / -700.
+    danger = Color(0xFFF4A59C),
+    dangerSoft = Color(0xFF472925),
+    dangerInk = Color(0xFFE78E83),
     primarySoft = Color(0xFF235039),
-    primaryInk = Color(0xFFA6E6B9),
-    fieldEdge = Color(0xFF7C9083),
+    // Dark --nv-green-700.
+    primaryInk = Color(0xFFA2E4B6),
+    // Dark --nv-field-edge.
+    fieldEdge = Color(0xFFAEBBB1),
     tileCyan = Color(0xFF3EC0EA),
     tileYellow = Color(0xFFF6C945),
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
-    atmosphereDeep = null,
+    // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
+    atmosphereDeep = Color(0xFF242B27),
+    atmosphereBase = Color(0xFF171C19),
+    atmosphereStop = 0.48f,
+    toolActive = Color(0xFF42D982),
+    notificationDot = Color(0xFFA2E4B6),
+    // Dark --nv-notification-outline = --nv-canvas.
+    notificationOutline = Color(0xFF141816),
     restingShadowElevation = 6.dp,
     restingShadowAmbient = Color(0x55000000),
     restingShadowSpot = Color(0x88000000),
@@ -211,11 +238,9 @@ val TeamilyLightPalette = TeamilyPalette(
     ),
     bgSurface = Color(0xFFFFFFFF),
     surfaceGradient = Brush.verticalGradient(
-        listOf(
-            Color(0xB8FFFFFF),
-            Color(0x8AF7FBF9),
-            Color(0x7AECF3EF),
-        ),
+        0f to Color(0xB8FFFFFF),
+        0.48f to Color(0x8AF7FBF9),
+        1f to Color(0x7AECF3EF),
     ),
     bgElevated = Color(0xFFF6F8F5),
     cardGradient = Brush.verticalGradient(
@@ -224,12 +249,11 @@ val TeamilyLightPalette = TeamilyPalette(
             Color(0x94F0F5F3),
         ),
     ),
+    // --nv-edge: linear-gradient(145deg, #fff 0%, #e8ede9 35%, #cfd9d2 100%)
     borderGradient = Brush.linearGradient(
-        listOf(
-            Color(0xCCFFFFFF),
-            Color(0xFFE8EDE9),
-            Color(0x14284735),
-        ),
+        0f to Color(0xFFFFFFFF),
+        0.35f to Color(0xFFE8EDE9),
+        1f to Color(0xFFCFD9D2),
     ),
     cardHeroColor = Color(0xFFDDF3E5),
     surfaceRecessed = Color(0xFFF2F4F3),
@@ -257,10 +281,11 @@ val TeamilyLightPalette = TeamilyPalette(
     accentContrast = Color(0xFFFFFFFF),
     logoMint = Color(0xFF42D982),
     signalGreen = Color(0xFF00D95A),
-    gradientStart = Color(0xFF118A51),
+    // --nv-primary-fill: linear-gradient(180deg, #0b8249 0%, #087c45 100%)
+    gradientStart = Color(0xFF0B8249),
     gradientEnd = Color(0xFF087C45),
     brandGradient = Brush.verticalGradient(
-        listOf(Color(0xFF118A51), Color(0xFF087C45)),
+        listOf(Color(0xFF0B8249), Color(0xFF087C45)),
     ),
     bubbleUser = Color(0xFFDDF3E5),
     bubbleUserText = Color(0xFF182B23),
@@ -270,19 +295,29 @@ val TeamilyLightPalette = TeamilyPalette(
     sendButtonIcon = Color(0xFFFFFFFF),
     chatCanvas = Color(0xFFFFFFFF),
     chatGlow = Color(0xFFFFFFFF),
-    danger = Color(0xFFA4271E),
-    dangerSoft = Color(0xFFF7DCD9),
-    dangerInk = Color(0xFFA4271E),
+    // --nv-error-600 / -50 / -700.
+    danger = Color(0xFFC93434),
+    dangerSoft = Color(0xFFFDEEEE),
+    dangerInk = Color(0xFFB12C2C),
     primarySoft = Color(0xFFDDF3E5),
     primaryInk = Color(0xFF066A3B),
-    fieldEdge = Color(0xFF788C7E),
+    // --nv-field-edge = --nv-neutral-500.
+    fieldEdge = Color(0xFF5C6D63),
     tileCyan = Color(0xFF3EC0EA),
     tileYellow = Color(0xFFF6C945),
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
-    // --nv-atmosphere-deep
+    // --nv-atmosphere: radial-gradient(ellipse at 8% 92%, #e8f3ec 0, transparent 52%), #fafbfa
     atmosphereDeep = Color(0xFFE8F3EC),
+    atmosphereBase = Color(0xFFFAFBFA),
+    atmosphereStop = 0.52f,
+    // --nv-green-700 (light --text-brand / active ink); #42D982 on #EEF2EF is 1.62:1.
+    toolActive = Color(0xFF087C45),
+    // Light --nv-green-700, the same ramp step as the measured dark dot.
+    notificationDot = Color(0xFF087C45),
+    // --nv-notification-outline = --nv-neutral-0.
+    notificationOutline = Color(0xFFFFFFFF),
     restingShadowElevation = 4.dp,
     restingShadowAmbient = Color(0x0A284735),
     restingShadowSpot = Color(0x1F284735),
@@ -301,16 +336,46 @@ object TeamilyShapes {
     val lg = RoundedCornerShape(16.dp)
     /** `--nv-radius-xl` 20px — pinned agent, Memory and Artifact cards. */
     val card = RoundedCornerShape(20.dp)
-    /** `--nv-radius-xl` 20px — user chat bubble. */
-    val userBubble = RoundedCornerShape(20.dp)
+    /** `--nv-radius-xl` 20px — user chat bubble, with the `--kit-radius-tail`
+     *  6px corner at the bottom end (beside the user's avatar). */
+    val userBubble = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp)
     /** `--nv-radius-2xl` 24px — bottom sheets. */
     val sheet = RoundedCornerShape(24.dp)
-    /** Bottom composer pill, 28dp. */
-    val composer = RoundedCornerShape(28.dp)
+    /** `--kit-radius-composer` = `--nv-radius-3xl` 32px. */
+    val composer = RoundedCornerShape(32.dp)
     /** `--nv-radius-3xl` 32px. */
     val hero = RoundedCornerShape(32.dp)
     /** `--nv-radius-pill` — floating bottom navigation dock and its selected pill. */
     val capsule = RoundedCornerShape(999.dp)
+}
+
+/** Icon strokes — `--nv-icon-stroke` 1.75 and `--nv-icon-stroke-strong` 2.25 (active / current). */
+object TeamilyStroke {
+    val icon: Dp = 1.75.dp
+    val iconStrong: Dp = 2.25.dp
+}
+
+/**
+ * Motion — `--nv-duration-*`, `--nv-ease-*` and `--nv-spring-standard-ui-*`.
+ * Spring: mass 1, stiffness 300, damping 32, i.e. damping ratio
+ * 32 / (2 * sqrt(300 * 1)) = 0.9238.
+ */
+object TeamilyMotion {
+    const val durationExtraSmall = 70
+    const val durationSmall = 140
+    const val durationBase = 240
+    const val durationLarge = 320
+    const val durationExtraLarge = 480
+    /** `--nv-ease-enter` cubic-bezier(.2,.2,.2,1). */
+    val easeEnter = CubicBezierEasing(0.2f, 0.2f, 0.2f, 1f)
+    /** `--nv-ease-change` cubic-bezier(.4,.1,.2,1). */
+    val easeChange = CubicBezierEasing(0.4f, 0.1f, 0.2f, 1f)
+    /** `--nv-ease-exit` cubic-bezier(.6,.1,.7,.7). */
+    val easeExit = CubicBezierEasing(0.6f, 0.1f, 0.7f, 0.7f)
+    const val springStiffness = 300f
+    const val springDampingRatio = 0.9238f
+    fun <T> standardSpring(): SpringSpec<T> =
+        spring(dampingRatio = springDampingRatio, stiffness = springStiffness)
 }
 
 /**

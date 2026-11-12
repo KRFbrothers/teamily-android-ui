@@ -89,6 +89,7 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
 
@@ -904,7 +905,7 @@ private fun MemoryDeleteGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val bar = 2.dp.toPx()
+        val bar = TeamilyStroke.icon.toPx()
         // Lid.
         drawLine(color = tint, start = Offset(w * 0.16f, h * 0.28f), end = Offset(w * 0.84f, h * 0.28f), strokeWidth = bar, cap = StrokeCap.Round)
         // Handle.
@@ -1120,7 +1121,7 @@ private fun MemoryEmptyState(modifier: Modifier = Modifier) {
 @Composable
 private fun MemoryGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        val stroke = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+        val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round)
         val w = size.width
         val h = size.height
 
@@ -1141,7 +1142,7 @@ private fun MemoryGlyph(tint: Color, modifier: Modifier = Modifier) {
                 color = tint,
                 start = Offset(lineStart, h * y),
                 end = Offset(lineEnd, h * y),
-                strokeWidth = 2.dp.toPx(),
+                strokeWidth = TeamilyStroke.icon.toPx(),
                 cap = StrokeCap.Round,
             )
         }

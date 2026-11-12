@@ -79,7 +79,7 @@ import ai.duagenai.design.theme.teamilyPalette
  *  -------------------
  *  The thread's composer is NOT a new component: it is `DuaComposer` from
  *  HomeScreen.kt — the exact same pill Dua's home draws, same tokens, same
- *  28dp radius, same spacing. Dua's call site passes no value/change/send, so
+ *  32dp radius, same spacing. Dua's call site passes no value/change/send, so
  *  its pill stays static; this screen passes them, which makes the field live,
  *  plus the agent tools: Attach `+` (opens ComposerPlusSheet), Skills and MCP
  *  Tools (open ComposerSkillsSheet / ComposerMcpSheet), and the single
@@ -332,8 +332,8 @@ fun ChatScreen(
         agentTyping = false
     }
 
-    // Teamily canvas behind the whole thread (light atmosphere / dark
-    // gradient); the Scaffold and top bar are transparent so it shows through.
+    // Teamily canvas behind the whole thread (the zip `--nv-atmosphere`, light
+    // and dark); the Scaffold and top bar are transparent so it shows through.
     Scaffold(
         modifier = modifier.teamilyCanvas(teamilyPalette()),
         containerColor = Color.Transparent,
@@ -521,7 +521,8 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
             Box(
                 modifier = Modifier
                     .widthIn(max = 280.dp)
-                    // User bubble: `bubbleUser` in a 20dp rounded shape.
+                    // User bubble: `bubbleUser`, 20dp corners with the 6dp
+                    // `--kit-radius-tail` at the bottom end, beside the avatar.
                     .clip(TeamilyShapes.userBubble)
                     .background(palette.bubbleUser)
                     .padding(horizontal = 14.dp, vertical = 11.dp),

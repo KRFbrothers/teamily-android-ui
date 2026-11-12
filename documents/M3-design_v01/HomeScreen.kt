@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -86,6 +88,7 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyCanvas
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyPressScale
@@ -246,8 +249,8 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Teamily canvas: light atmosphere (#E8F3EC at 8%/92%) over
-            // white; dark keeps the vertical bgCanvasGradient.
+            // Teamily canvas: the zip `--nv-atmosphere` (light #E8F3EC glow
+            // over #FAFBFA, dark #242B27 glow over #171C19, both at 8%/92%).
             .teamilyCanvas(teamilyPalette()),
     ) {
         Column(Modifier.fillMaxSize()) {
@@ -551,7 +554,7 @@ internal fun DuaComposer(
                 bottom = spacing.md,
             ),
     ) {
-        // Forest-slate composer capsule: 28dp pill on `composerBg`, 1dp
+        // Forest-slate composer capsule: 32dp (`--kit-radius-composer`) on `composerBg`, 1dp
         // `borderGradient` edge, soft floating shadow.
         val palette = teamilyPalette()
         Surface(
@@ -625,7 +628,7 @@ internal fun DuaComposer(
                         icon = Icons.Outlined.Build,
                         contentDescription = "Skills",
                         enabled = true,
-                        tint = if (enabledSkillIds.isNotEmpty()) palette.logoMint
+                        tint = if (enabledSkillIds.isNotEmpty()) palette.toolActive
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         activeDot = enabledSkillIds.isNotEmpty(),
                         onClick = { sheet = ComposerSheet.Skills },
@@ -634,7 +637,7 @@ internal fun DuaComposer(
                         icon = Icons.Outlined.Extension,
                         contentDescription = "MCP Tools",
                         enabled = true,
-                        tint = if (mcpEnabled) palette.logoMint
+                        tint = if (mcpEnabled) palette.toolActive
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         activeDot = mcpEnabled,
                         onClick = { sheet = ComposerSheet.Mcp },
@@ -734,8 +737,10 @@ private enum class SendMode { Send, Stop, Voice }
 
 /**
  * The single trailing control: a 48dp touch target wrapping a 42dp
- * `brandGradient` disc, replacing the old separate 40dp voice disc + 36dp send
- * disc.
+ * `brandGradient` disc (zip `--nv-primary-fill`: light #0B8249 -> #087C45 with a
+ * white glyph, dark flat #CBE7D2 with a #17201B glyph and no shadow — the same
+ * pair as the dark header plus), replacing the old separate 40dp voice disc +
+ * 36dp send disc.
  *
  *  • Stop  — a reply is in flight on a live thread; calls `onStop`.
  *  • Send  — the field has text; calls `onSend`.
@@ -1245,7 +1250,7 @@ private fun VerifiedCheck() {
             lineTo(w * 0.45f, h * 0.66f)
             lineTo(w * 0.71f, h * 0.38f)
         }
-        drawPath(p, color = palette.tileInk, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(p, color = palette.tileInk, style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round))
     }
 }
 
@@ -1279,7 +1284,7 @@ private fun SectionHeader(
         Canvas(Modifier.size(16.dp)) {
             val w = size.width
             val h = size.height
-            val stroke = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
             when (icon) {
                 // A tilted push-pin.
                 SectionIcon.Pin -> {
@@ -1319,7 +1324,7 @@ private fun SectionHeader(
                 lineTo(w * 0.5f, h * 0.66f)
                 lineTo(w * 0.8f, h * 0.38f)
             }
-            drawPath(p, color = ink, style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(p, color = ink, style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round))
         }
     }
 }
@@ -1438,32 +1443,66 @@ private fun HomeBottomNav(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
+                    // The capsule clip lives on a background layer only, so the
+                    // Memory dot (which sits just outside the glyph) is not cut
+                    // by the selected pill's rounded corner. The ripple is drawn
+                    // in that clipped layer, so it keeps the capsule shape.
+                    val interaction = remember { MutableInteractionSource() }
+                    Box(
                         modifier = Modifier
-                            .clip(TeamilyShapes.capsule)
-                            .background(if (active) palette.navSelected else Color.Transparent)
-                            .clickable { onSelect(tab) }
+                            .clickable(interactionSource = interaction, indication = null) { onSelect(tab) }
                             .sizeIn(minWidth = 64.dp, minHeight = 60.dp)
-                            .padding(horizontal = spacing.xs, vertical = spacing.xs)
                             .semantics {
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
                                 this.selected = active
                             },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                        contentAlignment = Alignment.Center,
                     ) {
-                        TabGlyph(tab = tab, tint = tint)
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = tab.label,
-                            style = DuaGenAITextStyles.navLabel.copy(
-                                fontSize = 13.sp,
-                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                            ),
-                            color = tint,
-                            maxLines = 1,
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .clip(TeamilyShapes.capsule)
+                                .background(if (active) palette.navSelected else Color.Transparent)
+                                .indication(interaction, LocalIndication.current),
                         )
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = spacing.xs, vertical = spacing.xs),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Box {
+                                TabGlyph(tab = tab, tint = tint, strong = active)
+                                if (tab == HomeTab.Memory) {
+                                    // The reference's unread dot: #A2E4B6 fill (measured;
+                                    // = dark --nv-green-700) in a --nv-notification-outline
+                                    // ring. Measured at 3.2px/dp: 8.75dp fill, 2.2dp ring,
+                                    // centred 1dp past the glyph's top-end corner.
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart)
+                                            .offset(x = 18.5.dp, y = (-7.5).dp)
+                                            .size(13.dp)
+                                            .clip(CircleShape)
+                                            .background(palette.notificationOutline)
+                                            .padding(2.dp)
+                                            .clip(CircleShape)
+                                            .background(palette.notificationDot),
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = tab.label,
+                                style = DuaGenAITextStyles.navLabel.copy(
+                                    fontSize = 13.sp,
+                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                ),
+                                color = tint,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -1476,11 +1515,13 @@ private fun HomeBottomNav(
  * `material-icons-core` only). The preview page draws the same five shapes.
  */
 @Composable
-private fun TabGlyph(tab: HomeTab, tint: Color) {
+private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
     Canvas(Modifier.size(24.dp)) {
         val w = size.width
         val h = size.height
-        val stroke = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        // `--nv-icon-stroke` 1.75; the active tab uses `--nv-icon-stroke-strong` 2.25.
+        val width = if (strong) TeamilyStroke.iconStrong else TeamilyStroke.icon
+        val stroke = Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (tab) {
             // The Dua bot: square head with two eyes over a stem.

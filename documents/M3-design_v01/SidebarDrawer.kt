@@ -47,6 +47,8 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyStroke
+import ai.duagenai.design.theme.teamilyPalette
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -70,7 +72,7 @@ import kotlin.math.sin
  *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
  *  and from Library's isometric box in the HTML preview. Neither is a cube
  *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
- *  solid charcoal/orange fills, and these are 1.5dp outlines. Keeping them
+ *  solid charcoal/orange fills, and these are 1.75dp (`--nv-icon-stroke`) outlines. Keeping them
  *  separate is what stops the two from being confused later.
  *
  *  Colours are the kit's own green tokens — no purple anywhere. The mockup's
@@ -167,7 +169,8 @@ fun SidebarDrawer(
                     .padding(horizontal = spacing.lg, vertical = spacing.sm),
                 shape = DuaGenAITheme.shapes.pill,
                 color = colors.field,
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.fieldEdge),
+                // Zip `--nv-field-edge` (light #5C6D63, dark #AEBBB1).
+                border = androidx.compose.foundation.BorderStroke(1.dp, teamilyPalette().fieldEdge),
             ) {
                 Row(
                     modifier = Modifier
@@ -389,13 +392,13 @@ private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
 /**
  * The "Dua" nav glyph: a front-facing cube outline (square face, top and
  * right planes), stroke only. Drawn with [Canvas] for the same reason as
- * [AgentCubeGlyph] — it is a 1.5dp wireframe nav icon, not a catalogue avatar.
+ * [AgentCubeGlyph] — it is a 1.75dp wireframe nav icon, not a catalogue avatar.
  */
 @Composable
 internal fun DuaCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.size(20.dp)) {
         val stroke = Stroke(
-            width = 1.5.dp.toPx(),
+            width = TeamilyStroke.icon.toPx(),
             cap = StrokeCap.Round,
             join = StrokeJoin.Round,
         )
@@ -440,7 +443,7 @@ internal fun DuaCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
  *
  * Drawn with [Canvas] rather than added to `CubeIcons` on purpose. `CubeIcons`
  * is a generated catalogue of 42 solid-colour 24×24 cube avatars; this is a
- * 1.5dp wireframe nav icon. Putting it in the catalogue would break that
+ * 1.75dp wireframe nav icon. Putting it in the catalogue would break that
  * contract (and, because `CubeCatalog.forEntity` uses `h % COUNT`, changing
  * COUNT would silently re-map every entity's cube).
  */
@@ -472,7 +475,7 @@ internal fun AgentCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
             lineTo(upperLeft.x, upperLeft.y)
             close()
         }
-        drawPath(hexagon, color = tint, style = Stroke(width = 1.5.dp.toPx()))
+        drawPath(hexagon, color = tint, style = Stroke(width = TeamilyStroke.icon.toPx()))
 
         // The Y seam: centre to top, centre to lower-left, centre to lower-right.
         val seam = Path().apply {
@@ -483,6 +486,6 @@ internal fun AgentCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
             moveTo(cx, cy)
             lineTo(lowerRight.x, lowerRight.y)
         }
-        drawPath(seam, color = tint, style = Stroke(width = 1.5.dp.toPx()))
+        drawPath(seam, color = tint, style = Stroke(width = TeamilyStroke.icon.toPx()))
     }
 }
