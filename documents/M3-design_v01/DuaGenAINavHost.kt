@@ -36,6 +36,16 @@ import ai.duagenai.design.screens.AGENT_CHAT_ID
 import ai.duagenai.design.screens.AGENT_CHAT_TITLE
 import ai.duagenai.design.screens.DiscoverScreen
 import ai.duagenai.design.screens.DrawerDestination
+import ai.duagenai.design.screens.AgentWorkspaceDestination
+import ai.duagenai.design.screens.DuaAgentApiScreen
+import ai.duagenai.design.screens.DuaAgentArtifactsScreen
+import ai.duagenai.design.screens.DuaAgentConnectAppScreen
+import ai.duagenai.design.screens.DuaAgentLiveSitesScreen
+import ai.duagenai.design.screens.DuaAgentMailScreen
+import ai.duagenai.design.screens.DuaAgentNewGroupScreen
+import ai.duagenai.design.screens.DuaAgentOverviewScreen
+import ai.duagenai.design.screens.DuaAgentProfileScreen
+import ai.duagenai.design.screens.DuaAgentWorkspaceScreen
 import ai.duagenai.design.screens.DuaAgentSkills
 import ai.duagenai.design.screens.HomeMode
 import ai.duagenai.design.screens.HomeScreen
@@ -121,6 +131,17 @@ object DuaGenAIRoutes {
     const val APPEARANCE = "appearance"
     const val STORAGE = "storage"
     const val NOTIFICATIONS = "notifications"
+
+    // Dua Agent profile & workspace (approved SVG set dua-agent-01..13).
+    const val AGENT_PROFILE = "agent/profile"
+    const val AGENT_CONNECT_APP = "agent/connect_app"
+    const val AGENT_WORKSPACE = "agent/workspace"
+    const val AGENT_OVERVIEW = "agent/overview"
+    const val AGENT_ARTIFACTS = "agent/artifacts"
+    const val AGENT_API = "agent/api"
+    const val AGENT_LIVE_SITES = "agent/live_sites"
+    const val AGENT_MAIL = "agent/mail"
+    const val AGENT_NEW_GROUP = "agent/new_group"
 
     /** `chat/{chatId}?title={title}` — the title is optional and display-only. */
     const val CHAT = "chat/{chatId}?title={title}"
@@ -429,6 +450,55 @@ fun DuaGenAINavHost(
                     },
                     mcpEnabled = mcpEnabled,
                     onToggleMcp = { mcpEnabled = it },
+                    // Only the Agent chat has a profile: its header avatar and
+                    // title open the Dua Agent profile (SVG 01).
+                    onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
+                        { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
+                    } else {
+                        null
+                    },
+                )
+            }
+
+            // --- Dua Agent profile & workspace ---------------------------------
+            composable(DuaGenAIRoutes.AGENT_PROFILE) {
+                // 02 (scrolled), 03 (more sheet), 04/05 (expanded) are states of
+                // this one screen, not separate routes.
+                DuaAgentProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
+                    onOpenNewGroup = { navController.navigate(DuaGenAIRoutes.AGENT_NEW_GROUP) },
+                    onOpenConnectApp = { navController.navigate(DuaGenAIRoutes.AGENT_CONNECT_APP) },
+                )
+            }
+            composable(DuaGenAIRoutes.AGENT_CONNECT_APP) {
+                DuaAgentConnectAppScreen(onClose = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.AGENT_WORKSPACE) {
+                DuaAgentWorkspaceScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpen = { dest ->
+                        navController.navigate(
+                            when (dest) {
+                                AgentWorkspaceDestination.Overview -> DuaGenAIRoutes.AGENT_OVERVIEW
+                                AgentWorkspaceDestination.LiveSites -> DuaGenAIRoutes.AGENT_LIVE_SITES
+                                AgentWorkspaceDestination.Mail -> DuaGenAIRoutes.AGENT_MAIL
+                                AgentWorkspaceDestination.Artifacts -> DuaGenAIRoutes.AGENT_ARTIFACTS
+                                AgentWorkspaceDestination.AgentApi -> DuaGenAIRoutes.AGENT_API
+                            },
+                        )
+                    },
+                )
+            }
+            composable(DuaGenAIRoutes.AGENT_OVERVIEW) { DuaAgentOverviewScreen(onBack = { navController.popBackStack() }) }
+            composable(DuaGenAIRoutes.AGENT_ARTIFACTS) { DuaAgentArtifactsScreen(onBack = { navController.popBackStack() }) }
+            composable(DuaGenAIRoutes.AGENT_API) { DuaAgentApiScreen(onBack = { navController.popBackStack() }) }
+            composable(DuaGenAIRoutes.AGENT_LIVE_SITES) { DuaAgentLiveSitesScreen(onBack = { navController.popBackStack() }) }
+            composable(DuaGenAIRoutes.AGENT_MAIL) { DuaAgentMailScreen(onBack = { navController.popBackStack() }) }
+            composable(DuaGenAIRoutes.AGENT_NEW_GROUP) {
+                DuaAgentNewGroupScreen(
+                    onClose = { navController.popBackStack() },
+                    onCreate = { navController.popBackStack() },
                 )
             }
 

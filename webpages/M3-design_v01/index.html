@@ -1370,6 +1370,202 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .phone[data-mode="agent"] .tab .ic{position:relative}
 .tab-dot{position:absolute;left:18.5px;top:-7.5px;width:13px;height:13px;border-radius:50%;
   background:var(--tm-notif-dot);border:2px solid var(--tm-notif-ring);box-sizing:border-box;pointer-events:none}
+/* ============================================================================
+   Dua Agent — profile & workspace (approved SVG set dua-agent-01..13).
+   One overlay per phone (`.agentview`), above the chat. Every size, colour and
+   offset below is the approved SVG's value; x/y are the SVG frame value minus
+   the phone's 1px border. Light values are the default, `.phone.dark` swaps.
+   ========================================================================== */
+.agentview{position:absolute;inset:0;z-index:30;display:none;overflow:hidden;
+  font-family:"Lato",system-ui,sans-serif;color:var(--ag-ink);
+  --ag-ink:#182B23;--ag-ink2:#5C6D63;--ag-dim:#5C6D63;--ag-border:#DDE6E0;--ag-chrome:#EEF2EF;
+  --ag-recessed:#F2F4F3;--ag-topbar:#FFFFFF;--ag-body:#F6F8F5;--ag-hair:#DDE6E0;
+  --ag-atm:#E8F3EC;--ag-atm-stop:52%;--ag-plus:#0A8048;--ag-plus-ink:#FFFFFF;
+  --ag-primary-ink:#066A3B;--ag-danger-ink:#B12C2C;--ag-ai-fill:#DDF3E5;--ag-ai-ink:#066A3B;
+  --ag-well:#EEF2EF;--ag-well-ink:#087C45;--ag-well-conn:#D7E3F4;--ag-well-conn-ink:#1B4A7A;
+  --ag-well-mute:#F3E6D4;--ag-well-mute-ink:#7A4E18;--ag-well-pin:#D9DCF6;--ag-well-pin-ink:#2A2F7A;
+  --ag-track:#DDE6E0;--ag-thumb:#FFFFFF;--ag-track-on:#087C45;--ag-thumb-on:#FFFFFF;
+  --ag-unread:#DDF3E5;--ag-unread-ink:#066A3B;--ag-needs:#C47A22;--ag-scrim:#00000099;
+  --ag-sheet:#FFFFFF;--ag-btn:#087C45;--ag-btn-ink:#FFFFFF;--ag-tab-idle:#5C6D63;--ag-tab-on:#182B23;
+  --ag-underline:#42D982;--ag-focus:#087C45;--ag-dashed:#C9D5CD;--ag-empty:#EEF2EF;--ag-handle:#C9D5CD;
+  --ag-navsel:#DDF3E5;--ag-navsel-ink:#066A3B;--ag-surface:#FFFFFF;--ag-notion:#000000}
+.phone.dark .agentview{
+  --ag-ink:#F7F9F7;--ag-ink2:#B4BFB8;--ag-dim:#8A958E;--ag-border:#D1DAD338;--ag-chrome:#323B36;
+  --ag-recessed:#181D1B;--ag-topbar:#1D2220;--ag-body:#272E2B;--ag-hair:#343A36;
+  --ag-atm:#242B27;--ag-atm-stop:48%;--ag-plus:#CBE7D2;--ag-plus-ink:#17201B;
+  --ag-primary-ink:#A2E4B6;--ag-danger-ink:#E78E83;--ag-ai-fill:#224735;--ag-ai-ink:#A2E4B6;
+  --ag-well:#545B56;--ag-well-ink:#A2E4B6;--ag-well-conn:#1B3A5C;--ag-well-conn-ink:#8BB4E0;
+  --ag-well-mute:#4A3218;--ag-well-mute-ink:#E0C08A;--ag-well-pin:#1E2A6A;--ag-well-pin-ink:#A8B0F0;
+  --ag-track:#3A423D;--ag-thumb:#D1DAD3;--ag-track-on:#A2E4B6;--ag-thumb-on:#17201B;
+  --ag-unread:#A2E4B6;--ag-unread-ink:#17201B;--ag-needs:#E0A04A;--ag-scrim:#000000A8;
+  --ag-sheet:#1D2220;--ag-tab-idle:#B4BFB8;--ag-tab-on:#F7F9F7;--ag-focus:#91D9A8;--ag-dashed:#4B5750;
+  --ag-empty:#323B36;--ag-handle:#545B56;--ag-navsel:#545B56;--ag-navsel-ink:#F7F9F7;--ag-surface:#1F2521;--ag-notion:#FFFFFF}
+.phone.agenting .agentview{display:block}
+.agentview *{box-sizing:border-box}
+:where(.agentview) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer}
+.agentview .ag-ic{display:block;flex:0 0 auto;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.agentview .ag-ic .f{fill:currentColor;stroke:none}
+/* screen backgrounds: body+atmosphere (profile, new group), topbar+atmosphere (connect app), flat body under a topbar (the rest) */
+.ag-screen{position:absolute;inset:0;background:var(--ag-body)}
+.ag-screen.atm{background:radial-gradient(359px 776px at 30.2px 775.5px,var(--ag-atm) 0,transparent var(--ag-atm-stop)),var(--ag-body)}
+.ag-screen.atm-top{background:radial-gradient(359px 776px at 30.2px 775.5px,var(--ag-atm) 0,transparent var(--ag-atm-stop)),var(--ag-topbar)}
+.ag-screen .sb{position:absolute;left:0;right:0;top:0;height:44px;background:var(--ag-topbar);color:var(--ag-ink);z-index:3}
+.ag-screen.atm-top .sb{background:transparent}
+.ag-top{position:absolute;left:0;right:0;top:44px;background:var(--ag-topbar);z-index:2}
+.ag-screen.atm-top .ag-top{background:transparent}
+.ag-hdr{position:relative;height:84px}
+.ag-hdr .ag-back{position:absolute;left:15px;top:30px;width:24px;height:24px;color:var(--ag-ink)}
+.ag-hdr .ag-back::after{content:"";position:absolute;inset:-12px}
+.ag-hdr .ag-title{position:absolute;left:51px;top:28px;font:700 20px/28px "Lato",sans-serif;white-space:nowrap}
+.ag-hdr .ag-ctr{position:absolute;left:0;right:0;top:28px;height:28px;display:flex;justify-content:center;align-items:center;gap:8px}
+.ag-hdr .ag-ctr .ag-title{position:static}
+.ag-hdr .ag-twell{width:28px;height:28px;border-radius:50%;background:var(--ag-empty);display:flex;align-items:center;justify-content:center;color:var(--ag-well-ink)}
+.ag-hdr .ag-right{position:absolute;right:15px;top:30px;width:24px;height:24px;color:var(--ag-ink)}
+.ag-hdr .ag-create{position:absolute;right:15px;top:24px;height:36px;padding:0 18px;border-radius:18px;background:var(--ag-plus);color:var(--ag-plus-ink);font:700 16px/22px "Lato",sans-serif}
+.ag-dim .ag-hdr .ag-title,.ag-dim .ag-name{color:var(--ag-dim)}
+.ag-sub{margin:-16px 15px 0;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2);padding-bottom:10px}
+.ag-hair{height:1px;background:var(--ag-hair)}
+.ag-scroll{position:absolute;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.ag-scroll::-webkit-scrollbar{display:none}
+.ag-abs{position:absolute}
+.t12{font:400 12px/16px "Lato",sans-serif}.t13{font:400 13px/18px "Lato",sans-serif}.t14{font:400 14px/20px "Lato",sans-serif}
+.t15{font:400 15px/22px "Lato",sans-serif}.t16{font:400 16px/22px "Lato",sans-serif}
+.b11{font:700 11px/16px "Lato",sans-serif}.b12{font:700 12px/16px "Lato",sans-serif}.b13{font:700 13px/18px "Lato",sans-serif}
+.b14{font:700 14px/20px "Lato",sans-serif}.b15{font:700 15px/22px "Lato",sans-serif}.b16{font:700 16px/22px "Lato",sans-serif}
+.b18{font:700 18px/26px "Lato",sans-serif}.b20{font:700 20px/28px "Lato",sans-serif}
+.ink2{color:var(--ag-ink2)}.pink{color:var(--ag-primary-ink)}
+.ag-ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* --- profile --- */
+.ag-hero{position:relative;height:284px;background:var(--ag-topbar)}
+.ag-hero .ag-av{position:absolute;left:144px;top:49px}
+.ag-namerow{position:absolute;left:0;right:0;top:165px;height:28px;display:flex;justify-content:center;align-items:center;gap:8px}
+.ag-ai{width:32px;height:18px;border-radius:9px;background:var(--ag-ai-fill);color:var(--ag-ai-ink);font:700 10px/18px "Lato",sans-serif;text-align:center}
+.ag-actions{position:absolute;left:52px;top:196.5px;width:283px;height:60px;border-radius:30px;background:var(--ag-chrome);display:flex}
+.ag-actions button{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ag-ink)}
+.ag-search-row{position:relative;height:73px}
+.ag-search-row .ag-ic{position:absolute;left:35px;top:15px;color:var(--ag-ink2)}
+.ag-search-row span{position:absolute;left:61px;top:13px;font:400 16px/22px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-row{position:relative;display:block;width:100%;text-align:left}
+.ag-row .ag-well{position:absolute;left:34px;top:0}
+.ag-well{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--ag-well);color:var(--ag-well-ink)}
+.ag-well.conn{background:var(--ag-well-conn);color:var(--ag-well-conn-ink)}
+.ag-well.mute{background:var(--ag-well-mute);color:var(--ag-well-mute-ink)}
+.ag-well.pin{background:var(--ag-well-pin);color:var(--ag-well-pin-ink)}
+.ag-row .r-title{position:absolute;left:80px;top:4px;font:700 16px/24px "Lato",sans-serif;color:var(--ag-ink)}
+.ag-row.has-sub .r-title{top:1px}
+.ag-row .r-sub{position:absolute;left:80px;top:25px;font:400 12px/16px "Lato",sans-serif;color:var(--ag-ink2);white-space:nowrap}
+.ag-row .r-link{position:absolute;left:80px;top:41px;font:700 13px/18px "Lato",sans-serif;color:var(--ag-primary-ink)}
+.ag-row .r-chev{position:absolute;right:19px;top:6px;color:var(--ag-ink2)}
+.ag-row .r-hair{position:absolute;left:82px;right:19px;top:52px;height:1px;background:var(--ag-hair)}
+.ag-tog{position:relative;width:40px;height:24px;border-radius:12px;background:var(--ag-track);flex:0 0 40px}
+.ag-tog::after{content:"";position:absolute;left:4px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--ag-thumb)}
+.ag-tog[aria-checked="true"]{background:var(--ag-track-on)}
+.ag-tog[aria-checked="true"]::after{left:18px;background:var(--ag-thumb-on)}
+.ag-row > .ag-tog,.ag-crow > .ag-tog{position:absolute;right:19px;top:4px}
+.ag-skill{position:relative;height:100px}
+.ag-skill .ag-well{position:absolute;left:36px;top:0;width:28px;height:28px}
+.ag-skill .s-id{position:absolute;left:80px;top:-1px;font:700 14px/20px "Lato",sans-serif}
+.ag-skill .s-desc{position:absolute;left:80px;right:19px;top:19px;font:400 12px/16px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-pillbtn{display:block;height:44px;margin:0 19px;width:calc(100% - 38px);border-radius:22px;background:var(--ag-chrome);font:700 15px/22px "Lato",sans-serif;color:var(--ag-ink);text-align:center;white-space:pre}
+.ag-skill .ag-pillbtn{position:absolute;left:0;right:0;top:56px}
+.ag-crow{position:relative;height:48px}
+.ag-crow .c-l{position:absolute;left:35px;top:12px;font:400 16px/24px "Lato",sans-serif}
+.ag-crow > .ag-tog{top:12px}
+.ag-conn-btns{padding-top:8px}
+.ag-conn-btns .ag-pillbtn + .ag-pillbtn{margin-top:10px}
+.ag-scrim{position:absolute;inset:0;background:var(--ag-scrim);z-index:5}
+.ag-sheet{position:absolute;left:0;right:0;bottom:0;height:156px;border-radius:24px 24px 0 0;background:var(--ag-sheet);z-index:6;padding-top:32px}
+.ag-sheet .ag-handle{position:absolute;left:176px;top:10px;width:36px;height:4px;border-radius:2px;background:var(--ag-handle)}
+.ag-sheet button{position:relative;display:block;width:100%;height:52px;text-align:left}
+.ag-sheet button .ag-ic{position:absolute;left:23px;top:14px}
+.ag-sheet button span{position:absolute;left:55px;top:14px;font:400 16px/24px "Lato",sans-serif}
+.ag-sheet .danger{color:var(--ag-danger-ink)}
+/* --- connect app --- */
+.ag-capp-search{position:absolute;left:15px;right:15px;top:128px;height:44px;border-radius:22px;background:var(--ag-recessed);border:1.75px solid var(--ag-focus)}
+.ag-capp-search .ag-ic{position:absolute;left:12.25px;top:10.25px;color:var(--ag-ink2)}
+.ag-capp-search span{position:absolute;left:38.25px;top:9.25px;font:400 15px/22px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-applist{position:absolute;left:0;right:0;top:188px}
+.ag-app{position:relative;height:56px}
+.ag-app .ag-tile{position:absolute;left:15px;top:12px;width:32px;height:32px;border-radius:8px;background:var(--ag-surface)}
+.ag-app .ag-tile svg{position:absolute;left:4px;top:4px;width:24px;height:24px;overflow:visible}
+.ag-app .a-name{position:absolute;left:57px;top:17px;font:400 16px/22px "Lato",sans-serif}
+.ag-app .a-btn{position:absolute;right:15px;top:12px;height:32px;padding:0 14px;border-radius:16px;border:1.25px solid var(--ag-border);font:700 13px/18px "Lato",sans-serif}
+.ag-manage{position:absolute;left:0;right:0;top:801px;height:16px;display:flex;justify-content:center;align-items:flex-start;gap:6px;color:var(--ag-ink2);font:400 13px/16px "Lato",sans-serif}
+.ag-manage .ag-ic{margin-top:2px}
+/* --- workspace / overview shared --- */
+.ag-card{position:absolute;left:15px;right:15px;background:var(--ag-chrome)}
+.ag-tiles{position:absolute;left:15px;top:242px;width:358px;display:grid;grid-template-columns:repeat(3,114px);gap:8px}
+.ag-tiles button{position:relative;height:72px;border-radius:16px;background:var(--ag-chrome)}
+.ag-tiles button .ag-ic{position:absolute;left:47px;top:12px;color:var(--ag-well-ink)}
+.ag-tiles button span{position:absolute;left:0;right:0;top:36px;text-align:center;font:700 12px/16px "Lato",sans-serif}
+.ag-field{position:absolute;left:15px;right:15px;height:40px;border-radius:20px;background:var(--ag-recessed);border:1px solid var(--ag-border)}
+.ag-field .ag-ic{position:absolute;left:11px;top:9px;color:var(--ag-ink2)}
+.ag-field span{position:absolute;left:35px;top:8px;font:400 15px/22px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-conv{position:absolute;left:0;right:0;height:64px}
+.ag-conv .c-av{position:absolute;left:15px;top:8px;width:40px;height:40px}
+.ag-conv .c-av img{width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;background:#3A4540}
+.ag-conv .c-title{position:absolute;left:67px;top:8px;display:flex;align-items:flex-start;gap:6px;font:700 16px/22px "Lato",sans-serif;white-space:nowrap}
+.ag-conv .c-time{position:absolute;right:15px;top:10px;font:400 12px/16px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-conv .c-sub{position:absolute;left:67px;top:30px;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2);white-space:nowrap}
+.ag-conv .c-unread{position:absolute;right:15px;top:26px;width:20px;height:20px;border-radius:50%;background:var(--ag-unread);color:var(--ag-unread-ink);font:700 11px/20px "Lato",sans-serif;text-align:center}
+.ag-plusb{position:relative;margin-top:3px;height:16px;padding:0 9px 0 15px;border-radius:8px;background:#9A7BFF;color:#FFFFFF;font:700 8px/16px "Lato",sans-serif}
+.ag-plusb .ag-ic{position:absolute;left:4px;top:3px}
+.ag-cluster{position:relative;width:40px;height:40px}
+.ag-cluster i{position:absolute;width:23.2px;height:23.2px;border-radius:50%;font:normal 700 9px/23.2px "Lato",sans-serif;color:#17201B;text-align:center}
+/* --- overview --- */
+.ag-ov-card{top:156px;height:208px;border-radius:20px;border:1px solid var(--ag-border)}
+.ag-ov-card > *{position:absolute}
+.ag-sharep{right:15px;top:107px;width:96px;height:36px;border-radius:18px;background:var(--ag-body);border:1px solid var(--ag-border)}
+.ag-sharep .ag-ic{position:absolute;left:13px;top:7px}
+.ag-sharep span{position:absolute;left:37px;top:7px;font:700 14px/20px "Lato",sans-serif}
+.ag-btn2{top:151px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:6px;font:700 13px/18px "Lato",sans-serif}
+.ag-btn2.fill{background:var(--ag-btn);color:var(--ag-btn-ink)}
+.ag-btn2.line{border:1.25px solid var(--ag-ink);color:var(--ag-ink)}
+.ag-chanp{position:absolute;right:15px;width:112px;height:36px;border-radius:18px;background:var(--ag-chrome);border:1px solid var(--ag-border)}
+.ag-chanp .ag-ic{position:absolute;left:11px;top:7px;color:var(--ag-well-ink)}
+.ag-chanp span{position:absolute;left:35px;top:7px;font:700 13px/20px "Lato",sans-serif}
+/* --- api --- */
+.ag-tabs{display:flex;gap:16px;padding:11px 15px 0;height:39px}
+.ag-tabs span{position:relative;font:400 14px/20px "Lato",sans-serif;color:var(--ag-tab-idle);white-space:nowrap}
+.ag-tabs span.on{font-weight:700;color:var(--ag-tab-on)}
+.ag-tabs span.on::after{content:"";position:absolute;left:0;right:0;top:22px;height:2.5px;border-radius:1.5px;background:var(--ag-underline)}
+.ag-sec{padding:0 15px}
+.ag-sec h4{margin:0;font:700 18px/26px "Lato",sans-serif}
+.ag-sec p{margin:2px 0 0;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-apic{position:relative;margin-top:10px;border-radius:16px;background:var(--ag-chrome);padding:40px 72px 22px 58px;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-apic .ag-well{position:absolute;left:16px;top:12px;color:var(--ag-ink)}
+.ag-apic .a-t{position:absolute;left:58px;top:14px;display:flex;align-items:flex-start;white-space:nowrap;font:700 15px/22px "Lato",sans-serif;color:var(--ag-ink)}
+.ag-apic .a-off{display:flex;margin-left:8px;margin-top:3px;gap:4px;font:400 12px/16px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-apic .ag-tog{position:absolute;right:16px;top:16px}
+/* --- empty states --- */
+.ag-empty-c{position:absolute;left:0;right:0;text-align:center}
+.ag-dash{position:absolute;left:15px;right:15px;top:188px;height:88px}
+.ag-dash svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ag-dash span{position:absolute;left:0;right:0;top:33px;text-align:center;font:400 15px/22px "Lato",sans-serif;color:var(--ag-ink2)}
+/* --- new group --- */
+.ag-seg{position:absolute;left:15px;right:15px;top:144px;height:40px;border-radius:20px;background:var(--ag-chrome)}
+.ag-seg .on{position:absolute;left:2px;top:2px;width:177px;height:36px;border-radius:18px;background:var(--ag-navsel)}
+.ag-seg span{position:absolute;top:9px;width:179px;text-align:center;font:400 13px/22px "Lato",sans-serif;color:var(--ag-ink2)}
+.ag-seg span.sel{font-weight:700;color:var(--ag-navsel-ink)}
+.phone.dark .ag-seg span.sel{color:var(--ag-ink)}
+.ag-gname{position:absolute;left:15px;right:15px;top:200px;height:36px;display:flex;gap:12px}
+.ag-gname b{font:700 13px/18px "Lato",sans-serif;margin-top:8px;white-space:nowrap}
+.ag-gname div{flex:1;border:1.25px solid var(--ag-border);border-radius:10px;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2);padding:5.75px 0 0 10.75px}
+.ag-gtabs{position:absolute;top:352px;left:0;right:0;height:26px}
+.ag-gtabs .g{position:absolute;display:flex;gap:6px;white-space:nowrap}
+.ag-gtabs .g.on::after{content:"";position:absolute;left:0;right:0;top:22px;height:2.5px;border-radius:1.5px;background:var(--ag-underline)}
+.ag-agent{position:absolute;left:0;right:0;height:52px}
+.ag-agent .radio{position:absolute;left:22px;top:10px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--ag-ink2);margin:0}
+.ag-agent .ca{position:absolute;left:47px;top:4px}
+.ag-agent span{position:absolute;left:85px;top:8px;font:700 15px/22px "Lato",sans-serif}
+.ag-pay{position:absolute;left:0;right:0;top:747px;bottom:0;background:var(--ag-body)}
+.ag-pay .pm-row{position:absolute;left:15px;top:12px;display:flex;align-items:flex-start;gap:12px}
+.ag-pay .pills{display:flex;gap:8px;margin-top:-4px}
+.ag-pay .pills span{height:28px;padding:0 10px;border-radius:14px;font:400 12px/26px "Lato",sans-serif;color:var(--ag-ink2);border:1px solid var(--ag-border);white-space:nowrap}
+.ag-pay .pills span.sel{border-color:transparent;background:var(--ag-navsel);color:var(--ag-navsel-ink);font-weight:700}
+.phone.dark .ag-pay .pills span.sel{color:var(--ag-ink)}
+/* entry point: the Agent chat's header avatar + title open the profile */
+.chatbar [data-open-agent-profile]{cursor:pointer}
 </style>
 </head>
 <body>
@@ -1404,6 +1600,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     <div class="toolbar">
       <button class="btn primary" id="themeBtn" type="button">Switch page to dark</button>
       <a class="btn" href="#home">Home</a>
+      <a class="btn" href="#agent-profile">Dua Agent profile</a>
       <a class="btn" href="#drawer">Sidebar drawer</a>
       <a class="btn" href="#integration">Integration</a>
     </div>
@@ -1564,6 +1761,500 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
           <span class="phone-label">Agent chat &middot; dark</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="agent-profile">
+  <div class="wrap">
+    <h2>01b &middot; Dua Agent &mdash; profile &amp; workspace</h2>
+    <p class="sub">
+      Approved SVG set (dua-agent-01&hellip;13) ka live HTML. <b>Entry:</b> Agent chat (frame 04) ke header me
+      avatar ya title tap karein &mdash; Dua Agent profile khulta hai. Profile scroll hota hai; Skills aur
+      Connectors rows tap karke expand/collapse; &#8943; se more sheet (Share, Clear Chat History). Action bar
+      ka workspace icon Agent workspace kholta hai, jiske Manage tiles Overview, Live Sites, Mail, Artifacts aur
+      Agent API kholte hain. Back / close har jagah pichhli screen par le jaata hai.
+    </p>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A01</span>
+        <h3 class="screen-title">Profile &mdash; light + dark</h3>
+        <p class="screen-note">Agent chat header avatar/title tap karein &middot; action bar: workspace, New Group, more</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-01-light" data-phone data-mode="agent" data-agent-on-load="profile">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-01-dark" data-phone data-mode="agent" data-agent-on-load="profile">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A02</span>
+        <h3 class="screen-title">Profile &mdash; scrolled &mdash; light + dark</h3>
+        <p class="screen-note">wahi profile, neeche scroll &middot; Connectors, Mute Notifications, Pin to Top</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-02-light" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-02-dark" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A03</span>
+        <h3 class="screen-title">Profile &mdash; more sheet &mdash; light + dark</h3>
+        <p class="screen-note">&#8943; tap karein &middot; sirf Share aur Clear Chat History</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-03-light" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="sheet">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-03-dark" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="sheet">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A04</span>
+        <h3 class="screen-title">Profile &mdash; Skills expanded &mdash; light + dark</h3>
+        <p class="screen-note">Skills row tap karein &middot; [agent-skill-id] + Add Skill</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-04-light" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="skills" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-04-dark" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="skills" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A05</span>
+        <h3 class="screen-title">Profile &mdash; Connectors expanded &mdash; light + dark</h3>
+        <p class="screen-note">Connectors row tap karein &middot; GitHub, Agent, Connect App, Add MCP server</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-05-light" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="skills,connectors" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-05-dark" data-phone data-mode="agent" data-agent-on-load="profile" data-agent-state="skills,connectors" data-agent-scroll="max">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Profile &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A06</span>
+        <h3 class="screen-title">Connect App &mdash; light + dark</h3>
+        <p class="screen-note">Connectors &rarr; + Connect App &middot; app icon tiles &middot; close se wapas</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-06-light" data-phone data-mode="agent" data-agent-on-load="profile,connect">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Connect App &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-06-dark" data-phone data-mode="agent" data-agent-on-load="profile,connect">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Connect App &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A07</span>
+        <h3 class="screen-title">Agent workspace &mdash; light + dark</h3>
+        <p class="screen-note">profile action bar ka workspace icon &middot; Manage: Overview, Live Sites, Mail, Artifacts, Agent API</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-07-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Agent workspace &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-07-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Agent workspace &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A08</span>
+        <h3 class="screen-title">Overview &mdash; light + dark</h3>
+        <p class="screen-note">workspace &rarr; Overview</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-08-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace,overview">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Overview &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-08-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace,overview">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Overview &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A09</span>
+        <h3 class="screen-title">Artifacts &mdash; empty &mdash; light + dark</h3>
+        <p class="screen-note">workspace &rarr; Artifacts</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-09-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace,artifacts">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Artifacts &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-09-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace,artifacts">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Artifacts &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A10</span>
+        <h3 class="screen-title">Agent API &mdash; light + dark</h3>
+        <p class="screen-note">workspace &rarr; Agent API &middot; Setup tab</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-10-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace,api">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Agent API &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-10-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace,api">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Agent API &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A11</span>
+        <h3 class="screen-title">Live Sites &mdash; empty &mdash; light + dark</h3>
+        <p class="screen-note">workspace &rarr; Live Sites</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-11-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace,live">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Live Sites &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-11-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace,live">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Live Sites &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A12</span>
+        <h3 class="screen-title">Mail &mdash; coming soon &mdash; light + dark</h3>
+        <p class="screen-note">workspace &rarr; Mail</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-12-light" data-phone data-mode="agent" data-agent-on-load="profile,workspace,mail">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Mail &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-12-dark" data-phone data-mode="agent" data-agent-on-load="profile,workspace,mail">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">Mail &middot; dark</span>
+        </div>
+      </div>
+    </div>
+    <div class="screen-block">
+      <div class="screen-head">
+        <span class="screen-num">A13</span>
+        <h3 class="screen-title">New Group &mdash; light + dark</h3>
+        <p class="screen-note">profile action bar ka person+ icon &middot; close se wapas</p>
+      </div>
+      <div class="pair">
+        <div class="phone-col">
+          <div class="phone" id="ag-13-light" data-phone data-mode="agent" data-agent-on-load="profile,group">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">New Group &middot; light</span>
+        </div>
+        <div class="phone-col">
+          <div class="phone dark" id="ag-13-dark" data-phone data-mode="agent" data-agent-on-load="profile,group">
+            <div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>
+            <div class="hdr" data-hdr></div>
+            <div class="body" data-body></div>
+            <div class="dock" data-dock></div>
+            <div class="scrim" data-scrim></div>
+            <aside class="drawer" data-drawer aria-hidden="true"></aside>
+            <div class="chatview" data-chatview aria-hidden="true"></div>
+            <div class="profileview" data-profileview aria-hidden="true"></div>
+            <div class="pickerview" data-pickerview aria-hidden="true"></div>
+          </div>
+          <span class="phone-label">New Group &middot; dark</span>
         </div>
       </div>
     </div>
@@ -4058,9 +4749,10 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       '<div class="chatbar">' +
         '<button class="back" type="button" data-chat-back aria-label="Back">' +
           '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>' +
-        '<span class="av av-chat" data-cube="' + esc(AGENT_CHAT.cube) + '">' +
+        // Avatar + title open the Dua Agent profile (approved SVG 01).
+        '<span class="av av-chat" data-cube="' + esc(AGENT_CHAT.cube) + '" data-open-agent-profile role="button" tabindex="0" aria-label="Open Dua Agent profile">' +
           '<img src="' + cubeSrc(AGENT_CHAT.cube) + '" alt="' + esc(AGENT_CHAT.title) + ' avatar"></span>' +
-        '<span class="ctitle">' + esc(AGENT_CHAT.title) + '</span>' +
+        '<span class="ctitle" data-open-agent-profile role="button" tabindex="0">' + esc(AGENT_CHAT.title) + '</span>' +
       '</div>' +
       '<div class="chatbody" data-chat-body>' + threadHtml(thread, typing) + '</div>' +
       '<div class="chatdock">' + chatComposerHtml('Message ' + AGENT_CHAT.title + '\u2026', c) + '</div>' +
@@ -6152,6 +6844,421 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       }
     })(phones[p]);
   }
+})();
+</script>
+<script>
+/* ============================================================================
+ *  Dua Agent — profile & workspace screens (approved SVGs dua-agent-01..13)
+ *
+ *  Entry: Agent chat → tap the header avatar or title → Dua Agent profile.
+ *  Profile action bar: workspace (id card) → Agent workspace, person+ → New
+ *  Group, ⋯ → more-sheet (Share · Clear Chat History). Skills / Connectors rows
+ *  expand in place; "+ Connect App" opens Connect App. Workspace tiles open
+ *  Overview · Live Sites · Mail · Artifacts · Agent API. Back / close pops.
+ *  One `.agentview` overlay per phone, a per-phone screen stack, re-rendered
+ *  from state like the rest of this page.
+ * ==========================================================================*/
+(function () {
+  'use strict';
+  var AVATAR = 'assets/dua-user-avatar.jpg';
+  var P = {
+    back: '<path d="M15 6l-6 6 6 6"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    more: '<circle class="f" cx="6" cy="12" r="1.4"/><circle class="f" cx="12" cy="12" r="1.4"/><circle class="f" cx="18" cy="12" r="1.4"/>',
+    robot: '<path d="M12 3.2v3.4"/><rect x="5" y="6.6" width="14" height="12.2" rx="2.6"/><path d="M9.4 11.4v2.4M14.6 11.4v2.4M3.2 12.2v2.4M20.8 12.2v2.4"/>',
+    idcard: '<rect x="4" y="5.5" width="16" height="13" rx="2.2"/><circle cx="9.2" cy="11.2" r="2.1"/><path d="M13.2 10.2h5.2M13.2 13.4h4.2"/>',
+    person_plus: '<circle cx="10" cy="8.2" r="3"/><path d="M5.2 18c.4-3.2 2.4-4.8 4.8-4.8S14.4 14.8 14.8 18"/><path d="M17.2 10.5v5M14.7 13h5"/>',
+    search: '<circle cx="11" cy="11" r="6.2"/><path d="M20 20l-3.4-3.4"/>',
+    phone: '<path d="M8.2 4.8h2.2l1.2 3.2-1.6 1.2a11 11 0 0 0 5.6 5.6l1.2-1.6 3.2 1.2v2.2c0 .9-.7 1.7-1.6 1.8-7.2.6-13.2-5.4-12.6-12.6.1-.9.9-1.6 1.8-1.6z"/>',
+    chev_right: '<path d="M10 6l6 6-6 6"/>',
+    chev_down: '<path d="M6 9l6 6 6-6"/>',
+    chev_up: '<path d="M6 15l6-6 6 6"/>',
+    translate: '<path d="M4.5 6.5h10.5M9.75 6.5V5.2M7.2 6.5c.3 3.4 2.4 6.4 5.4 8"/><path d="M12.8 9.2c-.8 2.2-2.4 4.2-4.6 5.6"/><path d="M13.6 13.2h6.2M16.7 13.2l-3 6.3M16.7 13.2l3 6.3M14.6 17.4h4.2"/>',
+    channels: '<circle cx="12" cy="16.6" r="1.5"/><path d="M8.4 13.4a5.2 5.2 0 0 1 7.2 0M6.2 10.8a8.2 8.2 0 0 1 11.6 0M4.2 8.2a11 11 0 0 1 15.6 0"/>',
+    puzzle: '<path d="M8.2 4.8h2.6c0 1.5 1.2 2.4 2.4 2.4S15.6 6.3 15.6 4.8h2.2A1.6 1.6 0 0 1 19.4 6.4v2.4c-1.5 0-2.4 1.1-2.4 2.3s.9 2.3 2.4 2.3v2.4a1.6 1.6 0 0 1-1.6 1.6h-2.4c0-1.5-1.1-2.4-2.3-2.4s-2.3.9-2.3 2.4H8.2A1.6 1.6 0 0 1 6.6 17.4v-2.2c1.5 0 2.4-1.2 2.4-2.4S8.1 10.4 6.6 10.4V8A1.6 1.6 0 0 1 8.2 6.4z"/>',
+    link: '<path d="M9.6 13.6l4.8-4.8"/><path d="M11.2 7.2l1.4-1.4a3.2 3.2 0 0 1 4.5 4.5L15.7 11.7"/><path d="M12.8 16.8l-1.4 1.4a3.2 3.2 0 0 1-4.5-4.5L8.3 12.3"/>',
+    bell: '<path d="M6.5 16.2V11a5.5 5.5 0 0 1 11 0v5.2l1.2 1.6H5.3z"/><path d="M10 18.8a2 2 0 0 0 4 0"/>',
+    pin: '<path d="M13.92 2.8l7.2 7.2-2.7 1.35-3.6 4.05v3.15L5.22 9.15h3.15l4.05-3.6z"/><path d="M9.6 14.2l-6.3 6.3"/>',
+    share: '<circle cx="6.5" cy="12" r="2.2"/><circle cx="17" cy="6.8" r="2.2"/><circle cx="17" cy="17.2" r="2.2"/><path d="M8.5 11.1l4.6-3.1M8.5 12.9l4.6 3.1"/>',
+    pencil: '<path d="M13.2 5.2l5.6 5.6-10.2 10.2H3v-5.6z"/><path d="M11.4 7l5.6 5.6"/>',
+    arrow_up_right: '<path d="M8 16L16 8M9.5 8H16v6.5"/>',
+    copy: '<rect x="8.2" y="8.2" width="11" height="11" rx="1.8"/><rect x="4.8" y="4.8" width="11" height="11" rx="1.8"/>',
+    mail: '<rect x="3.6" y="6" width="16.8" height="12" rx="2"/><path d="M4.4 7.4L12 12.4l7.6-5"/>',
+    layers: '<path d="M12 3.4l8.6 4.3-8.6 4.3-8.6-4.3z"/><path d="M3.4 12.2l8.6 4.3 8.6-4.3M3.4 16.2l8.6 4.3 8.6-4.3"/>',
+    window: '<rect x="4.2" y="5.2" width="15.6" height="13.6" rx="2.2"/><path d="M4.2 9.2h15.6"/><circle class="f" cx="7.2" cy="7.2" r="0.7"/>',
+    api: '<circle cx="12" cy="6.2" r="2.1"/><circle cx="6.2" cy="17" r="2.1"/><circle cx="17.8" cy="17" r="2.1"/><path d="M12 8.4v3.2M12 11.6L7.6 15.4M12 11.6l4.4 3.8"/>',
+    book: '<path d="M5 5.2c1.8-.8 3.8-.8 5.8 0v13.2c-2-.8-4-.8-5.8 0zM13.2 5.2c1.8-.8 3.8-.8 5.8 0v13.2c-2-.8-4-.8-5.8 0z"/><path d="M12 5.2v13.2"/>',
+    bolt: '<path d="M13.2 3.5L6.5 13.2h5.2L10.8 20.5l6.8-9.8h-5.2z"/>',
+    eraser: '<path d="M5.2 14.2l6.4-6.4 7.2 7.2-4.2 4.2H8.2z"/><path d="M9.4 10l4.8 4.8"/>',
+    bubble: '<path d="M5.4 6.2h13.2A2 2 0 0 1 20.6 8.2v6.2A2 2 0 0 1 18.6 16.4h-3.6v3.8l-4.6-3.8H5.4A2 2 0 0 1 3.4 14.4V8.2A2 2 0 0 1 5.4 6.2z"/>',
+    braces: '<path d="M9.2 5.5H7.4A2 2 0 0 0 5.4 7.5v3.2L4 12l1.4 1.3v3.2a2 2 0 0 0 2 2h1.8"/><path d="M14.8 5.5h1.8a2 2 0 0 1 2 2v3.2L20 12l-1.4 1.3v3.2a2 2 0 0 1-2 2h-1.8"/>',
+    bars: '<path d="M6 16.8V11.2M12 16.8V6.5M18 16.8V9.2"/>',
+    check: '<path d="M5.5 12.2l4.2 4.2 8.8-9"/>',
+    star: '<path d="M12 4.2l2.1 4.4 4.8.6-3.5 3.4.9 4.8L12 15.2 7.7 17.4l.9-4.8-3.5-3.4 4.8-.6z"/>',
+    glyph: '<path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/>'
+  };
+  function ic(name, size, sw, color) {
+    return '<svg class="ag-ic" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" stroke-width="' + (sw || 1.75) + '"' +
+      (color ? ' style="color:' + color + '"' : '') + ' aria-hidden="true">' + P[name] + '</svg>';
+  }
+  function star(size) {
+    return '<svg class="ag-ic" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="' + P.star.match(/d="([^"]+)"/)[1] + '" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  }
+  /* Mint circle + cube glyph (62% of the circle), optional mini badge. */
+  function cubeAv(d, badgeD, ring) {
+    var g = d * 0.62, html = '<span class="ag-av" style="position:relative;display:block;width:' + d + 'px;height:' + d + 'px">' +
+      '<span style="position:absolute;inset:0;border-radius:50%;background:#42D982"></span>' +
+      '<span style="position:absolute;left:' + (d - g) / 2 + 'px;top:' + (d - g) / 2 + 'px">' + ic('glyph', g, 1.75, '#17201B') + '</span>';
+    if (badgeD) {
+      var c = d / 2 * 1.62, br = badgeD / 2, gg = badgeD * 0.62;
+      html += '<span style="position:absolute;left:' + (c - br - 2) + 'px;top:' + (c - br - 2) + 'px;width:' + (badgeD + 4) + 'px;height:' + (badgeD + 4) + 'px;border-radius:50%;background:' + ring + '"></span>' +
+        '<span style="position:absolute;left:' + (c - br) + 'px;top:' + (c - br) + 'px;width:' + badgeD + 'px;height:' + badgeD + 'px;border-radius:50%;background:#42D982"></span>' +
+        '<span style="position:absolute;left:' + (c - gg / 2) + 'px;top:' + (c - gg / 2) + 'px">' + ic('glyph', gg, 1.5, '#17201B') + '</span>';
+    }
+    return html + '</span>';
+  }
+  /* New Group list avatar: coloured circle, 55% glyph, mini cube badge. */
+  function colorAgent(fill) {
+    return '<span class="ca" style="display:block;width:32px;height:32px">' +
+      '<span style="position:absolute;inset:0;border-radius:50%;background:' + fill + '"></span>' +
+      '<span style="position:absolute;left:7.2px;top:7.2px">' + ic('glyph', 17.6, 1.5, '#17201B') + '</span>' +
+      '<span style="position:absolute;left:17.32px;top:17.32px;width:17.2px;height:17.2px;border-radius:50%;background:var(--ag-body)"></span>' +
+      '<span style="position:absolute;left:18.92px;top:18.92px;width:14px;height:14px;border-radius:50%;background:#42D982"></span>' +
+      '<span style="position:absolute;left:21.42px;top:21.42px">' + ic('glyph', 9, 1.2, '#17201B') + '</span></span>';
+  }
+  function cluster() {
+    return '<span class="ag-cluster">' +
+      '<i style="left:0;top:16.8px;background:#3EC0EA">S</i>' +
+      '<i style="left:16.8px;top:20.28px;background:#9A7BFF">A</i>' +
+      '<i style="left:8.12px;top:0;background:#F6C945">F</i></span>';
+  }
+  function tog(id, on) {
+    return '<span class="ag-tog" role="switch" tabindex="0" data-ag-toggle="' + id + '" aria-checked="' + (on ? 'true' : 'false') + '"></span>';
+  }
+  var SB = '<div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>';
+
+  /* App bar, 84 tall. opts: {center, icon, right:'book'|'create', close} */
+  function hdr(title, o) {
+    o = o || {};
+    var h = '<div class="ag-hdr">' +
+      '<button class="ag-back" type="button" data-ag-back aria-label="' + (o.close ? 'Close' : 'Back') + '">' + ic(o.close ? 'close' : 'back', 24) + '</button>';
+    if (o.center) {
+      h += '<div class="ag-ctr">' + (o.icon ? '<span class="ag-twell">' + ic(o.icon, 18) + '</span>' : '') +
+        '<span class="ag-title">' + title + '</span></div>';
+    } else {
+      h += '<span class="ag-title">' + title + '</span>';
+    }
+    if (o.right === 'book') h += '<span class="ag-right" aria-hidden="true">' + ic('book', 24) + '</span>';
+    if (o.right === 'create') h += '<button class="ag-create" type="button">Create</button>';
+    return h + '</div>';
+  }
+  function conv(top, o) {
+    var av = o.fareed ? '<img src="' + AVATAR + '" alt="">' : cluster();
+    return '<div class="ag-conv" style="top:' + top + 'px">' +
+      '<span class="c-av">' + av + '</span>' +
+      '<span class="c-title"><span>' + o.title + '</span>' +
+        (o.plus ? '<span class="ag-plusb">' + star(10) + 'PLUS</span>' : '') + '</span>' +
+      '<span class="c-time">' + o.time + '</span>' +
+      '<span class="c-sub">' + o.sub + '</span>' +
+      (o.unread ? '<span class="c-unread">' + o.unread + '</span>' : '') + '</div>';
+  }
+
+  /* ---------------------------------------------------------------- profile */
+  function row(o) {
+    var cls = 'ag-row' + (o.sub || o.link ? ' has-sub' : '');
+    var tag = o.action ? 'button type="button" data-ag-row="' + o.action + '"' : 'div';
+    var h = '<' + tag + ' class="' + cls + '" style="height:' + o.h + 'px"' + (o.expanded != null ? ' aria-expanded="' + o.expanded + '"' : '') + '>' +
+      '<span class="ag-well ' + (o.well || '') + '">' + ic(o.icon, 18) + '</span>' +
+      '<span class="r-title">' + o.title + '</span>' +
+      (o.sub ? '<span class="r-sub">' + o.sub + '</span>' : '') +
+      (o.link ? '<span class="r-link">' + o.link + '</span>' : '') +
+      (o.trail && o.trail.indexOf('chev') === 0 ? '<span class="r-chev">' + ic(o.trail, 20) + '</span>' : '') +
+      (o.hair ? '<span class="r-hair"></span>' : '');
+    h += '</' + (o.action ? 'button' : 'div') + '>';
+    if (o.toggle) h = h.replace(/<\/(button|div)>$/, tog(o.toggle, o.on) + '</$1>');
+    return h;
+  }
+  function profile(s) {
+    var t = s.toggles;
+    var html = '<div class="ag-screen atm' + (s.sheet ? ' ag-dim' : '') + '">' + SB +
+      '<div class="ag-top">' + hdr('Dua Agent') + '<div class="ag-hair"></div></div>' +
+      '<div class="ag-scroll" data-ag-scroll style="top:129px">' +
+        '<div class="ag-hero">' + cubeAv(100) +
+          '<div class="ag-namerow"><span class="b20 ag-name">Dua Agent</span><span class="ag-ai">AI</span></div>' +
+          '<div class="ag-actions">' +
+            '<button type="button" aria-label="Agent" aria-disabled="true">' + ic('robot', 22) + '</button>' +
+            '<button type="button" data-ag-go="workspace" aria-label="Agent workspace">' + ic('idcard', 22) + '</button>' +
+            '<button type="button" data-ag-go="group" aria-label="New Group">' + ic('person_plus', 22) + '</button>' +
+            '<button type="button" data-ag-sheet aria-label="More">' + ic('more', 22) + '</button>' +
+          '</div></div>' +
+        '<div class="ag-search-row">' + ic('search', 18) + '<span>Search chat history</span></div>' +
+        row({ h: 73, icon: 'phone', title: 'Voice call', trail: 'chev_right' }) +
+        row({ h: 126, icon: 'translate', title: 'Auto-translation', sub: 'Messages will be translated into English.', link: 'Change language', toggle: 'translate', on: t.translate }) +
+        row({ h: 87, icon: 'channels', title: 'Channels', sub: '0 connected', trail: 'chev_down' }) +
+        row({ h: s.skills ? 47 : 95, icon: 'puzzle', title: 'Skills', sub: '1 active skill', trail: s.skills ? 'chev_up' : 'chev_down', action: 'skills', expanded: !!s.skills });
+    if (s.skills) {
+      html += '<div class="ag-skill"><span class="ag-well">' + ic('bolt', 16) + '</span>' +
+        '<span class="s-id">[agent-skill-id]</span><span class="s-desc ag-ellip">[agent-skill-description]</span>' +
+        '<button class="ag-pillbtn" type="button">+  Add Skill</button></div><div style="height:58px"></div>';
+    }
+    html += row({ h: s.connectors ? 48 : 77, icon: 'link', well: 'conn', title: 'Connectors', sub: '2 apps connected', trail: s.connectors ? 'chev_up' : 'chev_down', action: 'connectors', expanded: !!s.connectors });
+    if (s.connectors) {
+      html += '<div class="ag-crow"><span class="c-l">GitHub</span>' + tog('github', t.github) + '</div>' +
+        '<div class="ag-crow"><span class="c-l">Agent</span>' + tog('agent', t.agent) + '</div>' +
+        '<div class="ag-conn-btns"><button class="ag-pillbtn" type="button" data-ag-go="connect">+  Connect App</button>' +
+        '<button class="ag-pillbtn" type="button">+  Add MCP server</button></div><div style="height:40px"></div>';
+    }
+    html += row({ h: 70, icon: 'bell', well: 'mute', title: 'Mute Notifications', toggle: 'mute', on: t.mute, hair: true }) +
+      row({ h: 103, icon: 'pin', well: 'pin', title: 'Pin to Top', toggle: 'pin', on: t.pin }) +
+      '</div>';
+    if (s.sheet) {
+      html += '<div class="ag-scrim" data-ag-sheet-close></div>' +
+        '<div class="ag-sheet" role="dialog" aria-label="More"><span class="ag-handle"></span>' +
+          '<button type="button" data-ag-sheet-close>' + ic('share', 22) + '<span>Share</span></button>' +
+          '<button type="button" class="danger" data-ag-sheet-close>' + ic('eraser', 22) + '<span>Clear Chat History</span></button>' +
+        '</div>';
+    }
+    return html + '</div>';
+  }
+
+  /* ------------------------------------------------------------ connect app */
+  var BRAND = {
+    gmail: function () { return '<path d="M2.2 6.4c0-1 .8-1.8 1.8-1.8h16c1 0 1.8.8 1.8 1.8v11.2c0 1-.8 1.8-1.8 1.8h-16A1.8 1.8 0 0 1 2.2 17.6z" fill="#EA4335"/><path d="M3 6.2l9 7 9-7v2.2L12 15.6 3 8.4z" fill="#FFFFFF"/><path d="M3 8.2L12 15.2V19H4.2A1.2 1.2 0 0 1 3 17.8z" fill="#C5221F" opacity=".35"/>'; },
+    calendar: function () { return '<rect x="3" y="3.4" width="18" height="17.2" rx="2.4" fill="#FFFFFF"/><rect x="3" y="3.4" width="18" height="5.2" fill="#4285F4"/><circle cx="7.2" cy="6" r="0.9" fill="#FFFFFF"/><circle cx="16.8" cy="6" r="0.9" fill="#FFFFFF"/><text x="12" y="17.4" fill="#4285F4" font-family="Lato" font-size="9" font-weight="700" text-anchor="middle">31</text>'; },
+    notion: function () { return '<path d="M6 4.2h3.4L16.2 15V4.2H19V19.8h-3.4L7.8 9v10.8H5V4.2z" fill="var(--ag-notion)"/>'; },
+    sheets: function () { return '<rect x="3.6" y="2.8" width="16.8" height="18.4" rx="2" fill="#34A853"/><path d="M7 8.4h10M7 12h10M7 15.6h10M10.4 8.4v10.4" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/>'; },
+    slack: function () { return '<rect x="9.4" y="2.4" width="5.2" height="8.2" rx="2.6" fill="#E01E5A"/><rect x="13.4" y="9.4" width="8.2" height="5.2" rx="2.6" fill="#36C5F0"/><rect x="9.4" y="13.4" width="5.2" height="8.2" rx="2.6" fill="#2EB67D"/><rect x="2.4" y="9.4" width="8.2" height="5.2" rx="2.6" fill="#ECB22E"/>'; },
+    supabase: function () { return '<path d="M14.4 2.6L4.6 13.8h6.2L8.4 21.4 19.4 10H13.2L16.6 2.6z" fill="#3ECF8E"/>'; },
+    outlook: function () { return '<rect x="2.4" y="6" width="19.2" height="12.6" rx="1.6" fill="#0078D4"/><path d="M3.2 7.2L12 13.2l8.8-6" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'; },
+    twitter: function () { return '<path d="M22 5.8a8.2 8.2 0 01-2.36.65 4.1 4.1 0 001.8-2.27 8.2 8.2 0 01-2.6 1 4.1 4.1 0 00-7 3.74 11.65 11.65 0 01-8.45-4.29 4.1 4.1 0 001.27 5.48 4.07 4.07 0 01-1.86-.51v.05a4.1 4.1 0 003.29 4.02 4.1 4.1 0 01-1.85.07 4.1 4.1 0 003.83 2.85A8.23 8.23 0 012 18.4a11.62 11.62 0 006.29 1.84c7.55 0 11.68-6.25 11.68-11.67 0-.18 0-.36-.01-.53A8.35 8.35 0 0022 5.8z" fill="#1DA1F2"/>'; },
+    drive: function () { return '<path d="M12 3.2L4.2 16.8h5.4L14.6 9z" fill="#34A853"/><path d="M12 3.2L19.8 16.8h-5.4L9.4 9z" fill="#4285F4"/><path d="M4.2 16.8L7.4 21.2h9.2l3.2-4.4z" fill="#FBBC05"/>'; },
+    docs: function () { return '<path d="M6 2.8h8.2L19.2 8v13.2A1.4 1.4 0 0 1 17.8 22.6H6A1.4 1.4 0 0 1 4.6 21.2V4.2A1.4 1.4 0 0 1 6 2.8z" fill="#4285F4"/><path d="M14.2 2.8V7.4c0 .5.4.9.9.9h4.1z" fill="#1967D2"/><path d="M7.6 12.2h8.8M7.6 15.2h8.8M7.6 18.2h6.2" stroke="#FFFFFF" stroke-width="1.2" stroke-linecap="round"/>'; }
+  };
+  var APPS = [['gmail', 'Gmail'], ['calendar', 'Google Calendar'], ['notion', 'Notion'], ['sheets', 'Google Sheets'],
+    ['slack', 'Slack'], ['supabase', 'Supabase'], ['outlook', 'Outlook'], ['twitter', 'Twitter'],
+    ['drive', 'Google Drive'], ['docs', 'Google Docs']];
+  function connectApp() {
+    var h = '<div class="ag-screen atm-top">' + SB +
+      '<div class="ag-top"><div class="ag-hdr"><div class="ag-ctr"><span class="ag-title">Connect App</span></div>' +
+        '<button class="ag-right" type="button" data-ag-back aria-label="Close">' + ic('close', 24) + '</button></div></div>' +
+      '<div class="ag-capp-search" role="search">' + ic('search', 20) + '<span>Search apps\u2026</span></div><div class="ag-applist">';
+    for (var i = 0; i < APPS.length; i++) {
+      h += '<div class="ag-app"><span class="ag-tile"><svg viewBox="0 0 24 24" aria-hidden="true">' + BRAND[APPS[i][0]]() + '</svg></span>' +
+        '<span class="a-name">' + APPS[i][1] + '</span><button class="a-btn" type="button">Connect</button></div>';
+    }
+    return h + '</div><div class="ag-manage">' + ic('check', 14) + '<span>Manage in Settings</span></div></div>';
+  }
+
+  /* -------------------------------------------------------------- workspace */
+  function workspace() {
+    var tiles = [['bars', 'Overview', 'overview'], ['window', 'Live Sites', 'live'], ['mail', 'Mail', 'mail'],
+      ['layers', 'Artifacts', 'artifacts'], ['api', 'Agent API', 'api']];
+    var h = '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Agent workspace', { center: true }) + '<div class="ag-hair"></div></div>' +
+      '<div class="ag-card" style="top:144px;height:64px;border-radius:16px">' +
+        '<span class="ag-abs" style="left:16px;top:12px">' + cubeAv(40, 14, 'var(--ag-chrome)') + '</span>' +
+        '<span class="ag-abs b16" style="left:64px;top:10px">Dua Agent</span>' +
+        '<span class="ag-abs pink" style="left:64px;top:32px;display:flex;gap:4px;font:400 13px/18px Lato,sans-serif">Agent home' +
+          '<span style="margin-top:2px">' + ic('arrow_up_right', 14) + '</span></span></div>' +
+      '<span class="ag-abs b11 ink2" style="left:15px;top:220px">MANAGE</span><div class="ag-tiles">';
+    for (var i = 0; i < tiles.length; i++) {
+      h += '<button type="button" data-ag-go="' + tiles[i][2] + '">' + ic(tiles[i][0], 20) + '<span>' + tiles[i][1] + '</span></button>';
+    }
+    h += '</div><span class="ag-abs b11 ink2" style="left:15px;top:414px">CHAT</span>' +
+      '<span class="ag-abs t12 ink2" style="right:15px;top:414px">3</span>' +
+      '<div class="ag-field" style="top:436px">' + ic('search', 20) + '<span>Search</span></div>' +
+      conv(484, { fareed: true, title: 'fareed', sub: 'You are now friends', time: 'Thu', plus: true }) +
+      conv(548, { title: 'Full-Stack Delivery Guild', sub: 'Frontend Developer, Backend Archite\u2026', time: 'Wed', unread: '1' }) +
+      conv(612, { title: 'Full-Stack Delivery Guild', sub: '[Someone @you] Dua Agent: [Cust\u2026', time: '11/03/26', unread: '2' });
+    return h + '</div>';
+  }
+
+  /* --------------------------------------------------------------- overview */
+  function overview() {
+    return '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Overview', { center: true, icon: 'bars' }) +
+        '<div class="ag-sub">Attention, recent work, and original conversations</div><div class="ag-hair"></div></div>' +
+      '<div class="ag-card ag-ov-card">' +
+        '<span style="left:15px;top:15px">' + cubeAv(52) + '</span>' +
+        '<span class="t12 ink2" style="left:79px;top:13px">[agent-id]</span>' +
+        '<span class="b18" style="left:79px;top:35px">Dua Agent</span>' +
+        '<span class="t14 ink2" style="left:15px;top:79px;width:326px">I\u0027m Dua Agent \u2014 the official agent of Dua Gen AI</span>' +
+        '<span class="t12 ink2" style="left:15px;top:115px;display:flex;gap:6px">[agent-url]<span style="margin-top:1px">' + ic('copy', 14) + '</span></span>' +
+        '<button class="ag-sharep" type="button">' + ic('share', 20) + '<span>Share</span></button>' +
+        '<button class="ag-btn2 fill" type="button" style="left:15px;width:145.36px">' + ic('pencil', 18) + 'Edit profile</button>' +
+        '<button class="ag-btn2 line" type="button" style="left:170.36px;width:170.64px">' + ic('arrow_up_right', 16) + 'View public profile</button>' +
+      '</div>' +
+      '<span class="ag-abs b20" style="left:15px;top:384px;width:254px;line-height:26px">Pick up where Dua Agent left off</span>' +
+      '<button class="ag-chanp" type="button" style="top:384px">' + ic('channels', 20) + '<span>Channels</span></button>' +
+      '<span class="ag-abs t14 ink2" style="left:15px;top:444px">2 items need your attention across 3 conversations.</span>' +
+      '<span class="ag-abs b16" style="left:15px;top:482px;display:flex;gap:6px">Needs you<span style="margin-top:1px;font:700 14px/20px Lato,sans-serif;color:var(--ag-needs)">2</span></span>' +
+      '<span class="ag-abs t12 ink2" style="left:15px;top:506px">Unread or waiting for a decision</span>' +
+      conv(534, { title: 'Full-Stack Delivery Guild', sub: 'Frontend Developer, Backend Archite\u2026', time: 'Wed', unread: '1' }) +
+      conv(598, { title: 'Full-Stack Delivery Guild', sub: '[Someone @you] Dua Agent: [Cust\u2026', time: '11/03/26', unread: '2' }) +
+      '</div>';
+  }
+
+  /* -------------------------------------------------------------- artifacts */
+  function artifacts() {
+    return '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Artifacts', { center: true, icon: 'layers' }) +
+        '<div class="ag-sub">Work created and shared by this Agent</div><div class="ag-hair"></div></div>' +
+      '<span class="ag-abs t14 ink2" style="left:15px;top:156px">0 published \u00b7 0 draft</span>' +
+      '<div class="ag-dash"><svg aria-hidden="true"><rect x="0" y="0" width="100%" height="100%" rx="20" fill="none" stroke="var(--ag-dashed)" stroke-width="1.5" stroke-dasharray="5 5"/></svg>' +
+        '<span>No artifacts yet.</span></div></div>';
+  }
+
+  /* -------------------------------------------------------------- agent api */
+  function apiCard(icon, title, body, id, on) {
+    return '<div class="ag-apic"><span class="ag-well">' + ic(icon, 18) + '</span>' +
+      '<span class="a-t">' + title + '<span class="a-off">' + ic('copy', 14) + 'Off</span></span>' +
+      tog(id, on) + body + '</div>';
+  }
+  function agentApi(s) {
+    var t = s.toggles;
+    var tabs = ['Setup', 'Conversations', 'Call log', 'Keys', 'Site access'];
+    var th = '';
+    for (var i = 0; i < tabs.length; i++) th += '<span' + (i === 0 ? ' class="on"' : '') + '>' + tabs[i] + '</span>';
+    return '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Agent API', { center: true, icon: 'api', right: 'book' }) +
+        '<div class="ag-sub">How websites, programs and other agents reach Dua Agent, and what happened there</div>' +
+        '<div class="ag-hair"></div><div class="ag-tabs">' + th + '</div></div>' +
+      '<div class="ag-scroll" style="top:198px;padding-top:12px">' +
+        '<div class="ag-sec"><h4>On a website</h4><p>A chat bubble on your own site, answered by Dua Agent.</p>' +
+          apiCard('bubble', 'Website Widget', 'Embed a chat bubble on any website', 'widget', t.widget) + '</div>' +
+        '<div class="ag-sec" style="margin-top:20px"><h4>From programs and other agents</h4>' +
+          '<p>Your backend over REST or the OpenAI SDK, and AI clients such as Claude Code over MCP.</p>' +
+          apiCard('braces', 'RESTful API for servers', 'Call Dua Agent over HTTPS from your own backend.', 'rest', t.rest) +
+          apiCard('robot', 'API for other Agents', 'Let Codex, Claude Code and other Agents discover and call Dua Agent over MCP.', 'mcp', t.mcp) +
+        '</div><div style="height:24px"></div></div></div>';
+  }
+
+  /* ------------------------------------------------------ live sites / mail */
+  function liveSites() {
+    return '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Live Sites', { center: true, icon: 'window' }) +
+        '<div class="ag-sub">Built, connected, and operated by Dua Agent\u0027s Agent Team</div><div class="ag-hair"></div></div>' +
+      '<span class="ag-abs" style="left:162px;top:357px;width:64px;height:64px;border-radius:16px;background:var(--ag-empty);color:var(--ag-well-ink);display:flex;align-items:center;justify-content:center">' + ic('window', 28) + '</span>' +
+      '<span class="ag-empty-c b18" style="top:437px">No live sites yet</span>' +
+      '<span class="ag-empty-c t14 ink2" style="top:469px;left:44px;right:44px">Sites Dua Agent builds and publishes appear here, each with its Web admin one click away.</span>' +
+      '</div>';
+  }
+  function mail() {
+    return '<div class="ag-screen">' + SB +
+      '<div class="ag-top">' + hdr('Mail', { center: true, icon: 'mail' }) + '</div>' +
+      '<span class="ag-abs" style="left:158px;top:363px;width:72px;height:72px;border-radius:50%;background:var(--ag-empty);color:var(--ag-well-ink);display:flex;align-items:center;justify-content:center">' + ic('mail', 28) + '</span>' +
+      '<span class="ag-empty-c b20" style="top:455px">Coming soon</span>' +
+      '<span class="ag-empty-c t14 ink2" style="top:489px">Agent email, drafts, and replies</span>' +
+      '<span class="ag-empty-c t13 ink2" style="top:515px">This section is coming soon on mobile.</span></div>';
+  }
+
+  /* -------------------------------------------------------------- new group */
+  function newGroup() {
+    var agents = [['#F6C945', 'Finance Assistant'], ['#E07A3D', 'Slides Assistant'], ['#3EC0EA', 'Webpage Developer'],
+      ['#2DD4BF', 'Travel Planner'], ['#9BE3B8', 'Health Assistant']];
+    var h = '<div class="ag-screen atm">' + SB +
+      '<div class="ag-top">' + hdr('New Group', { close: true, right: 'create' }) + '</div>' +
+      '<div class="ag-seg"><span class="on"></span><span class="sel" style="left:0">Custom Group</span><span style="left:179px">AI Agent Team</span></div>' +
+      '<div class="ag-gname"><b>Group Name</b><div>Enter group name (Optional)</div></div>' +
+      '<div class="ag-hair ag-abs" style="left:0;right:0;top:248px"></div>' +
+      '<span class="ag-abs" style="left:15px;top:260px;display:flex;gap:16px"><span class="t13 ink2">Selected 1</span>' +
+        '<span style="margin-top:-6px">' + cubeAv(28, 10, 'var(--ag-body)') + '</span></span>' +
+      '<div class="ag-field" style="top:300px">' + ic('search', 20) + '<span>Search</span></div>' +
+      '<div class="ag-gtabs"><span class="g on" style="left:47px"><span class="b14">Agents</span><span class="ink2" style="font:400 13px/20px Lato,sans-serif">21</span></span>' +
+        '<span class="g" style="left:219px"><span class="t14 ink2">Friends</span><span class="ink2" style="font:400 13px/20px Lato,sans-serif">0</span></span></div>';
+    for (var i = 0; i < agents.length; i++) {
+      h += '<div class="ag-agent" style="top:' + (386 + i * 52) + 'px"><span class="radio" role="radio" aria-checked="false"></span>' +
+        colorAgent(agents[i][0]) + '<span>' + agents[i][1] + '</span></div>';
+    }
+    return h + '<div class="ag-pay"><div class="pm-row"><span class="b13">Payment Mode</span>' +
+      '<span class="pills"><span class="sel">Members Pay</span><span>Owner Pays</span></span></div>' +
+      '<span class="ag-abs t12 ink2" style="left:15px;top:44px">Each member uses their own credits</span></div></div>';
+  }
+
+  var SCREENS = { profile: profile, connect: connectApp, workspace: workspace, overview: overview,
+    artifacts: artifacts, api: agentApi, live: liveSites, mail: mail, group: newGroup };
+
+  function setup(phone) {
+    var view = document.createElement('div');
+    view.className = 'agentview';
+    view.setAttribute('data-agentview', '');
+    view.setAttribute('aria-hidden', 'true');
+    phone.appendChild(view);
+    var st = { stack: [], skills: false, connectors: false, sheet: false, toggles: {} };
+
+    function render(keepScroll) {
+      var sc = view.querySelector('[data-ag-scroll]');
+      var y = keepScroll && sc ? sc.scrollTop : 0;
+      var top = st.stack[st.stack.length - 1];
+      view.innerHTML = top ? SCREENS[top](st) : '';
+      var sc2 = view.querySelector('[data-ag-scroll]');
+      if (sc2) sc2.scrollTop = y;
+    }
+    function open(screen) {
+      st.stack.push(screen);
+      phone.classList.add('agenting');
+      view.setAttribute('aria-hidden', 'false');
+      render(false);
+    }
+    function back() {
+      var leaving = st.stack.pop();
+      if (leaving === 'profile') { st.skills = st.connectors = st.sheet = false; }
+      if (!st.stack.length) {
+        phone.classList.remove('agenting');
+        view.setAttribute('aria-hidden', 'true');
+      }
+      render(st.stack[st.stack.length - 1] === 'profile');
+    }
+    phone.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (!t.closest) return;
+      if (t.closest('[data-open-agent-profile]')) { open('profile'); return; }
+      if (!view.contains(t)) return;
+      var el;
+      if ((el = t.closest('[data-ag-toggle]'))) {
+        var k = el.getAttribute('data-ag-toggle');
+        st.toggles[k] = !st.toggles[k];
+        render(true); return;
+      }
+      if (t.closest('[data-ag-back]')) { back(); return; }
+      if ((el = t.closest('[data-ag-go]'))) { open(el.getAttribute('data-ag-go')); return; }
+      if (t.closest('[data-ag-sheet]')) { st.sheet = true; render(true); return; }
+      if (t.closest('[data-ag-sheet-close]')) { st.sheet = false; render(true); return; }
+      if ((el = t.closest('[data-ag-row]'))) {
+        var r = el.getAttribute('data-ag-row');
+        st[r] = !st[r];
+        render(true); return;
+      }
+    });
+    phone.addEventListener('keydown', function (ev) {
+      if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches &&
+          ev.target.matches('[data-open-agent-profile],[data-ag-toggle]')) {
+        ev.preventDefault(); ev.target.click();
+      }
+    });
+
+    /* Gallery frames: data-agent-on-load="<stack,comma,separated>" plus an
+       optional data-agent-state (skills | connectors | sheet) and
+       data-agent-scroll (px from the top, or "max"). */
+    var onload = phone.getAttribute('data-agent-on-load');
+    if (onload) {
+      var parts = onload.split(',');
+      var stateAttr = (phone.getAttribute('data-agent-state') || '').split(',');
+      for (var i = 0; i < stateAttr.length; i++) if (stateAttr[i]) st[stateAttr[i]] = true;
+      for (var j = 0; j < parts.length; j++) st.stack.push(parts[j]);
+      phone.classList.add('agenting');
+      view.setAttribute('aria-hidden', 'false');
+      render(false);
+      var scroll = phone.getAttribute('data-agent-scroll');
+      if (scroll) {
+        var sc = view.querySelector('[data-ag-scroll]');
+        if (sc) sc.scrollTop = scroll === 'max' ? sc.scrollHeight : parseFloat(scroll);
+      }
+    }
+  }
+  var phones = document.querySelectorAll('[data-phone]');
+  for (var i = 0; i < phones.length; i++) setup(phones[i]);
 })();
 </script>
 </body>

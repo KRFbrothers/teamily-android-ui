@@ -3,6 +3,7 @@ package ai.duagenai.design.screens
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -259,7 +261,15 @@ fun ChatScreen(
     onToggleSkill: ((String) -> Unit)? = null,
     mcpEnabled: Boolean = true,
     onToggleMcp: ((Boolean) -> Unit)? = null,
+    // Agent chat only: tapping the header title or avatar opens the Dua Agent
+    // profile. Null (the default) leaves the header exactly as before.
+    onOpenAgentProfile: (() -> Unit)? = null,
 ) {
+    val profileClick = if (onOpenAgentProfile != null) {
+        Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
+    } else {
+        Modifier
+    }
     // Agent's own thread is the one conversation whose content is not the
     // generic sample: it is Agent reporting on the agents it controls. Every
     // other id keeps the sample thread, so nothing else changes.
@@ -340,7 +350,7 @@ fun ChatScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    Column(modifier = profileClick) {
                         Text(
                             text = chatTitle,
                             style = DuaGenAITextStyles.rowTitle,
@@ -374,7 +384,7 @@ fun ChatScreen(
                         size = 32.dp,
                         shape = DuaGenAITheme.shapes.avatarMessage,
                         contentDescription = "$chatTitle avatar, ${CubeIds.label(cubeId)}",
-                        modifier = Modifier.padding(end = spacing.gutter),
+                        modifier = Modifier.padding(end = spacing.gutter).then(profileClick),
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
