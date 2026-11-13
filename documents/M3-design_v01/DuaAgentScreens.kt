@@ -1,10 +1,13 @@
 package ai.duagenai.design.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -56,6 +59,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -287,15 +293,45 @@ fun AgentCubeAvatar(size: Dp, modifier: Modifier = Modifier, badge: Dp = 0.dp, r
     }
 }
 
-/** The SVG switch: 40 × 24 track, 18dp thumb. */
+/**
+ * Layout-neutral 48dp tap target (review fix): [visual] is drawn exactly as
+ * before, the click + its semantics sit on a ≥48dp box centred on it
+ * ([touchTarget48]), and the pressed ripple stays clipped to [visual].
+ */
 @Composable
-private fun AgentToggle(checked: Boolean, onChange: (Boolean) -> Unit, c: AgentColors, modifier: Modifier = Modifier) {
+private fun Modifier.tap48(
+    onClick: () -> Unit,
+    visual: Modifier,
+    label: String? = null,
+    shiftUp: Dp = 0.dp,
+): Modifier {
+    val src = remember { MutableInteractionSource() }
+    return touchTarget48(
+        Modifier
+            .clickable(interactionSource = src, indication = null, onClick = onClick)
+            .then(if (label != null) Modifier.semantics { contentDescription = label; role = Role.Button } else Modifier),
+        shiftUp,
+    ).then(visual).indication(src, LocalIndication.current)
+}
+
+/**
+ * The SVG switch: 40 × 24 track, 18dp thumb — drawn at that size, tappable on a
+ * 48dp box, and announced by [label] (the row's title).
+ */
+@Composable
+private fun AgentToggle(checked: Boolean, onChange: (Boolean) -> Unit, c: AgentColors, label: String, modifier: Modifier = Modifier) {
+    val src = remember { MutableInteractionSource() }
     Box(
         modifier
+            .touchTarget48(
+                Modifier
+                    .toggleable(value = checked, interactionSource = src, indication = null, role = Role.Switch, onValueChange = onChange)
+                    .semantics { contentDescription = label },
+            )
             .size(40.dp, 24.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (checked) c.trackOn else c.track)
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onChange),
+            .indication(src, LocalIndication.current),
     ) {
         Box(
             Modifier.offset(x = if (checked) 18.dp else 4.dp, y = 3.dp).size(18.dp).clip(CircleShape)
@@ -323,7 +359,8 @@ private fun AgentAppBar(
 ) {
     Box(Modifier.fillMaxWidth().height(84.dp)) {
         Box(
-            Modifier.offset(4.dp, 18.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack),
+            Modifier.offset(4.dp, 18.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
+                .semantics { contentDescription = if (close) "Close" else "Back"; role = Role.Button },
             contentAlignment = Alignment.Center,
         ) { AgentIcon(if (close) "close" else "back", 24.dp, titleColor) }
         if (center) {
@@ -383,8 +420,8 @@ private fun Well(icon: String, fill: Color, ink: Color, modifier: Modifier = Mod
 @Composable
 private fun PillButton(label: String, c: AgentColors, onClick: () -> Unit = {}) {
     Box(
-        Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp))
-            .background(c.chrome).clickable(onClick = onClick),
+        Modifier.padding(horizontal = 20.dp)
+            .tap48(onClick, Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).background(c.chrome)),
         contentAlignment = Alignment.Center,
     ) { Text(label, style = t(15, 22, true), color = c.ink) }
 }
@@ -424,9 +461,11 @@ private fun ProfileRow(
     onClick: (() -> Unit)? = null,
     hairlineAt: Dp? = null,
 ) {
+    // A tappable row never contains the switch (no call site passes both), so
+    // the switch stays its own control; the row's tap box is ≥48dp (47dp rows).
     Box(
-        Modifier.fillMaxWidth().height(height)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        if (onClick != null) Modifier.tap48(onClick, Modifier.fillMaxWidth().height(height))
+        else Modifier.fillMaxWidth().height(height),
     ) {
         Well(icon, wellFill, wellInk, Modifier.offset(35.dp, 0.dp))
         val hasSub = subtitle != null || link != null
@@ -442,7 +481,7 @@ private fun ProfileRow(
                 },
                 20.dp, c.ink2, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 6.dp),
             )
-            Trail.Toggle -> AgentToggle(checked, onToggle, c, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 4.dp))
+            Trail.Toggle -> AgentToggle(checked, onToggle, c, title, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 4.dp))
             Trail.None -> Unit
         }
         if (hairlineAt != null) {
@@ -500,16 +539,20 @@ fun DuaAgentProfileScreen(
                         ) { Text("AI", style = t(10, 12, true), color = c.aiInk) }
                     }
                     Row(Modifier.offset(53.dp, 196.5.dp).size(283.dp, 60.dp).clip(RoundedCornerShape(30.dp)).background(c.chrome)) {
-                        val actions = listOf<Pair<String, (() -> Unit)?>>(
-                            "robot" to null,
-                            "idcard" to onOpenWorkspace,
-                            "person_plus" to onOpenNewGroup,
-                            "more" to { sheet = true },
+                        val actions = listOf<Triple<String, String, (() -> Unit)?>>(
+                            Triple("robot", "Agent", null),
+                            Triple("idcard", "Agent workspace", onOpenWorkspace),
+                            Triple("person_plus", "New Group", onOpenNewGroup),
+                            Triple("more", "More", { sheet = true }),
                         )
-                        for ((icon, action) in actions) {
+                        for ((icon, label, action) in actions) {
                             Box(
                                 Modifier.weight(1f).fillMaxSize()
-                                    .then(if (action != null) Modifier.clickable(onClick = action) else Modifier),
+                                    .then(
+                                        if (action != null) Modifier.clickable(onClick = action)
+                                            .semantics { contentDescription = label; role = Role.Button }
+                                        else Modifier,
+                                    ),
                                 contentAlignment = Alignment.Center,
                             ) { AgentIcon(icon, 22.dp, c.ink) }
                         }
@@ -551,7 +594,7 @@ fun DuaAgentProfileScreen(
                     for (name in listOf("GitHub", "Agent")) {
                         Box(Modifier.fillMaxWidth().height(48.dp)) {
                             Text(name, style = t(16, 24), color = c.ink, modifier = Modifier.offset(36.dp, 12.dp))
-                            AgentToggle(on(name), { toggles[name] = it }, c, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 12.dp))
+                            AgentToggle(on(name), { toggles[name] = it }, c, name, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 12.dp))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -687,7 +730,8 @@ fun DuaAgentConnectAppScreen(onClose: () -> Unit = {}, modifier: Modifier = Modi
             Box(Modifier.fillMaxWidth().height(84.dp)) {
                 Text("Connect App", style = t(20, 28, true), color = c.ink, modifier = Modifier.align(Alignment.Center))
                 Box(
-                    Modifier.align(Alignment.CenterEnd).padding(end = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onClose),
+                    Modifier.align(Alignment.CenterEnd).padding(end = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onClose)
+                        .semantics { contentDescription = "Close"; role = Role.Button },
                     contentAlignment = Alignment.Center,
                 ) { AgentIcon("close", 24.dp, c.ink) }
             }
@@ -705,8 +749,9 @@ fun DuaAgentConnectAppScreen(onClose: () -> Unit = {}, modifier: Modifier = Modi
                     Spacer(Modifier.width(10.dp))
                     Text(name, style = t(16, 22), color = c.ink, modifier = Modifier.weight(1f))
                     Box(
-                        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp))
-                            .border(1.25.dp, c.border, RoundedCornerShape(16.dp)).clickable { }.padding(horizontal = 14.dp),
+                        Modifier.tap48(
+                            {}, Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).border(1.25.dp, c.border, RoundedCornerShape(16.dp)),
+                        ).padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("Connect", style = t(13, 18, true), color = c.ink) }
                 }
@@ -737,7 +782,7 @@ private fun GroupCluster() {
             Box(
                 Modifier.offset(pos.x.dp, pos.y.dp).size(s).clip(CircleShape).background(fill),
                 contentAlignment = Alignment.Center,
-            ) { Text(initial, style = t(9, 12, true), color = TileInk) }
+            ) { Text(initial, style = t(12, 16, true), color = TileInk) }
         }
     }
 }
@@ -758,8 +803,10 @@ private fun ConversationRow(
             Text(title, style = t(16, 22, true), color = c.ink, maxLines = 1)
             if (plus) {
                 Box(Modifier.padding(top = 3.dp).height(16.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
-                    AgentIcon("star", 10.dp, Color.White, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
-                    Text("PLUS", style = t(8, 16, true), color = Color.White, modifier = Modifier.padding(start = 15.dp, end = 9.dp))
+                    // Review fix: 12sp label in TileInk #17201B on tileViolet #9A7BFF
+                    // (5.2:1; white was 3.16:1). The fill is unchanged.
+                    AgentIcon("star", 10.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
+                    Text("PLUS", style = t(12, 16, true), color = TileInk, modifier = Modifier.padding(start = 15.dp, end = 9.dp))
                 }
             }
         }
@@ -888,15 +935,21 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
                     AgentIcon("copy", 14.dp, c.ink2, Modifier.offset(y = 1.dp))
                 }
                 Box(
-                    Modifier.align(Alignment.TopEnd).padding(top = 108.dp, end = 16.dp).size(96.dp, 36.dp)
-                        .clip(RoundedCornerShape(18.dp)).background(c.body).border(1.dp, c.border, RoundedCornerShape(18.dp)).clickable { },
+                    // Share sits 8dp above Edit / View public profile, so its 48dp
+                    // box grows 2dp more upward and meets theirs without overlap.
+                    Modifier.align(Alignment.TopEnd).padding(top = 108.dp, end = 16.dp).tap48(
+                        {},
+                        Modifier.size(96.dp, 36.dp).clip(RoundedCornerShape(18.dp)).background(c.body)
+                            .border(1.dp, c.border, RoundedCornerShape(18.dp)),
+                        shiftUp = 2.dp,
+                    ),
                 ) {
                     AgentIcon("share", 20.dp, c.ink, Modifier.offset(14.dp, 8.dp))
                     Text("Share", style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(38.dp, 8.dp))
                 }
                 Row(Modifier.offset(16.dp, 152.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
-                        Modifier.size(145.36.dp, 40.dp).clip(RoundedCornerShape(20.dp)).background(c.button).clickable { },
+                        Modifier.tap48({}, Modifier.size(145.36.dp, 40.dp).clip(RoundedCornerShape(20.dp)).background(c.button)),
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -904,8 +957,9 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
                         Text("Edit profile", style = t(13, 18, true), color = c.buttonInk)
                     }
                     Row(
-                        Modifier.size(170.64.dp, 40.dp).clip(RoundedCornerShape(20.dp))
-                            .border(1.25.dp, c.ink, RoundedCornerShape(20.dp)).clickable { },
+                        Modifier.tap48(
+                            {}, Modifier.size(170.64.dp, 40.dp).clip(RoundedCornerShape(20.dp)).border(1.25.dp, c.ink, RoundedCornerShape(20.dp)),
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -918,8 +972,11 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Text("Pick up where Dua Agent left off", style = t(20, 26, true), color = c.ink, modifier = Modifier.width(254.dp))
                 Box(
-                    Modifier.align(Alignment.TopEnd).size(112.dp, 36.dp).clip(RoundedCornerShape(18.dp))
-                        .background(c.chrome).border(1.dp, c.border, RoundedCornerShape(18.dp)).clickable { },
+                    Modifier.align(Alignment.TopEnd).tap48(
+                        {},
+                        Modifier.size(112.dp, 36.dp).clip(RoundedCornerShape(18.dp)).background(c.chrome)
+                            .border(1.dp, c.border, RoundedCornerShape(18.dp)),
+                    ),
                 ) {
                     AgentIcon("channels", 20.dp, c.wellInk, Modifier.offset(12.dp, 8.dp))
                     Text("Channels", style = t(13, 20, true), color = c.ink, modifier = Modifier.offset(36.dp, 8.dp))
@@ -991,7 +1048,7 @@ private fun ApiCard(c: AgentColors, icon: String, title: String, body: String, c
                 Text("Off", style = t(12, 16), color = c.ink2)
             }
         }
-        AgentToggle(checked, onToggle, c, Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp))
+        AgentToggle(checked, onToggle, c, title, Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp))
         Text(body, style = t(13, 18), color = c.ink2, modifier = Modifier.padding(start = 58.dp, top = 40.dp, end = 72.dp, bottom = 22.dp))
     }
 }
@@ -1135,8 +1192,9 @@ fun DuaAgentNewGroupScreen(onClose: () -> Unit = {}, onCreate: () -> Unit = {}, 
             AgentTop(c, hairline = false) {
                 AgentAppBar("New Group", c, onClose, close = true) {
                     Box(
-                        Modifier.align(Alignment.CenterEnd).padding(end = 16.dp).height(36.dp).clip(RoundedCornerShape(18.dp))
-                            .background(c.plusFill).clickable(onClick = onCreate).padding(horizontal = 18.dp),
+                        Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)
+                            .tap48(onCreate, Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(c.plusFill))
+                            .padding(horizontal = 18.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("Create", style = t(16, 22, true), color = c.plusIcon) }
                 }

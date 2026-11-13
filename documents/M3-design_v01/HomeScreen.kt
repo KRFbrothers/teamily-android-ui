@@ -7,11 +7,13 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -588,7 +590,11 @@ internal fun DuaComposer(
                     BasicTextField(
                         value = value.orEmpty(),
                         onValueChange = onValueChange!!,
-                        modifier = Modifier.weight(1f),
+                        // Review fix: the field's tappable box is >=48dp tall
+                        // (the pill is 52dp). The decoration box below centres
+                        // the text in it, so the text sits exactly where the
+                        // Row's CenterVertically put it before.
+                        modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
                         textStyle = DuaGenAITextStyles.bubble.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                         ),
@@ -600,16 +606,20 @@ internal fun DuaComposer(
                             onSend = { if (canSend) onSend?.invoke() },
                         ),
                         decorationBox = { innerTextField ->
-                            if (value.isNullOrEmpty()) {
-                                Text(
-                                    text = placeholder,
-                                    style = DuaGenAITextStyles.bubble,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                            // Centres the hint + text inside the >=48dp field box.
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (value.isNullOrEmpty()) {
+                                    Text(
+                                        text = placeholder,
+                                        style = DuaGenAITextStyles.bubble,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                Box(Modifier.fillMaxWidth(), propagateMinConstraints = true) { innerTextField() }
                             }
-                            innerTextField()
                         },
                     )
                 } else {
@@ -1432,7 +1442,9 @@ private fun HomeBottomNav(
         shadowElevation = 6.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
+            // `selectableGroup()` makes the five tabs one tab list for TalkBack
+            // (the HTML preview's role="tablist").
+            modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs).selectableGroup(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             HomeTab.entries.forEach { tab ->
@@ -1456,6 +1468,8 @@ private fun HomeBottomNav(
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
                                 this.selected = active
+                                // The unread dot is drawn only; say it too.
+                                if (tab == HomeTab.Memory) contentDescription = "${tab.label}, unread"
                             },
                         contentAlignment = Alignment.Center,
                     ) {

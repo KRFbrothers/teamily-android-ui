@@ -1508,10 +1508,10 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .ag-conv .c-time{position:absolute;right:15px;top:10px;font:400 12px/16px "Lato",sans-serif;color:var(--ag-ink2)}
 .ag-conv .c-sub{position:absolute;left:67px;top:30px;font:400 13px/18px "Lato",sans-serif;color:var(--ag-ink2);white-space:nowrap}
 .ag-conv .c-unread{position:absolute;right:15px;top:26px;width:20px;height:20px;border-radius:50%;background:var(--ag-unread);color:var(--ag-unread-ink);font:700 11px/20px "Lato",sans-serif;text-align:center}
-.ag-plusb{position:relative;margin-top:3px;height:16px;padding:0 9px 0 15px;border-radius:8px;background:#9A7BFF;color:#FFFFFF;font:700 8px/16px "Lato",sans-serif}
+.ag-plusb{position:relative;margin-top:3px;height:16px;padding:0 9px 0 15px;border-radius:8px;background:#9A7BFF;color:#17201B;font:700 12px/16px "Lato",sans-serif}
 .ag-plusb .ag-ic{position:absolute;left:4px;top:3px}
 .ag-cluster{position:relative;width:40px;height:40px}
-.ag-cluster i{position:absolute;width:23.2px;height:23.2px;border-radius:50%;font:normal 700 9px/23.2px "Lato",sans-serif;color:#17201B;text-align:center}
+.ag-cluster i{position:absolute;width:23.2px;height:23.2px;border-radius:50%;font:normal 700 12px/23.2px "Lato",sans-serif;color:#17201B;text-align:center}
 /* --- overview --- */
 .ag-ov-card{top:156px;height:208px;border-radius:20px;border:1px solid var(--ag-border)}
 .ag-ov-card > *{position:absolute}
@@ -1566,6 +1566,52 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .phone.dark .ag-pay .pills span.sel{color:var(--ag-ink)}
 /* entry point: the Agent chat's header avatar + title open the profile */
 .chatbar [data-open-agent-profile]{cursor:pointer}
+/* ============================================================================
+   Review fixes (audit rows 3-24, 29) — touch targets, badge text, initials.
+   48px touch targets WITHOUT changing what is drawn: every control below keeps
+   its visual box; a transparent pseudo-element (or, for the text inputs, the
+   input's own box inside the unchanged pill) extends the tappable area to at
+   least 48 x 48, centred on the control. Same rule as Compose's
+   `minTouchTarget()` / `touchTarget48()` in TouchTargets.kt.
+   ==========================================================================*/
+.pk-search .pk-clear,.mem-search .mem-clear,.seg button,.ag-pillbtn,
+.pk-cancel,.pk-save,.st-action,.ae-retry,
+.pk-noresults .nr-clear,.mem-nomatch .nm-clear{position:relative}
+.ag-tog::before,
+.ag-hdr button.ag-right::before,
+.pk-search .pk-clear::before,.mem-search .mem-clear::before,
+.seg button::before,
+.ag-pillbtn::before,
+.ag-sharep::before,.ag-chanp::before,.ag-btn2::before,
+.ag-app .a-btn::before,
+.ag-hdr .ag-create::before,
+.pk-cancel::before,.pk-save::before,
+.st-action::before,
+.ae-retry::before,.pk-noresults .nr-clear::before,.mem-nomatch .nm-clear::before,
+button.ag-row::before{
+  content:"";position:absolute;left:50%;top:50%;
+  width:max(100%,48px);height:max(100%,48px);transform:translate(-50%,-50%);
+  background:transparent
+}
+/* Text inputs (were 19px / 26px tall): equal vertical padding grows the
+   field's own tappable box to >=48px, and the matching negative margin keeps
+   its layout box — and so the text position — exactly where it was. */
+.pk-search input,.mem-search input{padding-top:15px;padding-bottom:15px;margin-top:-15px;margin-bottom:-15px}
+.ask-pill .ph-input{padding-top:12px;padding-bottom:12px;margin-top:-12px;margin-bottom:-12px}
+/* Tabs are real <button role="tab"> now — reset the UA button chrome so they
+   draw exactly as the old <div> did. */
+:where(button.tab){font:inherit;color:inherit;background:transparent;border:0;margin:0;-webkit-appearance:none;appearance:none;text-align:inherit}
+/* Row 49: the review state switcher sits under the phone, not inside it. */
+/* Share sits ~8px above Edit / View public profile: its 48px box grows UP
+   (10px from its 1px border) more than down (4px), so it meets — never
+   overlaps — theirs. */
+.ag-sharep::before{left:0;width:100%;top:-10px;bottom:-4px;height:auto;transform:none}
+.ag-rowwrap > .ag-tog{position:absolute;right:19px;top:4px}
+.art-states-host{width:390px;max-width:100%;
+  /* page chrome now, so it takes the PAGE tokens, not the phone's */
+  --line:var(--page-line);--ink2:var(--page-ink2);--brand-soft:var(--page-soft);--primary-ink:var(--page-primary)}
+.art-states-host:empty{display:none}
+.art-states-host .art-states{justify-content:center;flex-wrap:wrap;padding:0}
 </style>
 </head>
 <body>
@@ -1573,7 +1619,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 <header class="hero">
   <div class="wrap">
     <p class="eyebrow">Dua Gen AI · Android · Material 3</p>
-    <h1>Home — Agent pinned, Dua plain chatbot</h1>
+    <h1>Dua Gen AI — Android UI design package</h1>
     <p class="lede">
       Dua Gen AI — ek complete package: <b>Dua AI</b>, <b>Dua Agent</b> aur <b>Dua Workspace</b>.
       UI mein do modes hain: <b>Dua</b> aur <b>Agent</b>. <b>Dua</b> ek chatbot hai —
@@ -1721,7 +1767,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
             <div class="profileview" data-profileview aria-hidden="true"></div>
             <div class="pickerview" data-pickerview aria-hidden="true"></div>
           </div>
-          <span class="phone-label">Agent &middot; 560px &middot; list scrolls, card pinned</span>
+          <span class="phone-label">Agent &middot; 470px &middot; list scrolls, card pinned</span>
         </div>
       </div>
     </div>
@@ -2380,7 +2426,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">03</span>
+        <span class="screen-num">05</span>
         <h3 class="screen-title">Drawer — open state</h3>
         <p class="screen-note">ModalNavigationDrawer &middot; scrim &middot; 320dp sheet &middot; brand + search + nav + history + footer</p>
       </div>
@@ -2437,7 +2483,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">05</span>
+        <span class="screen-num">06</span>
         <h3 class="screen-title">Profile &mdash; light + dark</h3>
         <p class="screen-note">drawer gear tap karein &middot; back se wapas &middot; saved cube (Cube 01) dono me same</p>
       </div>
@@ -2476,7 +2522,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">05b</span>
+        <span class="screen-num">06b</span>
         <h3 class="screen-title">Cube picker &mdash; light + dark</h3>
         <p class="screen-note">Profile &rarr; "Change cube" tap karein &middot; cube chunein &middot; Save se Profile update, Cancel se discard</p>
       </div>
@@ -2530,7 +2576,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">06</span>
+        <span class="screen-num">07</span>
         <h3 class="screen-title">Memory &mdash; light + dark</h3>
         <p class="screen-note">bottom nav &rarr; Memory &middot; empty state &middot; back se wapas</p>
       </div>
@@ -2571,7 +2617,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">07</span>
+        <span class="screen-num">08</span>
         <h3 class="screen-title">Artifacts &mdash; light + dark</h3>
         <p class="screen-note">bottom nav &rarr; Artifacts &middot; real 2-column grid (8 cards) &middot; back se wapas</p>
       </div>
@@ -2633,7 +2679,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">08</span>
+        <span class="screen-num">09</span>
         <h3 class="screen-title">Appearance &mdash; light + dark</h3>
         <p class="screen-note">Profile &rarr; Appearance &middot; theme choice &middot; selection Profile row me reflect hoti hai</p>
       </div>
@@ -2675,7 +2721,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">09</span>
+        <span class="screen-num">10</span>
         <h3 class="screen-title">Storage &mdash; light + dark</h3>
         <p class="screen-note">Profile &rarr; Storage &middot; usage bar &middot; Clear cache &rarr; confirmation dialog</p>
       </div>
@@ -2717,7 +2763,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">10</span>
+        <span class="screen-num">11</span>
         <h3 class="screen-title">Notifications &mdash; light + dark</h3>
         <p class="screen-note">Profile &rarr; Notifications &middot; teen switches &middot; summary usi map se</p>
       </div>
@@ -2759,7 +2805,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">11</span>
+        <span class="screen-num">12</span>
         <h3 class="screen-title">Cube picker &mdash; search, filter &amp; no-results</h3>
         <p class="screen-note">search field + category chips &middot; dono saath &middot; kuch match na ho to no-results + Clear filters</p>
       </div>
@@ -2797,7 +2843,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">12</span>
+        <span class="screen-num">13</span>
         <h3 class="screen-title">Artifacts &mdash; loading, empty &amp; error states</h3>
         <p class="screen-note">repository se data &middot; loading spinner &middot; empty fallback &middot; error + Retry</p>
       </div>
@@ -2854,7 +2900,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">13</span>
+        <span class="screen-num">14</span>
         <h3 class="screen-title">Artifacts &mdash; filter sheet, preview caption &amp; inert guard</h3>
         <p class="screen-note">filter button &rarr; type sheet (count badge + Clear) &middot; caption selected artifact ka naam/type/size dikhata hai &middot; disabled controls dimmed + not tappable</p>
       </div>
@@ -2926,7 +2972,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">12</span>
+        <span class="screen-num">15</span>
         <h3 class="screen-title">Memory &mdash; search, filter chips &amp; no-match</h3>
         <p class="screen-note">search field + category chips &middot; dono saath apply &middot; kuch match na ho to no-match + Clear filters</p>
       </div>
@@ -2981,7 +3027,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">13</span>
+        <span class="screen-num">16</span>
         <h3 class="screen-title">Artifacts &mdash; pull-to-refresh, swipe-to-delete &amp; undo</h3>
         <p class="screen-note">pull down &rarr; indicator upar, grid visible rehti hai &middot; card swipe karein &rarr; error-tinted reveal &rarr; same confirmation &rarr; Undo snackbar</p>
       </div>
@@ -3051,7 +3097,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">14</span>
+        <span class="screen-num">17</span>
         <h3 class="screen-title">Artifacts &mdash; long-press context menu</h3>
         <p class="screen-note">card par long-press &rarr; menu khulta hai: <b>Open</b> (caption us card par), <b>Share</b> (is build me disabled + reason), <b>Delete</b> (wahi confirmation jo swipe kholta hai) &middot; har item 48px</p>
       </div>
@@ -3091,7 +3137,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">15</span>
+        <span class="screen-num">18</span>
         <h3 class="screen-title">Memory &mdash; pull-to-refresh</h3>
         <p class="screen-note">list par pull down &rarr; indicator upar dikhta hai, list <b>visible rehti hai</b> (blank nahi hoti) &middot; active search aur chip refresh ke baad bhi wahi rehte hain</p>
       </div>
@@ -3131,7 +3177,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">16</span>
+        <span class="screen-num">19</span>
         <h3 class="screen-title">Artifacts &mdash; four-item context menu &amp; disabled state</h3>
         <p class="screen-note">long-press &rarr; <b>Open</b> &middot; <b>Open in new tab</b> (URL ho to naya tab, warna disabled + reason) &middot; <b>Share</b> (disabled) &middot; divider &middot; <b>Delete</b> (destructive, sabse neeche) &middot; har item 48px</p>
       </div>
@@ -3171,7 +3217,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">17</span>
+        <span class="screen-num">20</span>
         <h3 class="screen-title">Memory &mdash; swipe-to-delete, confirmation &amp; undo</h3>
         <p class="screen-note">row swipe karein &rarr; error-tinted reveal + delete glyph &rarr; same confirmation &rarr; <b>Memory deleted</b> snackbar with <b>Undo</b> &middot; filter/search active hone par bhi kaam karta hai</p>
       </div>
@@ -3243,7 +3289,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">18</span>
+        <span class="screen-num">21</span>
         <h3 class="screen-title">Memory &mdash; long-press context menu &amp; detail fallback</h3>
         <p class="screen-note">row par long-press &rarr; do-item menu: <b>Open</b> &middot; divider &middot; <b>Delete</b> (destructive, sabse neeche) &middot; URL ho to naya tab, warna <b>detail dialog</b> &middot; Delete se wahi confirmation jo swipe kholta hai &middot; har item 48px</p>
       </div>
@@ -3315,7 +3361,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">19</span>
+        <span class="screen-num">22</span>
         <h3 class="screen-title">Shared URL opener &mdash; one helper, both screens</h3>
         <p class="screen-note">Artifacts ka <b>Open in new tab</b> aur Memory ka <b>Open</b> dono ek hi <code>openInNewTab()</code> helper se jaate hain &middot; URL ho to naya tab, URL na ho to <b>false</b> &rarr; Artifacts me disabled item, Memory me detail dialog &middot; koi duplicate logic nahi</p>
       </div>
@@ -3387,7 +3433,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">20</span>
+        <span class="screen-num">23</span>
         <h3 class="screen-title">Memory detail &mdash; &ldquo;Open source&rdquo; button</h3>
         <p class="screen-note">memory card par tap &rarr; detail dialog &middot; URL ho to <b>Open source</b> (primary, filled) + <b>Close</b> (text) &middot; URL na ho to button <b>bilkul nahi</b> (disabled nahi) &middot; button shared <code>openInNewTab()</code> se jaata hai &middot; 48px touch target</p>
       </div>
@@ -3427,7 +3473,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">21</span>
+        <span class="screen-num">24</span>
         <h3 class="screen-title">Memory detail &mdash; &ldquo;Copy text&rdquo; button</h3>
         <p class="screen-note">detail dialog me <b>Copy text</b> (tonal/outlined) hamesha dikhta hai &middot; tap par poora memory (title + summary) clipboard me &middot; <b>Copied</b> snackbar (wahi surface jo Undo use karta hai) &middot; actions row wrap hota hai, overflow nahi &middot; 48px touch target</p>
       </div>
@@ -3467,7 +3513,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">22</span>
+        <span class="screen-num">25</span>
         <h3 class="screen-title">Cube picker &mdash; chip long-press tooltip</h3>
         <p class="screen-note">chip par long-press &rarr; plain M3 tooltip chip ke upar, poora label &middot; khud band ho jata hai &middot; tap se filter apply (long-press se nahi) &middot; chip ka <code>title</code>/<code>aria-label</code> bhi poora label &middot; 48px touch target</p>
       </div>
@@ -3505,7 +3551,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 
     <div class="screen-block">
       <div class="screen-head">
-        <span class="screen-num">23</span>
+        <span class="screen-num">26</span>
         <h3 class="screen-title">Memory detail &mdash; &ldquo;Share&rdquo; button</h3>
         <p class="screen-note">detail dialog me <b>Share</b> (tonal/outlined) hamesha dikhta hai, Copy text ke saath &middot; tap par platform ka apna share sheet (ACTION_SEND) &middot; text ke saath URL bhi jab ho &middot; koi custom share dialog nahi, koi naya library nahi &middot; 48px touch target</p>
       </div>
@@ -4699,18 +4745,23 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   /* `selectedTab` is passed IN, not read from a flag on TABS: the active tab is
      hoisted per phone, so the dock is a pure function of that state — the same
      shape the Kotlin `HomeBottomNav(selected = selectedTab)` now has. */
-  function dockHtml(mode, selectedTab) {
+  function dockHtml(mode, selectedTab, panelId) {
     if (mode === 'dua') {
       return askPillHtml('Ask Dua ...');
     }
-    var html = '<div class="tabbar">';
+    // A real tablist of <button role="tab">: focusable, Enter/Space activate,
+    // each tab names the panel it controls, and the unread dot is announced in
+    // the tab's label (the dot itself stays decorative).
+    var html = '<div class="tabbar" role="tablist">';
     for (var i = 0; i < TABS.length; i++) {
       var t = TABS[i];
       var on = t.id === selectedTab;
-      html += '<div class="tab' + (on ? ' on' : '') + '" data-tab="' + t.id + '"' +
-        ' role="tab" aria-selected="' + (on ? 'true' : 'false') + '">' +
+      html += '<button type="button" class="tab' + (on ? ' on' : '') + '" data-tab="' + t.id + '"' +
+        ' role="tab" aria-selected="' + (on ? 'true' : 'false') + '"' +
+        (panelId ? ' aria-controls="' + panelId + '"' : '') +
+        ' aria-label="' + esc(t.label) + (t.dot ? ', unread' : '') + '">' +
         '<span class="ic">' + ICON[t.icon] + (t.dot ? '<i class="tab-dot" aria-hidden="true"></i>' : '') + '</span>' +
-        '<span>' + esc(t.label) + '</span></div>';
+        '<span>' + esc(t.label) + '</span></button>';
     }
     return html + '</div>';
   }
@@ -5425,6 +5476,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   var MEMORY_SEED = MEMORIES.slice();
   var ARTIFACT_SEED = ARTIFACTS.slice();
 
+  var phoneSeq = 0;
   for (var p = 0; p < phones.length; p++) {
     (function (phone) {
       // Per-phone copies of the demo data. The arrays above are the SEED; each
@@ -5443,6 +5495,21 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       var profileview = phone.querySelector('[data-profileview]');
       var pickerview = phone.querySelector('[data-pickerview]');
       var tabview = phone.querySelector('[data-tabview]');
+      // The tab panel the dock's tabs control (aria-controls needs an id).
+      phoneSeq += 1;
+      if (!body.id) body.id = 'phone-' + phoneSeq + '-panel';
+      body.setAttribute('role', 'tabpanel');
+      // Row 49: the Artifacts / Memory review state switcher is a preview
+      // affordance, so it renders UNDER the phone frame, not inside the mockup.
+      var statesHost = document.createElement('div');
+      statesHost.className = 'art-states-host';
+      phone.insertAdjacentElement('afterend', statesHost);
+      statesHost.addEventListener('click', function (ev) {
+        var b = ev.target.closest ? ev.target.closest('[data-art-state],[data-mem-state]') : null;
+        if (!b) return;
+        if (b.hasAttribute('data-art-state')) { artifactsState = b.getAttribute('data-art-state'); paintArtifacts(); }
+        else { memoryState = b.getAttribute('data-mem-state'); paintMemory(); }
+      });
       // Every phone gets a placeholder-tab overlay, so the Memory / Artifacts
       // tabs work in EVERY frame, not only the ones that ship the div in HTML.
       if (!tabview) {
@@ -5806,8 +5873,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
           body = memorySearchHtml(memoryQuery) + memoryChipsHtml(memoryCategory) +
             memoryBodyHtml(memoryVisible());
         }
+        statesHost.innerHTML = memoryStatesHtml();
         tabview.innerHTML = tabViewHtml('Memory', MEMORY_GLYPH, '', '', null, true) +
-          memoryStatesHtml() +
           memoryRefreshHtml() + body +
           memoryMenuHtml(memoryMenuFor) +
           memoryDetailHtml(memoryDetailFor) +
@@ -5864,6 +5931,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       function closeTabView() {
         if (!tabview) return;
         openTab = null;
+        statesHost.innerHTML = '';
         artifactsSheetOpen = false;
         artifactsMenuFor = null;
         memoryRefreshing = false;
@@ -5979,9 +6047,9 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
         if (!tabview || openTab !== 'artifacts') return;
         var loaded = artifactsState === 'loaded';
         var previewed = loaded ? artifactsPreviewed() : null;
+        statesHost.innerHTML = artifactsStatesHtml();
         tabview.innerHTML = tabViewHtml('Artifacts', ARTIFACTS_GLYPH, '', '', null, true,
             artifactFilterButtonHtml(artifactsFilter)) +
-          artifactsStatesHtml() +
           artifactRefreshHtml() +
           artifactCaptionHtml(previewed) +
           artifactsBodyHtml() +
@@ -6056,7 +6124,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
         phone.setAttribute('data-mode', next);
         hdr.innerHTML = headerHtml(next);
         body.innerHTML = bodyHtml(next);
-        dock.innerHTML = dockHtml(next, selectedTab);
+        dock.innerHTML = dockHtml(next, selectedTab, body.id);
         // Dua's body is deliberately empty (a chatbot's home is the
         // conversation); Agent's is the agent list. `empty` stops the empty
         // body from scrolling.
@@ -6412,7 +6480,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
           // from it — no direct class toggling, so the DOM can never disagree
           // with the state a re-render would produce.
           selectedTab = tab.getAttribute('data-tab');
-          dock.innerHTML = dockHtml(phone.getAttribute('data-mode') || 'dua', selectedTab);
+          dock.innerHTML = dockHtml(phone.getAttribute('data-mode') || 'dua', selectedTab, body.id);
           // Memory and Artifacts open their own placeholder screens, exactly
           // like the Kotlin host navigating to `memory` / `artifacts`.
           if (selectedTab === 'memory' || selectedTab === 'artifacts') {
@@ -6903,7 +6971,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   }
   function star(size) {
     return '<svg class="ag-ic" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path d="' + P.star.match(/d="([^"]+)"/)[1] + '" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+      '<path d="' + P.star.match(/d="([^"]+)"/)[1] + '" fill="none" stroke="#17201B" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   }
   /* Mint circle + cube glyph (62% of the circle), optional mini badge. */
   function cubeAv(d, badgeD, ring) {
@@ -6933,8 +7001,9 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       '<i style="left:16.8px;top:20.28px;background:#9A7BFF">A</i>' +
       '<i style="left:8.12px;top:0;background:#F6C945">F</i></span>';
   }
-  function tog(id, on) {
-    return '<span class="ag-tog" role="switch" tabindex="0" data-ag-toggle="' + id + '" aria-checked="' + (on ? 'true' : 'false') + '"></span>';
+  function tog(id, on, label) {
+    return '<span class="ag-tog" role="switch" tabindex="0" data-ag-toggle="' + id + '" aria-checked="' + (on ? 'true' : 'false') + '"' +
+      (label ? ' aria-label="' + label + '"' : '') + '></span>';
   }
   var SB = '<div class="sb"><span>9:41</span><span class="sb-icons"><i></i><i></i><i class="batt"></i></span></div>';
 
@@ -6976,7 +7045,13 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
       (o.trail && o.trail.indexOf('chev') === 0 ? '<span class="r-chev">' + ic(o.trail, 20) + '</span>' : '') +
       (o.hair ? '<span class="r-hair"></span>' : '');
     h += '</' + (o.action ? 'button' : 'div') + '>';
-    if (o.toggle) h = h.replace(/<\/(button|div)>$/, tog(o.toggle, o.on) + '</$1>');
+    if (o.toggle) {
+      // The switch is its own control: inside a plain row it sits in the row's
+      // box; a tappable (button) row gets a wrapper so the switch is a SIBLING
+      // of the button, never nested in it (tapping it must not fire the row).
+      if (o.action) h = '<div class="ag-rowwrap" style="position:relative">' + h + tog(o.toggle, o.on, o.title) + '</div>';
+      else h = h.replace(/<\/div>$/, tog(o.toggle, o.on, o.title) + '</div>');
+    }
     return h;
   }
   function profile(s) {
@@ -7004,8 +7079,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
     }
     html += row({ h: s.connectors ? 48 : 77, icon: 'link', well: 'conn', title: 'Connectors', sub: '2 apps connected', trail: s.connectors ? 'chev_up' : 'chev_down', action: 'connectors', expanded: !!s.connectors });
     if (s.connectors) {
-      html += '<div class="ag-crow"><span class="c-l">GitHub</span>' + tog('github', t.github) + '</div>' +
-        '<div class="ag-crow"><span class="c-l">Agent</span>' + tog('agent', t.agent) + '</div>' +
+      html += '<div class="ag-crow"><span class="c-l">GitHub</span>' + tog('github', t.github, 'GitHub') + '</div>' +
+        '<div class="ag-crow"><span class="c-l">Agent</span>' + tog('agent', t.agent, 'Agent') + '</div>' +
         '<div class="ag-conn-btns"><button class="ag-pillbtn" type="button" data-ag-go="connect">+  Connect App</button>' +
         '<button class="ag-pillbtn" type="button">+  Add MCP server</button></div><div style="height:40px"></div>';
     }
@@ -7113,7 +7188,7 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
   function apiCard(icon, title, body, id, on) {
     return '<div class="ag-apic"><span class="ag-well">' + ic(icon, 18) + '</span>' +
       '<span class="a-t">' + title + '<span class="a-off">' + ic('copy', 14) + 'Off</span></span>' +
-      tog(id, on) + body + '</div>';
+      tog(id, on, title) + body + '</div>';
   }
   function agentApi(s) {
     var t = s.toggles;
