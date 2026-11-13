@@ -1309,6 +1309,14 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .ah-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 .ah-brand{display:flex;align-items:center;gap:8px;min-width:0}
 .ah-badge{width:30px;height:30px;border-radius:8px;display:block;object-fit:cover}
+/* Cube logo (approved agent-home SVG `cube-logo`): logoMint #42D982 tile/disc
+   with the cube glyph in #17201B. Glyph at 65% of a 30/48px tile (75% of the
+   16px mini), stroke 1.75px on screen (1.25px on the mini). */
+.cube-logo{background:#42d982;display:flex;align-items:center;justify-content:center}
+.cube-logo svg{display:block;fill:none;stroke:#17201b;stroke-linecap:round;stroke-linejoin:round}
+.ah-badge.cube-logo svg{width:19.5px;height:19.5px;stroke-width:2.154}
+.ah-badge.cube-logo,.ah-av-img.cube-logo{display:flex}
+.ah-av-img.cube-logo svg{width:31.2px;height:31.2px;stroke-width:1.346}
 .ah-brand span{font:700 24px/32px "Lato",system-ui,sans-serif;letter-spacing:-.01em;color:var(--tm-ink);white-space:nowrap}
 .cb.ah-plus{box-shadow:none}
 .cb.ah-plus svg{width:24px;height:24px}
@@ -1331,7 +1339,8 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .ah-tile{background:linear-gradient(color-mix(in srgb,var(--tile) 38%,transparent),color-mix(in srgb,var(--tile) 38%,transparent)),#fff;display:flex;align-items:center;justify-content:center}
 .ah-tile svg{width:26px;height:26px;stroke:#17201b;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 .ah-mini{position:absolute;right:0;bottom:0;width:20px;height:20px;border-radius:50%;background:var(--ring);padding:2px}
-.ah-mini img{width:16px;height:16px;border-radius:50%;display:block}
+.ah-mini img,.ah-mini .cube-logo{width:16px;height:16px;border-radius:50%;display:flex}
+.ah-mini .cube-logo svg{width:12px;height:12px;stroke-width:2.5}
 .ah-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
 .ah-top{display:flex;align-items:center;gap:8px}
 .ah-title{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;font:400 17px/24px "Lato",system-ui,sans-serif;color:var(--tm-ink)}
@@ -1358,7 +1367,6 @@ html[data-theme="dark"] .phone .svbtn .svdisc{background:var(--nv-primary-fill);
 .phone[data-mode="agent"] .tab .ic{width:24px;height:24px;flex:0 0 24px;color:var(--tm-ink)}
 .phone[data-mode="agent"] .tab .ic svg{width:24px;height:24px;stroke-width:1.75}
 .phone[data-mode="agent"] .tab.on .ic svg{stroke-width:2.25}
-.phone[data-mode="agent"] .tab .ic svg .dotfill{fill:currentColor;stroke:none}
 .phone[data-mode="agent"] .tab span{font:400 13px/16px "Lato",system-ui,sans-serif;color:var(--tm-ink)}
 .phone[data-mode="agent"] .tab.on span{font-weight:700;color:var(--tm-nav-selected-ink)}
 .phone[data-mode="agent"] .tab.on .ic{color:var(--tm-nav-selected-ink)}
@@ -4465,7 +4473,13 @@ button.ag-row::before{
     { id: 'chat_api_tester', title: 'API Tester', sub: 'You are now friends', time: '12:52', tile: '#9be3b8' },
     { id: 'chat_frontend_developer', title: 'Frontend Developer', sub: 'You are now friends', time: '12:40', tile: '#3ec0ea' }
   ];
-  var BADGE_SRC = 'assets/dua-bot-badge.png';
+  // The app's cube logo — replaces the old bot-badge PNG (approved
+  // agent-home SVG `cube-logo`). `cls` sizes it: ah-badge (30px tile),
+  // ah-av-img (48px disc) or the mini (16px disc).
+  var CUBE_GLYPH_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/></svg>';
+  function cubeLogo(cls) {
+    return '<span class="' + (cls ? cls + ' ' : '') + 'cube-logo" aria-hidden="true">' + CUBE_GLYPH_SVG + '</span>';
+  }
   var AVATAR_SRC = 'assets/dua-user-avatar.jpg';
 
   // Agent's OWN thread — the conversation the pinned card opens. It is written
@@ -4494,7 +4508,6 @@ button.ag-row::before{
     stop: '<svg class="solid" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>',
     send: '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>',
     chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
-    chat: '<svg viewBox="0 0 24 24"><path d="M5.28 3.36h13.44a1.92 1.92 0 0 1 1.92 1.92v7.2a1.92 1.92 0 0 1-1.92 1.92h-3.84v6.72h-4.8V14.4H5.28a1.92 1.92 0 0 1-1.92-1.92v-7.2a1.92 1.92 0 0 1 1.92-1.92z"/><circle class="dotfill" cx="9.6" cy="8.88" r="1.2"/><circle class="dotfill" cx="14.88" cy="8.88" r="1.2"/></svg>',
     // Agent home's dock "Agents" glyph: a robot — antenna, head, eyes, ears.
     robot: '<svg viewBox="0 0 24 24"><path d="M12 2.88v4.32"/><rect x="4.8" y="7.2" width="14.4" height="12.48" rx="2.88"/><path d="M9.6 12v2.4M14.4 12v2.4M1.92 12.48v2.4M22.08 12.48v2.4"/></svg>',
     brain: '<svg viewBox="0 0 24 24"><path d="M12 4.8C9.6 1.92 4.8 3.36 5.28 7.2 1.44 8.64 1.44 13.92 4.32 15.36 3.84 19.68 9.12 22.08 12 19.2c2.88 2.88 8.16.48 7.68-3.84 2.88-1.44 2.88-6.72-.96-8.16.48-3.84-4.32-5.28-6.72-2.4z"/><path d="M12 4.8v14.4M7.2 11.04l2.4 1.44M16.8 11.04l-2.4 1.44"/></svg>',
@@ -4518,6 +4531,8 @@ button.ag-row::before{
     // Front-facing wireframe cube for the Dua nav row — distinct from
     // Agent's pointy hexagon (`glyph`) and Library's isometric box (`box`).
     duaCube: '<svg viewBox="0 0 24 24"><path d="M5 8h11v11H5z"/><path d="M5 8l4-4h11l-4 4"/><path d="M16 8l4-4v11l-4 4"/></svg>',
+    // Chats tab — the cube logo (approved agent-home SVG `tab-chats`).
+    cube: '<svg viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/></svg>',
     glyph: '<svg class="glyph" viewBox="0 0 24 24"><path d="M12 2.6l8.1 4.7v9.4L12 21.4 3.9 16.7V7.3z"/><path d="M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7"/></svg>'
   };
 
@@ -4525,7 +4540,7 @@ button.ag-row::before{
   // hoisted per phone (see `selectedTab` in the phone closure), so there is one
   // source of truth for the indicator instead of a flag baked into the list.
   var TABS = [
-    { id: 'chats', label: 'Chats', icon: 'chat' },
+    { id: 'chats', label: 'Chats', icon: 'cube' },
     // HomeTab.Managed — same destination, visible label "Agents".
     { id: 'managed', label: 'Agents', icon: 'robot' },
     { id: 'discover', label: 'Discover', icon: 'discover' },
@@ -4559,7 +4574,7 @@ button.ag-row::before{
       return '' +
         '<button class="ah-avatar" type="button" data-open-drawer aria-label="Open menu">' +
           '<img src="' + AVATAR_SRC + '" alt=""></button>' +
-        '<div class="ah-brand"><img class="ah-badge" src="' + BADGE_SRC + '" alt="">' +
+        '<div class="ah-brand">' + cubeLogo('ah-badge') +
           '<span>Dua Gen AI</span></div>' +
         '<button class="cb ah-plus" type="button" data-hdr-right aria-label="New chat">' + ICON.plus + '</button>';
     }
@@ -4591,10 +4606,10 @@ button.ag-row::before{
     // a thin divider, Chats · 5. The floating dock is drawn over the list.
     function avatar(inner, ring, mini) {
       return '<span class="ah-av">' + inner +
-        (mini ? '<span class="ah-mini" style="--ring:' + ring + '"><img src="' + BADGE_SRC + '" alt=""></span>' : '') +
+        (mini ? '<span class="ah-mini" style="--ring:' + ring + '">' + cubeLogo('') + '</span>' : '') +
         '</span>';
     }
-    var badgeImg = '<img class="ah-av-img" src="' + BADGE_SRC + '" alt="">';
+    var badgeImg = cubeLogo('ah-av-img');
     function section(id, icon, label) {
       return '<button class="ah-sec" type="button" data-sec="' + id + '" aria-expanded="true">' +
         ICON[icon] + '<span>' + label + '</span>' + ICON.chev + '</button>';

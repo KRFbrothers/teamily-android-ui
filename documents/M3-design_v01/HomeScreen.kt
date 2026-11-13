@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -233,13 +234,12 @@ fun HomeScreen(
      */
     onOpenAgentChat: () -> Unit = {},
     /**
-     * Agent home's header photo (user-avatar.jpg) and green app badge
-     * (bot-badge.png). This package has no `res/`, so the app passes
-     * `painterResource(...)` for each; the reference images ship in
-     * webpages/M3-design_v01/assets/. Null draws a neutral fallback.
+     * Agent home's header photo (user-avatar.jpg). This package has no `res/`,
+     * so the app passes `painterResource(...)`; the reference image ships in
+     * webpages/M3-design_v01/assets/. Null draws a neutral fallback. The green
+     * app badge is the cube logo, drawn in code ([AppBadge]).
      */
     userAvatar: Painter? = null,
-    appBadge: Painter? = null,
     modifier: Modifier = Modifier,
 ) {
     // The search row's filter toggle. Screen-local UI state, saved so it
@@ -282,7 +282,6 @@ fun HomeScreen(
                     onOpenDrawer = onOpenDrawer,
                     onNewChat = onNewChat,
                     userAvatar = userAvatar,
-                    appBadge = appBadge,
                 )
                 SearchRow(
                     filterActive = filterActive,
@@ -301,7 +300,6 @@ fun HomeScreen(
                 ) {
                     AgentHomeList(
                         onOpenAgentChat = onOpenAgentChat,
-                        appBadge = appBadge,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -883,7 +881,6 @@ private fun AgentHomeTopBar(
     onOpenDrawer: () -> Unit,
     onNewChat: () -> Unit,
     userAvatar: Painter?,
-    appBadge: Painter?,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
@@ -927,7 +924,7 @@ private fun AgentHomeTopBar(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(painter = appBadge, size = 30.dp, shape = TeamilyShapes.xs)
+            AppBadge(size = 30.dp, shape = TeamilyShapes.xs)
             Spacer(Modifier.width(spacing.sm))
             Text(
                 text = APP_NAME,
@@ -959,13 +956,15 @@ private fun AgentHomeTopBar(
 }
 
 /**
- * The green app badge (bot-badge.png). The image is supplied by the app as a
- * [Painter] (this package has no `res/`); without one, a `logoMint` tile with
- * the kit's agent glyph stands in.
+ * The green app badge: the cube logo (approved agent-home SVG `cube-logo`).
+ * A `logoMint` tile or disc with the cube glyph in `tileInk`. The glyph is 65%
+ * of the 30dp / 48dp badge and 75% of the 16dp mini badge, stroked at 1.75dp
+ * (1.25dp on the mini) — the same values the preview page draws.
  */
 @Composable
-private fun AppBadge(painter: Painter?, size: Dp, shape: Shape) {
+private fun AppBadge(size: Dp, shape: Shape) {
     val palette = teamilyPalette()
+    val mini = size < 20.dp
     Box(
         modifier = Modifier
             .size(size)
@@ -973,17 +972,48 @@ private fun AppBadge(painter: Painter?, size: Dp, shape: Shape) {
             .background(palette.logoMint),
         contentAlignment = Alignment.Center,
     ) {
-        if (painter != null) {
-            Image(
-                painter = painter,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            AgentCubeGlyph(tint = palette.tileInk, modifier = Modifier.size(size * 0.6f))
+        CubeLogoGlyph(
+            tint = palette.tileInk,
+            strokeWidth = if (mini) 1.25.dp else TeamilyStroke.icon,
+            modifier = Modifier.size(size * if (mini) 0.75f else 0.65f),
+        )
+    }
+}
+
+/**
+ * The cube logo glyph on its 24-unit grid — `M12 2.6l8.1 4.7v9.4L12 21.4
+ * 3.9 16.7V7.3z` plus the Y seam `M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7`,
+ * scaled to the composable's size. Round caps and joins.
+ */
+@Composable
+private fun CubeLogoGlyph(tint: Color, strokeWidth: Dp, modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        drawCubeLogo(tint, Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+/** Draws the cube logo paths (24-unit grid) scaled to this canvas. */
+private fun DrawScope.drawCubeLogo(tint: Color, stroke: Stroke) {
+    val u = size.minDimension / 24f
+    fun p(x: Float, y: Float) = Offset(x * u, y * u)
+    val hexagon = Path().apply {
+        p(12f, 2.6f).let { moveTo(it.x, it.y) }
+        p(20.1f, 7.3f).let { lineTo(it.x, it.y) }
+        p(20.1f, 16.7f).let { lineTo(it.x, it.y) }
+        p(12f, 21.4f).let { lineTo(it.x, it.y) }
+        p(3.9f, 16.7f).let { lineTo(it.x, it.y) }
+        p(3.9f, 7.3f).let { lineTo(it.x, it.y) }
+        close()
+    }
+    drawPath(hexagon, color = tint, style = stroke)
+    val c = p(12f, 12f)
+    val seam = Path().apply {
+        for (end in listOf(p(12f, 2.6f), p(3.9f, 16.7f), p(20.1f, 16.7f))) {
+            moveTo(c.x, c.y)
+            lineTo(end.x, end.y)
         }
     }
+    drawPath(seam, color = tint, style = stroke)
 }
 
 /**
@@ -1085,7 +1115,6 @@ private fun SearchRow(
 @Composable
 private fun PersonalAgentHeroCard(
     onClick: () -> Unit,
-    appBadge: Painter?,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1111,8 +1140,8 @@ private fun PersonalAgentHeroCard(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ChatAvatar(ring = palette.cardHeroColor, miniBadge = true, appBadge = appBadge) {
-                AppBadge(painter = appBadge, size = 48.dp, shape = CircleShape)
+            ChatAvatar(ring = palette.cardHeroColor, miniBadge = true) {
+                AppBadge(size = 48.dp, shape = CircleShape)
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1152,7 +1181,6 @@ private fun PersonalAgentHeroCard(
 private fun ChatAvatar(
     ring: Color,
     miniBadge: Boolean,
-    appBadge: Painter?,
     content: @Composable () -> Unit,
 ) {
     Box(Modifier.size(52.dp)) {
@@ -1167,7 +1195,7 @@ private fun ChatAvatar(
                     .padding(2.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                AppBadge(painter = appBadge, size = 16.dp, shape = CircleShape)
+                AppBadge(size = 16.dp, shape = CircleShape)
             }
         }
     }
@@ -1346,7 +1374,6 @@ private fun SectionHeader(
 @Composable
 private fun AgentHomeList(
     onOpenAgentChat: () -> Unit,
-    appBadge: Painter?,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1362,7 +1389,6 @@ private fun AgentHomeList(
         item {
             PersonalAgentHeroCard(
                 onClick = onOpenAgentChat,
-                appBadge = appBadge,
                 modifier = Modifier.padding(horizontal = spacing.sm),
             )
         }
@@ -1385,8 +1411,8 @@ private fun AgentHomeList(
                     time = DUA_AGENT_TIME,
                     verified = true,
                 ) {
-                    ChatAvatar(ring = palette.bgCanvas, miniBadge = false, appBadge = appBadge) {
-                        AppBadge(painter = appBadge, size = 48.dp, shape = CircleShape)
+                    ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
+                        AppBadge(size = 48.dp, shape = CircleShape)
                     }
                 }
             }
@@ -1409,7 +1435,7 @@ private fun AgentHomeList(
         if (chatsExpanded) {
             itemsIndexed(agentHomeChats, key = { _, c -> c.chatId }) { index, chat ->
                 CanvasChatRow(title = chat.title, subtitle = chat.subtitle, time = chat.time) {
-                    ChatAvatar(ring = palette.bgCanvas, miniBadge = true, appBadge = appBadge) {
+                    ChatAvatar(ring = palette.bgCanvas, miniBadge = true) {
                         TileAvatar(tile = tiles[index % tiles.size])
                     }
                 }
@@ -1538,28 +1564,8 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
         val stroke = Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (tab) {
-            // The Dua bot: square head with two eyes over a stem.
-            HomeTab.Chats -> {
-                val head = Path().apply {
-                    moveTo(w * 0.22f, h * 0.14f)
-                    lineTo(w * 0.78f, h * 0.14f)
-                    quadraticBezierTo(w * 0.86f, h * 0.14f, w * 0.86f, h * 0.22f)
-                    lineTo(w * 0.86f, h * 0.52f)
-                    quadraticBezierTo(w * 0.86f, h * 0.60f, w * 0.78f, h * 0.60f)
-                    lineTo(w * 0.62f, h * 0.60f)
-                    lineTo(w * 0.62f, h * 0.88f)
-                    lineTo(w * 0.42f, h * 0.88f)
-                    lineTo(w * 0.42f, h * 0.60f)
-                    lineTo(w * 0.22f, h * 0.60f)
-                    quadraticBezierTo(w * 0.14f, h * 0.60f, w * 0.14f, h * 0.52f)
-                    lineTo(w * 0.14f, h * 0.22f)
-                    quadraticBezierTo(w * 0.14f, h * 0.14f, w * 0.22f, h * 0.14f)
-                    close()
-                }
-                drawPath(head, color = tint, style = stroke)
-                drawCircle(tint, radius = w * 0.05f, center = Offset(w * 0.40f, h * 0.37f))
-                drawCircle(tint, radius = w * 0.05f, center = Offset(w * 0.62f, h * 0.37f))
-            }
+            // The cube logo (approved agent-home SVG `tab-chats`).
+            HomeTab.Chats -> drawCubeLogo(tint, stroke)
 
             // A robot: antenna, rounded head, two eyes, side ears.
             HomeTab.Managed -> {
