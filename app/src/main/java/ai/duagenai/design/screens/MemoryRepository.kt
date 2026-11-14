@@ -323,4 +323,10 @@ class MemoryRepository(
 
     /** The message used when an exception carries none of its own. */
     override val errorFallback: String = "Memories load nahi ho paye."
+
+    /** Shown when a new memory could not be saved. */
+    override val addFailureFallback: String = "Memory save nahi ho payi."
+
+    /** Shown when a memory could not be deleted. */
+    override val deleteFailureFallback: String = "Memory delete nahi ho payi."
 }

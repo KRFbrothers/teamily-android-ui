@@ -49,6 +49,7 @@ import ai.duagenai.design.screens.MemoryUiState
 import ai.duagenai.design.screens.sampleMemories
 import ai.duagenai.design.screens.UrlLauncher
 import ai.duagenai.design.screens.UrlOpener
+import ai.duagenai.design.screens.WriteResult
 import ai.duagenai.design.screens.RemoteArtifactsDataSource
 import ai.duagenai.design.screens.RemoteDataSource
 import ai.duagenai.design.screens.RemoteMemoryDataSource
@@ -519,6 +520,63 @@ private class FlakyMemoryDataSource(private val failures: Int) : MemoryDataSourc
 
     override suspend fun delete(id: String) {
         deleteCount++
+    }
+}
+
+/**
+ * An artifacts source whose WRITES fail while its reads succeed.
+ *
+ * This is the seam the "failed write must be visible" tests drive: the list
+ * loads normally, so the screen is in its Loaded state, and then `delete` /
+ * `add` throw. Before the fix the screen showed "Artifact deleted" anyway and
+ * offered an Undo that re-added a row which had never been removed.
+ *
+ * The thrown message is deliberately a raw, ugly one (`boom`) so a test can
+ * prove the UI does NOT show it: the repository must substitute its own safe
+ * sentence.
+ */
+private class FailingWriteArtifactsDataSource(
+    private val failDelete: Boolean = true,
+    private val failAdd: Boolean = false,
+) : ArtifactsDataSource {
+    var deleteCount: Int = 0
+        private set
+    var addCount: Int = 0
+        private set
+
+    override suspend fun fetch(): List<ArtifactItem> = demoArtifacts
+
+    override suspend fun add(item: ArtifactItem) {
+        addCount++
+        if (failAdd) throw IllegalStateException("boom")
+    }
+
+    override suspend fun delete(id: String) {
+        deleteCount++
+        if (failDelete) throw IllegalStateException("boom")
+    }
+}
+
+/** The Memory twin of [FailingWriteArtifactsDataSource]. */
+private class FailingWriteMemoryDataSource(
+    private val failDelete: Boolean = true,
+    private val failAdd: Boolean = false,
+) : MemoryDataSource {
+    var deleteCount: Int = 0
+        private set
+    var addCount: Int = 0
+        private set
+
+    override suspend fun fetch(): List<MemoryItem> = sampleMemories
+
+    override suspend fun add(item: MemoryItem) {
+        addCount++
+        if (failAdd) throw IllegalStateException("boom")
+    }
+
+    override suspend fun delete(id: String) {
+        deleteCount++
+        if (failDelete) throw IllegalStateException("boom")
     }
 }
 
@@ -3189,6 +3247,172 @@ class DuaGenAINavHostTest {
             "delete must remove the item",
             afterDelete.artifacts.none { it.id == "art_new" },
         )
+    }
+
+    // ------------------------------------------- failed writes are visible
+
+    /**
+     * A refused delete returns [WriteResult.Failure], keeps the row, and
+     * publishes a SAFE message.
+     *
+     * This is the repository half of the fix. The source throws `boom`; the
+     * repository must not pass that through to the UI, and it must not remove
+     * the item from the list either.
+     */
+    @Test
+    fun aRefusedDeleteKeepsTheRowAndReportsASafeMessage() {
+        val source = FailingWriteArtifactsDataSource(failDelete = true)
+        val repository = ArtifactsRepository(dataSource = source)
+        kotlinx.coroutines.runBlocking { repository.load() }
+
+        val item = demoArtifacts.first()
+        val result = kotlinx.coroutines.runBlocking { repository.delete(item.id) }
+
+        assertTrue("a refused delete must report Failure", result is WriteResult.Failure)
+        assertEquals("the delete must have reached the source", 1, source.deleteCount)
+
+        val loaded = repository.state.value as ArtifactsUiState.Loaded
+        assertTrue(
+            "a refused delete must NOT remove the row",
+            loaded.artifacts.any { it.id == item.id },
+        )
+
+        val message = (result as WriteResult.Failure).message
+        assertEquals(
+            "the failure must be the feature's own sentence",
+            "Artifact delete nahi ho paya.",
+            message,
+        )
+        assertTrue("the raw exception text must not leak", !message.contains("boom"))
+        assertEquals(
+            "the failure must be published for the screen",
+            message,
+            repository.lastWriteError.value,
+        )
+    }
+
+    /** A refused add reports Failure and leaves the list untouched. */
+    @Test
+    fun aRefusedAddKeepsTheListAndReportsASafeMessage() {
+        val source = FailingWriteArtifactsDataSource(failDelete = false, failAdd = true)
+        val repository = ArtifactsRepository(dataSource = source)
+        kotlinx.coroutines.runBlocking { repository.load() }
+
+        val fresh = ArtifactItem(
+            id = "art_refused",
+            title = "Refused",
+            type = "Image",
+            timestamp = "Aaj",
+            sizeBytes = 1L,
+        )
+        val result = kotlinx.coroutines.runBlocking { repository.add(fresh) }
+
+        assertTrue("a refused add must report Failure", result is WriteResult.Failure)
+        val loaded = repository.state.value as ArtifactsUiState.Loaded
+        assertTrue(
+            "a refused add must NOT appear in the list",
+            loaded.artifacts.none { it.id == "art_refused" },
+        )
+        assertEquals(
+            "Artifact save nahi ho paya.",
+            (result as WriteResult.Failure).message,
+        )
+    }
+
+    /**
+     * A refused delete on the Artifacts SCREEN says so and offers no Undo.
+     *
+     * The end-to-end half of the fix: the row stays, the success snackbar never
+     * appears, and there is no Undo to tap — because nothing was deleted.
+     */
+    @Test
+    fun aRefusedArtifactDeleteShowsAFailureAndNoUndo() {
+        val repository = ArtifactsRepository(
+            dataSource = FailingWriteArtifactsDataSource(failDelete = true),
+        )
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ArtifactsScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+
+        // The row is still there, and the screen says the delete failed.
+        assertVisible(ARTIFACTS_IMAGE_ITEM)
+        assertVisible("Artifact delete nahi ho paya.")
+        assertNotVisible(ARTIFACT_DELETED_SNACK)
+        assertNotVisible(ARTIFACT_UNDO)
+    }
+
+    /**
+     * A refused delete on the Memory SCREEN says so and offers no Undo.
+     *
+     * The Memory twin of [aRefusedArtifactDeleteShowsAFailureAndNoUndo], so the
+     * two screens cannot drift apart again.
+     */
+    @Test
+    fun aRefusedMemoryDeleteShowsAFailureAndNoUndo() {
+        val repository = MemoryRepository(
+            dataSource = FailingWriteMemoryDataSource(failDelete = true),
+        )
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                MemoryScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Memory: $MEMORY_PREFERENCE_ITEM")
+            .performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+
+        assertVisible(MEMORY_PREFERENCE_ITEM)
+        assertVisible("Memory delete nahi ho payi.")
+        assertNotVisible(MEMORY_DELETED_SNACK)
+        assertNotVisible(MEMORY_UNDO)
+    }
+
+    /**
+     * A successful delete still offers Undo, and a failed Undo is reported.
+     *
+     * The delete succeeds, so the success snackbar and Undo DO appear; the
+     * re-add then fails, and that failure must be shown rather than swallowed.
+     */
+    @Test
+    fun aFailedUndoIsReportedInsteadOfSilentlyLosingTheRow() {
+        val repository = ArtifactsRepository(
+            dataSource = FailingWriteArtifactsDataSource(failDelete = false, failAdd = true),
+        )
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ArtifactsScreen(repository = repository)
+            }
+        }
+        compose.waitForIdle()
+
+        compose.onNodeWithText(ARTIFACTS_IMAGE_ITEM).performTouchInput { swipeLeft() }
+        compose.waitForIdle()
+        compose.onNodeWithText(ARTIFACT_DELETE_CONFIRM).performClick()
+        compose.waitForIdle()
+
+        // The delete worked, so Undo is a real offer.
+        assertNotVisible(ARTIFACTS_IMAGE_ITEM)
+        assertVisible(ARTIFACT_DELETED_SNACK)
+        assertVisible(ARTIFACT_UNDO)
+
+        compose.onNodeWithText(ARTIFACT_UNDO).performClick()
+        compose.waitForIdle()
+
+        // The restore failed, and the screen says so instead of pretending.
+        assertVisible("Artifact restore nahi ho paya.")
+        assertNotVisible(ARTIFACTS_IMAGE_ITEM)
     }
 
     /**
