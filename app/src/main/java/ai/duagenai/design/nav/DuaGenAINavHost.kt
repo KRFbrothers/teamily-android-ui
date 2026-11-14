@@ -1,10 +1,6 @@
 package ai.duagenai.design.nav
 
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
@@ -62,7 +58,6 @@ import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.screens.defaultNotificationState
 import ai.duagenai.design.screens.notificationSummary
 import ai.duagenai.design.screens.sampleChats
-import ai.duagenai.design.theme.DuaGenAITheme
 import kotlinx.coroutines.launch
 
 /* ============================================================================
@@ -518,13 +513,6 @@ fun DuaGenAINavHost(
 }
 
 /**
- * Host activity.
- *
- * `enableEdgeToEdge()` is called before `setContent` so the theme's
- * `WindowCompat` status-bar work in `DuaGenAITheme` has an edge-to-edge window
- * to act on.
- */
-/**
  * `3.2` / `15.0` -> `"3.2 GB of 15 GB"` — the Profile row's Storage subtitle.
  *
  * Kept here (not in the screen) because the ROW shows it, and the row is drawn
@@ -536,16 +524,4 @@ private fun storageLabel(usedGb: Double, totalGb: Double): String {
         return if (r % 1.0 == 0.0) "${r.toInt()} GB" else "$r GB"
     }
     return "${fmt(usedGb)} of ${fmt(totalGb)}"
-}
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            DuaGenAITheme {
-                DuaGenAINavHost()
-            }
-        }
-    }
 }
