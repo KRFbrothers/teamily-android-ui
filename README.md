@@ -29,7 +29,7 @@ Dua Gen AI — ek complete package: Dua AI, Dua Agent aur Dua Workspace.
 ## What's in here
 
 ```
-documents/M3-design_v01/     ← Kotlin (Jetpack Compose) sources, 24 files
+documents/M3-design_v01/     ← ARCHIVED original design snapshot (do not edit)
     res/font/                        ← official Lato Regular / Bold (ttf, SIL OFL)
     licenses/lato-OFL.txt            ← Lato license
 webpages/M3-design_v01/      ← Interactive HTML preview + assets
@@ -38,7 +38,13 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets
     icons/                           ← cube_01.svg … cube_42.svg
 ```
 
-### `documents/M3-design_v01/` — Kotlin sources
+> **`documents/M3-design_v01/` is archived.** It is the original design snapshot,
+> frozen and no longer maintained — see
+> [`documents/M3-design_v01/ARCHIVED.md`](documents/M3-design_v01/ARCHIVED.md).
+> Take files from `app/src/main/` instead; v01's vulnerable JSON-building code has
+> been patched in place so it cannot be copied back in.
+
+### `documents/M3-design_v01/` — Kotlin sources (archived)
 
 | File | What it is |
 |---|---|
@@ -118,7 +124,7 @@ SDK with `ANDROID_HOME` or a `local.properties` file containing `sdk.dir=/path/t
 | `app/src/main/java/ai/duagenai/design/theme/` | Palette, type scale, shapes, effects, `DuaGenAITheme` |
 | `app/src/main/java/ai/duagenai/design/nav/` | `DuaGenAINavHost` + `MainActivity` |
 | `app/src/test/java/ai/duagenai/design/nav/` | Compose UI test suite |
-| `documents/M3-design_v01/` | The original design package (unchanged reference copy) |
+| `documents/M3-design_v01/` | 🔒 Archived original snapshot — do not edit or copy from; `app/src/main/` is the maintained copy |
 | `webpages/M3-design_v01/` | Interactive HTML preview |
 
 ---
