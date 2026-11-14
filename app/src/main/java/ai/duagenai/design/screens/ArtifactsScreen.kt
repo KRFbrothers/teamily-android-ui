@@ -40,10 +40,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -456,19 +454,17 @@ fun ArtifactsScreen(
                         // the data source), so it runs in the screen's scope.
                         pendingDelete = null
                         scope.launch {
-                            repository.delete(artifact.id)
-                            // Undo: the snackbar re-adds through the repository,
-                            // so the list is restored by the same data source
-                            // that removed it. After the snackbar times out the
-                            // delete is final.
-                            val result = snackbarHostState.showSnackbar(
-                                message = "Artifact deleted",
-                                actionLabel = "Undo",
-                                duration = SnackbarDuration.Short,
+                            // The ONE delete + undo + failure flow, shared with
+                            // Memory (see WriteFeedback.kt). The success snackbar
+                            // and its Undo appear ONLY when the source accepted
+                            // the delete; a refused delete says so and offers no
+                            // Undo, because there is nothing to undo.
+                            repository.deleteWithUndo(
+                                item = artifact,
+                                snackbarHostState = snackbarHostState,
+                                deletedMessage = "Artifact deleted",
+                                undoFailedMessage = "Artifact restore nahi ho paya.",
                             )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                repository.add(artifact)
-                            }
                         }
                     },
                 ) {

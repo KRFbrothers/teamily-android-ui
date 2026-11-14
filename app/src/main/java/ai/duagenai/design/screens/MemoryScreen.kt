@@ -43,7 +43,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -516,19 +515,17 @@ fun MemoryScreen(
                     onClick = {
                         pendingDelete = null
                         scope.launch {
-                            repository.delete(memory.id)
-                            // Undo: the snackbar re-adds through the repository,
-                            // so the row is restored by the same data source that
-                            // removed it. After the snackbar times out the delete
-                            // is final.
-                            val result = snackbarHostState.showSnackbar(
-                                message = "Memory deleted",
-                                actionLabel = "Undo",
-                                duration = SnackbarDuration.Short,
+                            // The ONE delete + undo + failure flow, shared with
+                            // Artifacts (see WriteFeedback.kt). The success
+                            // snackbar and its Undo appear ONLY when the source
+                            // accepted the delete; a refused delete says so and
+                            // offers no Undo, because there is nothing to undo.
+                            repository.deleteWithUndo(
+                                item = memory,
+                                snackbarHostState = snackbarHostState,
+                                deletedMessage = "Memory deleted",
+                                undoFailedMessage = "Memory restore nahi ho payi.",
                             )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                repository.add(memory)
-                            }
                         }
                     },
                 ) {

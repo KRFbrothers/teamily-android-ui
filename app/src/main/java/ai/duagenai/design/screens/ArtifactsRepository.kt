@@ -400,4 +400,10 @@ class ArtifactsRepository(
 
     /** The message used when an exception carries none of its own. */
     override val errorFallback: String = "Artifacts load nahi ho paye."
+
+    /** Shown when a new artifact could not be saved. */
+    override val addFailureFallback: String = "Artifact save nahi ho paya."
+
+    /** Shown when an artifact could not be deleted. */
+    override val deleteFailureFallback: String = "Artifact delete nahi ho paya."
 }

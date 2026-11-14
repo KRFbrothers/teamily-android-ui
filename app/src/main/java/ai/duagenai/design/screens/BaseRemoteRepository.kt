@@ -134,6 +134,34 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
     /** The message used when an exception carries none of its own. */
     protected abstract val errorFallback: String
 
+    /**
+     * The message shown when an ADD fails and the exception is not an [ApiError].
+     *
+     * A write failure is shown to the user, so it must be a sentence this app
+     * wrote — never `e.toString()`, which leaks class names, URLs and stack
+     * frames into a snackbar. A concrete repository overrides this with its own
+     * wording; the default is the load fallback so a new repository still gets a
+     * safe message without extra work.
+     */
+    protected open val addFailureFallback: String get() = errorFallback
+
+    /** The message shown when a DELETE fails and the exception is not an [ApiError]. */
+    protected open val deleteFailureFallback: String get() = errorFallback
+
+    /**
+     * Turns a write exception into a sentence that is safe to show.
+     *
+     * [ApiError] already carries a curated [ApiError.userMessage], so it is used
+     * as-is. Anything else (an `IOException`, a parse failure, a bug) is replaced
+     * by the feature's own fallback: the user gets "couldn't delete" instead of
+     * `java.net.UnknownHostException: api.example.com`.
+     */
+    protected open fun writeFailureMessage(e: Exception, deleting: Boolean): String =
+        when (e) {
+            is ApiError -> e.userMessage
+            else -> if (deleting) deleteFailureFallback else addFailureFallback
+        }
+
     // ---- shared state. `loadingState()` returns a bare object singleton in
     // ---- both concrete repositories, so calling it here — before the subclass
     // ---- has finished constructing — is safe. A subclass must never read its
@@ -238,7 +266,7 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val message = e.message ?: errorFallback
+            val message = writeFailureMessage(e, deleting = false)
             _lastWriteError.value = message
             WriteResult.Failure(message)
         }
@@ -265,7 +293,7 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val message = e.message ?: errorFallback
+            val message = writeFailureMessage(e, deleting = true)
             _lastWriteError.value = message
             WriteResult.Failure(message)
         }
