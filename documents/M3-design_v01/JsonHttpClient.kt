@@ -120,6 +120,32 @@ class JsonHttpClient(
 }
 
 /**
+ * Percent-encodes one URL PATH SEGMENT.
+ *
+ * ARCHIVED COPY — added so the archived repositories can encode their delete
+ * ids. The maintained copy is documents/M3-design_v02/JsonHttpClient.kt.
+ *
+ * `URLEncoder` is deliberately NOT used: it is form encoding, so it turns a
+ * space into `+` (which a path reads literally) and leaves `*` alone. This
+ * encodes everything except RFC 3986's unreserved set, in UTF-8.
+ */
+fun encodePathSegment(segment: String): String {
+    val unreserved = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+    val out = StringBuilder(segment.length)
+    for (byte in segment.toByteArray(Charsets.UTF_8)) {
+        val ch = (byte.toInt() and 0xFF).toChar()
+        if (ch in unreserved) {
+            out.append(ch)
+        } else {
+            out.append('%')
+            out.append("0123456789ABCDEF"[(byte.toInt() and 0xFF) shr 4])
+            out.append("0123456789ABCDEF"[byte.toInt() and 0x0F])
+        }
+    }
+    return out.toString()
+}
+
+/**
  * The ONE [JsonHttpClient] the whole app shares.
  *
  * WHY A SINGLETON

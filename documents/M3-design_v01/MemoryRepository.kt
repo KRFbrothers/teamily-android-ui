@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  Memory — the data source
@@ -231,17 +232,30 @@ class RemoteMemoryDataSource(
     }
 
     override suspend fun add(item: MemoryItem) = withContext(Dispatchers.IO) {
-        val payload = """
-            {"id":"${item.id}","title":"${item.title}","summary":"${item.summary}",
-             "timestamp":"${item.timestamp}","category":"${item.category}",
-             "url":${item.url?.let { "\"$it\"" } ?: "null"}}
-        """.trimIndent()
+        // ARCHIVED COPY — see documents/M3-design_v01/ARCHIVED.md.
+        //
+        // Patched so copying this file back into the app cannot reintroduce the
+        // string-interpolation bug. The maintained copy is
+        // documents/M3-design_v02/MemoryRepository.kt.
+        val payload = JSONObject().apply {
+            put("id", item.id)
+            put("title", item.title)
+            put("summary", item.summary)
+            put("timestamp", item.timestamp)
+            put("category", item.category)
+            put("url", item.url ?: JSONObject.NULL)
+        }.toString()
         client.request("POST", baseUrl, payload, label = "Memory request")
         Unit
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        client.request("DELETE", "$baseUrl/$id", label = "Memory request")
+        // ARCHIVED COPY — the id is a path segment and must be percent-encoded.
+        client.request(
+            "DELETE",
+            "$baseUrl/${encodePathSegment(id)}",
+            label = "Memory request",
+        )
         Unit
     }
 

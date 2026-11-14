@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  Artifacts — the data source
@@ -304,17 +305,33 @@ class RemoteArtifactsDataSource(
     }
 
     override suspend fun add(item: ArtifactItem) = withContext(Dispatchers.IO) {
-        val payload = """
-            {"id":"${item.id}","title":"${item.title}","type":"${item.type}",
-             "timestamp":"${item.timestamp}","sizeBytes":${item.sizeBytes},
-             "url":${item.url?.let { "\"$it\"" } ?: "null"}}
-        """.trimIndent()
+        // ARCHIVED COPY — see documents/M3-design_v01/ARCHIVED.md.
+        //
+        // This file used to build the body by string interpolation, which made a
+        // title containing a quote produce invalid JSON and let a crafted value
+        // inject extra fields. It is patched here so that copying this file back
+        // into the app cannot reintroduce the bug; the maintained copy is
+        // documents/M3-design_v02/ArtifactsRepository.kt.
+        val payload = JSONObject().apply {
+            put("id", item.id)
+            put("title", item.title)
+            put("type", item.type)
+            put("timestamp", item.timestamp)
+            put("sizeBytes", item.sizeBytes)
+            put("url", item.url ?: JSONObject.NULL)
+        }.toString()
         client.request("POST", baseUrl, payload, label = "Artifacts request")
         Unit
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        client.request("DELETE", "$baseUrl/$id", label = "Artifacts request")
+        // ARCHIVED COPY — the id is a path segment and must be percent-encoded,
+        // otherwise `/`, `?`, `#` or a space changes the URL's structure.
+        client.request(
+            "DELETE",
+            "$baseUrl/${encodePathSegment(id)}",
+            label = "Artifacts request",
+        )
         Unit
     }
 
