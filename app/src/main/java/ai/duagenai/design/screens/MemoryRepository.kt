@@ -228,7 +228,9 @@ class RemoteMemoryDataSource(
 ) : MemoryDataSource {
 
     override suspend fun fetch(): List<MemoryItem> = withContext(Dispatchers.IO) {
-        parseMemories(client.request("GET", baseUrl, label = "Memory request"))
+        // requestOrThrow, not request: a typed [ApiError] means the Error state
+        // shows ApiError.userMessage, not the raw status string.
+        parseMemories(client.requestOrThrow("GET", baseUrl, label = "Memory request"))
     }
 
     override suspend fun add(item: MemoryItem) = withContext(Dispatchers.IO) {
@@ -247,14 +249,19 @@ class RemoteMemoryDataSource(
             // JSONObject.NULL, not the string "null".
             put("url", item.url ?: JSONObject.NULL)
         }.toString()
-        client.request("POST", baseUrl, payload, label = "Memory request")
+        // requestOrThrow so a refused write surfaces as a typed ApiError.
+        client.requestOrThrow("POST", baseUrl, payload, label = "Memory request")
         Unit
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
         // The id is a PATH SEGMENT, so it must be percent-encoded — see the
         // Artifacts twin for why an unencoded id changes the URL's structure.
-        client.request("DELETE", "$baseUrl/${encodePathSegment(id)}", label = "Memory request")
+        client.requestOrThrow(
+            "DELETE",
+            "$baseUrl/${encodePathSegment(id)}",
+            label = "Memory request",
+        )
         Unit
     }
 

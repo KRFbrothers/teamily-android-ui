@@ -300,7 +300,11 @@ class RemoteArtifactsDataSource(
 ) : ArtifactsDataSource {
 
     override suspend fun fetch(): List<ArtifactItem> = withContext(Dispatchers.IO) {
-        val body = client.request("GET", baseUrl, label = "Artifacts request")
+        // requestOrThrow, not request: it throws a typed [ApiError], so the
+        // failure the repository puts in [ArtifactsUiState.Error] is the curated
+        // userMessage ("Artifacts request: the server is unavailable.") instead
+        // of the raw "Artifacts request failed: HTTP 500" string.
+        val body = client.requestOrThrow("GET", baseUrl, label = "Artifacts request")
         parseArtifacts(body)
     }
 
@@ -321,7 +325,10 @@ class RemoteArtifactsDataSource(
             // null, not the four-character string.
             put("url", item.url ?: JSONObject.NULL)
         }.toString()
-        client.request("POST", baseUrl, payload, label = "Artifacts request")
+        // requestOrThrow so a refused write reaches WriteResult.Failure with a
+        // typed ApiError, which BaseRemoteRepository.writeFailureMessage shows
+        // verbatim; a plain request() would only carry a raw status string.
+        client.requestOrThrow("POST", baseUrl, payload, label = "Artifacts request")
         Unit
     }
 
@@ -332,7 +339,11 @@ class RemoteArtifactsDataSource(
         // structure — `art/1` became two segments, `art?x=1` became a query, and
         // a space produced an invalid request line. Encoding makes the id one
         // opaque segment, which is what the endpoint expects.
-        client.request("DELETE", "$baseUrl/${encodePathSegment(id)}", label = "Artifacts request")
+        client.requestOrThrow(
+            "DELETE",
+            "$baseUrl/${encodePathSegment(id)}",
+            label = "Artifacts request",
+        )
         Unit
     }
 

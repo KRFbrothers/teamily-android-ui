@@ -27,6 +27,7 @@ import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.screens.ApiError
 import ai.duagenai.design.screens.ArtifactItem
 import ai.duagenai.design.screens.ArtifactsDataSource
 import ai.duagenai.design.screens.ArtifactsRepository
@@ -3075,6 +3076,128 @@ class DuaGenAINavHostTest {
             "the failure must carry the feature label",
             "Memory request failed: HTTP 500",
             error?.message,
+        )
+    }
+
+    /**
+     * `requestOrThrow` turns a non-2xx into a typed [ApiError], not a string.
+     *
+     * This is the whole point of the switch: the repository forwards
+     * `e.message` into its Error state, so the TYPE decides what the user reads.
+     * An [ApiError] carries a curated sentence and a `retryable` flag; the old
+     * `IllegalStateException` carried only `"Memory request failed: HTTP 500"`.
+     */
+    @Test
+    fun requestOrThrowReportsAStatusFailureAsATypedApiError() {
+        val transport = RecordingTransport(failWith = 500)
+        val client = JsonHttpClient(transport = transport, label = "Memory request")
+
+        val error = runCatching { client.requestOrThrow("GET", "https://api.example/v1/memories") }
+            .exceptionOrNull()
+
+        assertTrue("a non-2xx must throw an ApiError", error is ApiError)
+        val apiError = error as ApiError
+        assertEquals("the status must be carried", 500, apiError.status)
+        assertTrue("a 5xx is worth retrying", apiError.retryable)
+        assertEquals(
+            "the message must be the curated sentence, not the raw status",
+            "Memory request: the server is unavailable.",
+            apiError.userMessage,
+        )
+        assertTrue(
+            "the raw status string must not leak into the user message",
+            !apiError.userMessage.contains("HTTP 500"),
+        )
+    }
+
+    /**
+     * A 4xx is NOT retryable — retrying a 401 or a 422 only burns battery.
+     *
+     * The `retryable` flag is what lets the UI decide whether offering a Retry
+     * action is honest, so the two halves are pinned separately.
+     */
+    @Test
+    fun requestOrThrowMarksAClientErrorAsNotRetryable() {
+        val transport = RecordingTransport(failWith = 401)
+        val client = JsonHttpClient(transport = transport, label = "Artifacts request")
+
+        val error = runCatching { client.requestOrThrow("GET", "https://api.example/v1/artifacts") }
+            .exceptionOrNull() as ApiError
+
+        assertEquals(401, error.status)
+        assertTrue("a 401 must not be retryable", !error.retryable)
+        assertEquals(
+            "a 401 must say sign-in is required",
+            "Artifacts request: sign-in required.",
+            error.userMessage,
+        )
+    }
+
+    /**
+     * A request that never reached the server is a network failure, not a status.
+     *
+     * `status` is null and the failure IS retryable — the distinction the old
+     * string-based error could not express at all.
+     */
+    @Test
+    fun requestOrThrowReportsANetworkFailureAsRetryable() {
+        val transport = HttpTransport { _, _, _ -> throw java.io.IOException("no route to host") }
+        val client = JsonHttpClient(transport = transport, label = "Artifacts request")
+
+        val error = runCatching { client.requestOrThrow("GET", "https://api.example/v1/artifacts") }
+            .exceptionOrNull() as ApiError
+
+        assertEquals("a network failure has no status", null, error.status)
+        assertTrue("a network failure is retryable", error.retryable)
+        assertEquals(
+            "the message must be the curated sentence",
+            "Artifacts request: no connection.",
+            error.userMessage,
+        )
+        assertTrue(
+            "the raw IOException text must not leak",
+            !error.userMessage.contains("no route to host"),
+        )
+    }
+
+    /**
+     * The remote sources now surface a typed [ApiError], not a raw status string.
+     *
+     * This is the end-to-end half of the switch: a 500 from the transport must
+     * reach the caller as an [ApiError] whose `userMessage` is safe to render,
+     * because that is exactly what the repository puts in its Error state.
+     */
+    @Test
+    fun theRemoteSourcesSurfaceATypedApiError() {
+        val transport = RecordingTransport(failWith = 500)
+        val client = JsonHttpClient(transport = transport, label = "Request")
+        val artifacts = RemoteArtifactsDataSource(
+            baseUrl = "https://api.example/v1/artifacts",
+            client = client,
+        )
+        val memories = RemoteMemoryDataSource(
+            baseUrl = "https://api.example/v1/memories",
+            client = client,
+        )
+
+        val artifactsError = runCatching {
+            kotlinx.coroutines.runBlocking { artifacts.fetch() }
+        }.exceptionOrNull()
+        val memoriesError = runCatching {
+            kotlinx.coroutines.runBlocking { memories.fetch() }
+        }.exceptionOrNull()
+
+        assertTrue("Artifacts must surface an ApiError", artifactsError is ApiError)
+        assertTrue("Memory must surface an ApiError", memoriesError is ApiError)
+        assertEquals(
+            "the Artifacts label must survive",
+            "Artifacts request: the server is unavailable.",
+            (artifactsError as ApiError).userMessage,
+        )
+        assertEquals(
+            "the Memory label must survive",
+            "Memory request: the server is unavailable.",
+            (memoriesError as ApiError).userMessage,
         )
     }
 

@@ -43,6 +43,23 @@ import kotlinx.coroutines.CancellationException
  *      "this will never work", so the UI could not offer the right action.
  *      [ApiError] carries the status, whether it is retryable, and a message
  *      that is safe to show.
+ *
+ *  WHERE request() ENDS AND requestOrThrow() BEGINS
+ *  ------------------------------------------------
+ *  Both entry points still work, and [request] is kept because it is the
+ *  simplest thing to call and some callers genuinely only want the body.
+ *
+ *  The difference is the FAILURE TYPE, and it decides what the user ends up
+ *  reading. [request] throws an [IllegalStateException] whose message is
+ *  `"<label> failed: HTTP 500"`; the repository turns `e.message` into its Error
+ *  state, so that raw string is what is rendered on screen. [requestOrThrow]
+ *  throws an [ApiError] whose [ApiError.userMessage] is a curated sentence
+ *  ("Artifacts request: the server is unavailable."), and — just as important —
+ *  carries [ApiError.retryable], which is what lets the UI decide whether
+ *  offering a Retry button is honest.
+ *
+ *  Both remote data sources therefore call [requestOrThrow]; [request] remains
+ *  for callers that only want the body.
  * ==========================================================================*/
 
 /**
@@ -186,6 +203,10 @@ class JsonHttpClient(
      * Throws [IllegalStateException] with a labelled message on a non-2xx
      * status, and lets a network failure propagate as-is. The repository turns
      * either into its Error state, so a caller only has to report failure.
+     *
+     * Prefer [requestOrThrow] unless you really only want the body: this method's
+     * failure message is the raw `"<label> failed: HTTP 500"` string, which is
+     * what a caller that forwards `e.message` to the UI will end up showing.
      *
      * A [CancellationException] is ALWAYS rethrown untouched: a cancelled
      * coroutine is not a failed request, and swallowing it would break the
