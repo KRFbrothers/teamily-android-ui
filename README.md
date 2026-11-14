@@ -4,9 +4,13 @@ This repository is the **UI design package for the Dua Gen AI Android app**, ver
 It contains the Material 3 (M3) design implementation as Jetpack Compose Kotlin sources plus a
 self-contained interactive HTML preview of the same screens.
 
-Everything here is a design/implementation reference — it is not a buildable Android project
-(no Gradle module, no manifest). The Kotlin files are the screen-level Compose sources; the HTML
-file is a pixel-accurate, clickable preview of the same UI.
+Everything here is a design/implementation reference. The Kotlin files are the screen-level
+Compose sources; the HTML file is a pixel-accurate, clickable preview of the same UI.
+
+**The Kotlin sources are now a real, buildable Android project.** The `app/` module
+(`ai.duagenai.design`) compiles the same screens, with a Gradle wrapper, an
+`AndroidManifest.xml`, and the theme / cube / navigation types the screens reference.
+See [Building](#building) below.
 
 ---
 
@@ -93,6 +97,32 @@ they are meant to be dropped into a Compose app that provides an M3 theme.
 
 ---
 
+## Building
+
+The Android module lives in `app/` and is built with the Gradle wrapper:
+
+```bash
+./gradlew :app:assembleDebug      # build the debug APK
+./gradlew :app:testDebugUnitTest  # run the Compose UI test suite (Robolectric)
+```
+
+Requirements: JDK 17 and the Android SDK (platform 34, build-tools 34). Point Gradle at the
+SDK with `ANDROID_HOME` or a `local.properties` file containing `sdk.dir=/path/to/sdk`.
+
+### Where the sources live
+
+| Path | What it is |
+|---|---|
+| `app/src/main/java/ai/duagenai/design/screens/` | Screens, repositories, HTTP client, settings |
+| `app/src/main/java/ai/duagenai/design/cube/` | Cube catalogue, avatar, picker, saved-avatar store |
+| `app/src/main/java/ai/duagenai/design/theme/` | Palette, type scale, shapes, effects, `DuaGenAITheme` |
+| `app/src/main/java/ai/duagenai/design/nav/` | `DuaGenAINavHost` + `MainActivity` |
+| `app/src/test/java/ai/duagenai/design/nav/` | Compose UI test suite |
+| `documents/M3-design_v01/` | The original design package (unchanged reference copy) |
+| `webpages/M3-design_v01/` | Interactive HTML preview |
+
+---
+
 ## Design notes
 
 - **Material 3 only** — all styling goes through M3 theme tokens; no hardcoded colors.
@@ -108,3 +138,10 @@ they are meant to be dropped into a Compose app that provides an M3 theme.
 ## Version
 
 **v01** — the latest iteration of the design package.
+
+**Buildable module** — the `app/` module was added on top of v01: the missing Gradle module,
+manifest, theme, cube and navigation types, plus fixes for the review's blockers (JSON built
+with `JSONObject` instead of string interpolation, percent-encoded ids in DELETE paths,
+`CancellationException` rethrown instead of swallowed, failed writes reported instead of
+silently dropped, and the chat transcript moved out of `rememberSaveable` into a retained
+`ViewModel`).

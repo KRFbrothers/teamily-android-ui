@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A bare Material3 theme. The app's real colours come from DuaGenAITheme
+      (Compose), so this only needs to give the Activity a sane window
+      background and let Compose draw edge to edge.
+    -->
+    <style name="Theme.DuaGenAI" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
