@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Adaptive-icon background. Matches TeamilyTokens.bgCanvas (0xFF1D2220) so
+      the launcher tile sits on the same dark canvas the app opens on.
+    -->
+    <color name="ic_launcher_background">#1D2220</color>
+</resources>

@@ -6,14 +6,16 @@
 
     <application
         android:allowBackup="true"
-        android:label="Dua Gen AI"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.DuaGenAI">
 
         <activity
             android:name=".nav.MainActivity"
             android:exported="true"
-            android:label="Dua Gen AI"
+            android:label="@string/app_name"
             android:theme="@style/Theme.DuaGenAI">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
