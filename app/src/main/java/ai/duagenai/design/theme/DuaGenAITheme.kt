@@ -253,6 +253,7 @@ object DuaGenAITheme {
         get() = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     /** Applies the theme to [content]. */
+    @Composable
     operator fun invoke(
         darkTheme: Boolean = isSystemInDarkTheme(),
         content: @Composable () -> Unit,
