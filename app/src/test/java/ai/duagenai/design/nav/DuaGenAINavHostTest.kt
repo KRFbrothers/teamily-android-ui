@@ -47,6 +47,8 @@ import ai.duagenai.design.screens.MemoryRepository
 import ai.duagenai.design.screens.MemoryScreen
 import ai.duagenai.design.screens.MemorySharer
 import ai.duagenai.design.screens.MemoryUiState
+import ai.duagenai.design.screens.TokenProvider
+import ai.duagenai.design.screens.TokenStore
 import ai.duagenai.design.screens.sampleMemories
 import ai.duagenai.design.screens.UrlLauncher
 import ai.duagenai.design.screens.UrlOpener
@@ -585,8 +587,9 @@ private class FailingWriteMemoryDataSource(
  * A fake [HttpTransport] that records every call and returns a canned body.
  *
  * It is the seam the shared-client tests drive: [calls] proves a remote source
- * actually went through [JsonHttpClient] (and with which method and URL), and
- * [failWith] lets a test see the labelled status failure — all without a socket.
+ * actually went through [JsonHttpClient] (and with which method and URL),
+ * [tokens] proves which bearer token each call carried, and [failWith] lets a
+ * test see the labelled status failure — all without a socket.
  */
 private class RecordingTransport(
     private val response: String = "[]",
@@ -594,8 +597,12 @@ private class RecordingTransport(
 ) : HttpTransport {
     val calls: MutableList<Pair<String, String>> = mutableListOf()
 
-    override fun execute(method: String, url: String, body: String?): String {
+    /** The token handed to the transport for each call, in call order. */
+    val tokens: MutableList<String?> = mutableListOf()
+
+    override fun execute(method: String, url: String, body: String?, token: String?): String {
         calls += method to url
+        tokens += token
         failWith?.let { throw HttpStatusException(it) }
         return response
     }
@@ -3141,7 +3148,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun requestOrThrowReportsANetworkFailureAsRetryable() {
-        val transport = HttpTransport { _, _, _ -> throw java.io.IOException("no route to host") }
+        val transport = HttpTransport { _, _, _, _ -> throw java.io.IOException("no route to host") }
         val client = JsonHttpClient(transport = transport, label = "Artifacts request")
 
         val error = runCatching { client.requestOrThrow("GET", "https://api.example/v1/artifacts") }
@@ -3158,6 +3165,144 @@ class DuaGenAINavHostTest {
             "the raw IOException text must not leak",
             !error.userMessage.contains("no route to host"),
         )
+    }
+
+    // ------------------------------------------------------- auth token wiring
+
+    /**
+     * The token actually reaches the transport.
+     *
+     * This is the regression the seam had: [TokenProvider] was read by
+     * `authToken()` and then dropped, because [HttpTransport.execute] had no
+     * token parameter. A provider that returns a token must now be visible to
+     * the transport on the very same call.
+     */
+    @Test
+    fun theTokenProviderReachesTheTransport() {
+        val transport = RecordingTransport(response = "[]")
+        val client = JsonHttpClient(
+            transport = transport,
+            label = "Artifacts request",
+            tokenProvider = TokenProvider { "tok-123" },
+        )
+
+        client.requestOrThrow("GET", "https://api.example/v1/artifacts")
+
+        assertEquals("one call must reach the transport", 1, transport.tokens.size)
+        assertEquals(
+            "the provider's token must be handed to the transport",
+            "tok-123",
+            transport.tokens[0],
+        )
+    }
+
+    /**
+     * No provider means an anonymous request, not an empty header.
+     *
+     * `TokenProvider.None` is the default, and null is the transport's signal to
+     * omit `Authorization` entirely — an empty `Bearer ` value would be a
+     * malformed header rather than an anonymous request.
+     */
+    @Test
+    fun theDefaultProviderSendsAnAnonymousRequest() {
+        val transport = RecordingTransport(response = "[]")
+        val client = JsonHttpClient(transport = transport, label = "Request")
+
+        client.requestOrThrow("GET", "https://api.example/v1/artifacts")
+
+        assertEquals("the default must be anonymous", null, transport.tokens[0])
+    }
+
+    /**
+     * The token is asked for PER REQUEST, not captured once at construction.
+     *
+     * A session store that refreshes an expiring token relies on this: the
+     * client must call `token()` again on every request, so a token set after
+     * the client was built is still sent.
+     */
+    @Test
+    fun theTokenIsReadPerRequestSoARefreshIsPickedUp() {
+        val transport = RecordingTransport(response = "[]")
+        var current: String? = "first"
+        val client = JsonHttpClient(
+            transport = transport,
+            label = "Request",
+            tokenProvider = TokenProvider { current },
+        )
+
+        client.requestOrThrow("GET", "https://api.example/v1/artifacts")
+        current = "second"
+        client.requestOrThrow("GET", "https://api.example/v1/artifacts")
+
+        assertEquals(
+            "each request must read the provider again",
+            listOf("first", "second"),
+            transport.tokens,
+        )
+    }
+
+    /**
+     * `request()` sends the token too — the wiring is not requestOrThrow-only.
+     *
+     * Both entry points share the transport, so a caller that still uses the
+     * simpler `request()` must not silently go anonymous.
+     */
+    @Test
+    fun thePlainRequestAlsoSendsTheToken() {
+        val transport = RecordingTransport(response = "[]")
+        val client = JsonHttpClient(
+            transport = transport,
+            label = "Request",
+            tokenProvider = TokenProvider { "tok-plain" },
+        )
+
+        client.request("GET", "https://api.example/v1/artifacts")
+
+        assertEquals("tok-plain", transport.tokens[0])
+    }
+
+    /**
+     * `TokenStore` normalises blank values to null.
+     *
+     * A half-filled sign-in field must not produce `Authorization: Bearer `,
+     * which is a malformed header rather than an anonymous request.
+     */
+    @Test
+    fun tokenStoreTreatsBlankAsSignedOut() {
+        val previous = TokenStore.token
+        try {
+            TokenStore.token = "   "
+            assertEquals("whitespace must normalise to null", null, TokenStore.token)
+
+            TokenStore.token = "  tok-trimmed  "
+            assertEquals("a real token must be trimmed", "tok-trimmed", TokenStore.token)
+
+            TokenStore.token = null
+            assertEquals("null must stay null", null, TokenStore.token)
+        } finally {
+            TokenStore.token = previous
+        }
+    }
+
+    /**
+     * The shared client reads [TokenStore], so signing in needs no rebuild.
+     *
+     * This is the end-to-end contract a sign-in flow depends on: set the token
+     * once, and the app-wide client starts sending it.
+     */
+    @Test
+    fun theSharedClientSendsTheTokenStoreValue() {
+        val previous = TokenStore.token
+        try {
+            TokenStore.token = "session-token"
+            assertEquals(
+                "the shared client must read TokenStore",
+                "session-token",
+                HttpClientProvider.client.authToken(),
+            )
+        } finally {
+            TokenStore.token = previous
+        }
     }
 
     /**

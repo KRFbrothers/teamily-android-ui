@@ -58,6 +58,14 @@ import kotlinx.coroutines.CancellationException
  *  carries [ApiError.retryable], which is what lets the UI decide whether
  *  offering a Retry button is honest.
  *
+ *   4. THE TOKEN WAS NEVER SENT. [TokenProvider] existed and [JsonHttpClient]
+ *      could read it, but [HttpTransport.execute] had no token parameter, so
+ *      [UrlConnectionTransport] never set an `Authorization` header: every
+ *      request went out anonymous no matter what the provider returned. The
+ *      seam is now wired end to end — the client asks for a token per request,
+ *      hands it to the transport, and the transport sets `Authorization: Bearer`.
+ *      [TokenStore] is the app-side holder a sign-in flow writes to.
+ *
  *  Both remote data sources therefore call [requestOrThrow]; [request] remains
  *  for callers that only want the body.
  * ==========================================================================*/
@@ -138,8 +146,15 @@ fun interface TokenProvider {
  * ... }` inline. [execute] returns the response body and throws on any failure.
  */
 fun interface HttpTransport {
-    /** Performs one request and returns the response body. Throws on failure. */
-    fun execute(method: String, url: String, body: String?): String
+    /**
+     * Performs one request and returns the response body. Throws on failure.
+     *
+     * @param token the bearer token to send, or null for an anonymous request.
+     *   It is a PARAMETER rather than something the transport fetches itself so
+     *   that the client owns the "one token per request" rule and a fake
+     *   transport can assert exactly which token a call carried.
+     */
+    fun execute(method: String, url: String, body: String?, token: String?): String
 }
 
 /**
@@ -154,12 +169,23 @@ class UrlConnectionTransport(
     private val readTimeoutMs: Int = 10_000,
 ) : HttpTransport {
 
-    override fun execute(method: String, url: String, body: String?): String {
+    override fun execute(method: String, url: String, body: String?, token: String?): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             setRequestProperty("Accept", "application/json")
+            // The auth header. Without this line the whole TokenProvider seam
+            // was decorative: the client read a token and then dropped it.
+            sanitizeToken(token)?.let { setRequestProperty("Authorization", "Bearer $it") }
+            // Do NOT follow redirects on an authenticated request.
+            //
+            // WHY: HttpURLConnection re-issues the request against the redirect
+            // target, and a 3xx from a compromised or misconfigured endpoint
+            // would then carry the bearer token to a host of the server's
+            // choosing. A JSON API has no legitimate reason to redirect, so a
+            // 3xx is reported as a failure instead of being followed.
+            instanceFollowRedirects = false
             if (body != null) {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -177,6 +203,23 @@ class UrlConnectionTransport(
         } finally {
             connection.disconnect()
         }
+    }
+
+    /**
+     * Normalises a token before it becomes a header value.
+     *
+     * A token pasted from a file or an env var routinely carries a trailing
+     * newline, and `setRequestProperty` rejects a value containing a line break
+     * (on Android it can instead produce a malformed request line). Trimming
+     * fixes the common case; a token with an EMBEDDED line break is not a token
+     * at all — sending it would be header injection — so it is dropped and the
+     * request goes out anonymous, where the server's 401 is the honest answer.
+     */
+    private fun sanitizeToken(token: String?): String? {
+        val trimmed = token?.trim() ?: return null
+        if (trimmed.isEmpty()) return null
+        if (trimmed.any { it == '\r' || it == '\n' }) return null
+        return trimmed
     }
 }
 
@@ -219,7 +262,7 @@ class JsonHttpClient(
         label: String? = null,
     ): String =
         try {
-            transport.execute(method, url, body)
+            transport.execute(method, url, body, authToken())
         } catch (e: CancellationException) {
             // Never convert cancellation into a failure. Rethrow as-is.
             throw e
@@ -242,7 +285,7 @@ class JsonHttpClient(
     ): String {
         val effectiveLabel = label ?: this.label
         return try {
-            transport.execute(method, url, body)
+            transport.execute(method, url, body, authToken())
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpStatusException) {
@@ -252,7 +295,17 @@ class JsonHttpClient(
         }
     }
 
-    /** The bearer token for the next request, or null when anonymous. */
+    /**
+     * The bearer token for the next request, or null when anonymous.
+     *
+     * Called once per request by both [request] and [requestOrThrow], so a
+     * provider that refreshes an expiring token is asked again on every call
+     * rather than being frozen at construction time.
+     *
+     * A provider that throws is NOT caught here: a session store that cannot
+     * produce a token is a real failure, and silently downgrading the request
+     * to anonymous would turn it into a confusing 401 instead.
+     */
     fun authToken(): String? = tokenProvider.token()
 }
 
@@ -303,6 +356,52 @@ fun encodePathSegment(segment: String): String {
  * transport) still passes its own — the injectable parameter is untouched.
  */
 object HttpClientProvider {
-    /** The app-wide client. Label is generic; callers pass per-request labels. */
-    val client: JsonHttpClient = JsonHttpClient(label = "Request")
+    /**
+     * The app-wide client. Label is generic; callers pass per-request labels.
+     *
+     * It reads [TokenStore] on every request, so a sign-in flow only has to set
+     * the token once and both features start sending it — no client rebuild.
+     */
+    val client: JsonHttpClient = JsonHttpClient(
+        label = "Request",
+        tokenProvider = TokenStore.provider,
+    )
+}
+
+/**
+ * The app-side holder for the current session token.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * [TokenProvider] is the seam, but a seam with nothing plugged into it is still
+ * an anonymous request. This is the smallest honest thing to plug in: a
+ * process-wide slot that a sign-in flow writes and [HttpClientProvider] reads.
+ *
+ * A real app should replace it with its own session store (DataStore, an
+ * encrypted preference, a refresh-aware auth manager) and pass that provider to
+ * [JsonHttpClient] instead. Nothing else has to change: the client only ever
+ * calls `token()`.
+ *
+ * The token is deliberately NOT persisted here. Writing a bearer token to disk
+ * needs encryption and an expiry policy, and a design kit that quietly stored
+ * one in plain preferences would be worse than one that forgets it on process
+ * death.
+ */
+object TokenStore {
+    /**
+     * The current bearer token, or null when signed out.
+     *
+     * `@Volatile` because a sign-in flow writes it from a background coroutine
+     * while the UI thread's requests read it. Blank and whitespace-only values
+     * are normalised to null so a half-filled field cannot produce an
+     * `Authorization: Bearer ` header.
+     */
+    @Volatile
+    var token: String? = null
+        set(value) {
+            field = value?.trim()?.takeIf { it.isNotEmpty() }
+        }
+
+    /** The provider [HttpClientProvider] hands to the shared client. */
+    val provider: TokenProvider = TokenProvider { token }
 }
