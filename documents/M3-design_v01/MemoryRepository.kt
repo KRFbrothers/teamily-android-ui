@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  Memory — the data source
@@ -95,8 +96,12 @@ object MemoryConfig {
      */
     const val BASE_URL: String = ApiConfig.BASE_URL
 
-    /** The path the memory list is served from, relative to [BASE_URL]. */
-    const val MEMORY_PATH: String = "/memories"
+    /**
+     * Cloud snapshot on the Node API. Notes are `snapshot.memory`, up to 10
+     * strings of 200 characters. A JSON array body is still accepted so the
+     * design-kit parser test can inject its sample list.
+     */
+    const val MEMORY_PATH: String = "/api/cloud"
 
     /** The full list endpoint. */
     val memoriesUrl: String get() = BASE_URL + MEMORY_PATH
@@ -226,26 +231,58 @@ class RemoteMemoryDataSource(
     val client: JsonHttpClient = HttpClientProvider.client,
 ) : MemoryDataSource {
 
+    /** Notes loaded from `snapshot.memory`, kept so add/delete can write them back. */
+    private var cloudRevision: Long = 0
+    private var cloudOwnerId: String = ""
+    private var cloudSnapshot: JSONObject? = null
+    private val cloudNotes = mutableListOf<Pair<String, String>>()
+
     override suspend fun fetch(): List<MemoryItem> = withContext(Dispatchers.IO) {
-        parseMemories(client.request("GET", baseUrl, label = "Memory request"))
+        val body = client.request("GET", baseUrl, label = "Memory request").trim()
+        if (body.startsWith("[")) {
+            cloudSnapshot = null
+            cloudNotes.clear()
+            parseMemories(body)
+        } else {
+            parseCloud(body)
+        }
     }
 
     override suspend fun add(item: MemoryItem) = withContext(Dispatchers.IO) {
-        val payload = """
-            {"id":"${item.id}","title":"${item.title}","summary":"${item.summary}",
-             "timestamp":"${item.timestamp}","category":"${item.category}",
-             "url":${item.url?.let { "\"$it\"" } ?: "null"}}
-        """.trimIndent()
-        client.request("POST", baseUrl, payload, label = "Memory request")
-        Unit
+        val snap = cloudSnapshot
+        if (snap == null) {
+            val payload = """
+                {"id":"${item.id}","title":"${item.title}","summary":"${item.summary}",
+                 "timestamp":"${item.timestamp}","category":"${item.category}",
+                 "url":${item.url?.let { "\"$it\"" } ?: "null"}}
+            """.trimIndent()
+            client.request("POST", baseUrl, payload, label = "Memory request")
+            return@withContext
+        }
+        val note = memoryNote(item)
+        if (cloudNotes.size >= 10) {
+            throw IllegalStateException("Cloud memory limit is 10 notes.")
+        }
+        val next = ArrayList(cloudNotes)
+        next.add(0, item.id to note)
+        writeCloud(next)
+        cloudNotes.clear()
+        cloudNotes.addAll(next)
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        client.request("DELETE", "$baseUrl/$id", label = "Memory request")
-        Unit
+        if (cloudSnapshot == null) {
+            client.request("DELETE", "$baseUrl/$id", label = "Memory request")
+            return@withContext
+        }
+        if (cloudNotes.none { it.first == id }) throw IllegalStateException("Unknown memory note.")
+        val next = cloudNotes.filterNot { it.first == id }
+        writeCloud(next)
+        cloudNotes.clear()
+        cloudNotes.addAll(next)
     }
 
-    /** Parses the list payload. Throws on malformed JSON. */
+    /** Parses the design-kit list payload. Throws on malformed JSON. */
     private fun parseMemories(body: String): List<MemoryItem> {
         val array = JSONArray(body)
         val out = ArrayList<MemoryItem>(array.length())
@@ -264,6 +301,55 @@ class RemoteMemoryDataSource(
             )
         }
         return out
+    }
+
+    /** `GET /api/cloud` — notes are plain strings on `snapshot.memory`. */
+    private fun parseCloud(body: String): List<MemoryItem> {
+        val root = JSONObject(body)
+        cloudRevision = root.optLong("revision", 0L)
+        cloudOwnerId = root.optString("ownerId")
+        val snap = root.getJSONObject("snapshot")
+        cloudSnapshot = snap
+        val notes = snap.optJSONArray("memory") ?: JSONArray()
+        cloudNotes.clear()
+        val out = ArrayList<MemoryItem>(notes.length())
+        for (i in 0 until notes.length()) {
+            val note = notes.getString(i)
+            val id = "memory:$i"
+            cloudNotes += id to note
+            out += MemoryItem(
+                id = id,
+                title = note,
+                summary = note,
+                timestamp = "",
+                category = "Memory",
+            )
+        }
+        return out
+    }
+
+    private fun memoryNote(item: MemoryItem): String {
+        val note = item.summary.ifBlank { item.title }.trim()
+        if (note.isEmpty() || note.length > 200) {
+            throw IllegalStateException("Memory notes are 200 characters or shorter.")
+        }
+        return note
+    }
+
+    /** Writes the same snapshot back with only the memory notes changed. */
+    private fun writeCloud(notes: List<Pair<String, String>>) {
+        if (cloudOwnerId.isBlank()) throw IllegalStateException("Cloud account is missing.")
+        val snap = JSONObject(cloudSnapshot.toString())
+        val memory = JSONArray()
+        for ((_, note) in notes) memory.put(note)
+        snap.put("memory", memory)
+        val body = JSONObject()
+            .put("expectedRevision", cloudRevision)
+            .put("expectedAccountId", cloudOwnerId)
+            .put("snapshot", snap)
+        val saved = JSONObject(client.request("PUT", baseUrl, body.toString(), label = "Memory request"))
+        if (saved.has("revision")) cloudRevision = saved.getLong("revision")
+        cloudSnapshot = snap
     }
 }
 

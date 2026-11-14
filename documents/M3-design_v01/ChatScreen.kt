@@ -49,9 +49,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ai.duagenai.design.cube.CubeAvatar
 import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.cube.CubeIds
@@ -191,9 +195,8 @@ private fun Message.toSaved(): SavedMessage = SavedMessage(
 /**
  * Agent's canned reply.
  *
- * Deliberately static: this kit has no model behind it, and the brief asked for
- * a simple reply rather than a real call. It is written to Agent's role — it
- * reports on the agents it controls — so the thread stays in character.
+ * Used only while [ApiConfig.accessToken] is blank, so previews and UI tests
+ * stay offline. A signed-in session calls [DuaChatClient] instead.
  */
 private const val AGENT_REPLY =
     "Got it — I've picked that up and I'm on it. I'll report back here as soon as it's done."
@@ -325,11 +328,31 @@ fun ChatScreen(
         messages = ArrayList(messages + SavedMessage(SavedMessage.USER, text, nowLabel()))
         draft = ""
         agentTyping = true
+        val sent = messages
+        val skillIds = skills
         replyJob = scope.launch {
-            delay(AGENT_REPLY_DELAY_MS)
+            val reply = try {
+                if (ApiConfig.accessToken.isBlank()) {
+                    delay(AGENT_REPLY_DELAY_MS)
+                    AGENT_REPLY
+                } else {
+                    withContext(Dispatchers.IO) {
+                        DuaChatClient.reply(
+                            agent = chatId == AGENT_CHAT_ID,
+                            history = sent,
+                            skillIds = skillIds,
+                        )
+                    }.ifBlank { "No reply." }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                error.message ?: "Request failed."
+            }
+            if (!isActive) return@launch
             agentTyping = false
             messages = ArrayList(
-                messages + SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()),
+                messages + SavedMessage(SavedMessage.AGENT, reply, nowLabel()),
             )
         }
     }

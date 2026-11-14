@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  Artifacts — the data source
@@ -113,8 +114,11 @@ object ArtifactsConfig {
      */
     const val BASE_URL: String = ApiConfig.BASE_URL
 
-    /** The path the artifacts list is served from, relative to [BASE_URL]. */
-    const val ARTIFACTS_PATH: String = "/artifacts"
+    /**
+     * Owner files on the Node API. A JSON array body is still accepted so the
+     * design-kit parser test can inject its sample list.
+     */
+    const val ARTIFACTS_PATH: String = "/api/files/list"
 
     /** The full list endpoint. */
     val artifactsUrl: String get() = BASE_URL + ARTIFACTS_PATH
@@ -280,11 +284,9 @@ class InMemoryArtifactsDataSource(
  * here) and the JSON shape. `org.json` is already on the platform, so wiring a
  * backend adds no library.
  *
- * The JSON shape it expects is the obvious one:
- * ```json
- * [ { "id": "...", "title": "...", "type": "Image",
- *     "timestamp": "Aaj", "sizeBytes": 1887437 } ]
- * ```
+ * Live `GET /api/files/list` returns `{ "files": [{ "path", "name", "mimeType", "size" }] }`.
+ * A JSON array of `{id, title, type, timestamp, sizeBytes, url}` is still parsed,
+ * which is the body the design-kit test injects.
  * A non-2xx response, a network failure or malformed JSON all throw, which the
  * repository surfaces as [ArtifactsUiState.Error] with a Retry action.
  */
@@ -304,6 +306,9 @@ class RemoteArtifactsDataSource(
     }
 
     override suspend fun add(item: ArtifactItem) = withContext(Dispatchers.IO) {
+        if (baseUrl.endsWith("/api/files/list")) {
+            throw IllegalStateException("Upload the file again. Stored files are not restored from the card.")
+        }
         val payload = """
             {"id":"${item.id}","title":"${item.title}","type":"${item.type}",
              "timestamp":"${item.timestamp}","sizeBytes":${item.sizeBytes},
@@ -314,13 +319,39 @@ class RemoteArtifactsDataSource(
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        client.request("DELETE", "$baseUrl/$id", label = "Artifacts request")
+        if (baseUrl.endsWith("/api/files/list")) {
+            val body = JSONObject().put("paths", JSONArray().put(id)).toString()
+            val deleteUrl = baseUrl.removeSuffix("/list") + "/delete"
+            client.request("POST", deleteUrl, body, label = "Artifacts request")
+        } else {
+            client.request("DELETE", "$baseUrl/$id", label = "Artifacts request")
+        }
         Unit
     }
 
     /** Parses the list payload. Throws on malformed JSON. */
     private fun parseArtifacts(body: String): List<ArtifactItem> {
-        val array = JSONArray(body)
+        val trimmed = body.trim()
+        if (trimmed.startsWith("[")) return parseArtifactArray(JSONArray(trimmed))
+        val files = JSONObject(trimmed).optJSONArray("files") ?: JSONArray()
+        val out = ArrayList<ArtifactItem>(files.length())
+        for (i in 0 until files.length()) {
+            val file = files.getJSONObject(i)
+            val path = file.getString("path")
+            val mime = file.optString("mimeType", "")
+            out += ArtifactItem(
+                id = path,
+                title = file.optString("name").ifBlank { path.substringAfterLast('/') },
+                type = artifactType(mime),
+                timestamp = "",
+                sizeBytes = file.optLong("size", 0L),
+                url = file.optString("url", "").takeIf { it.isNotBlank() },
+            )
+        }
+        return out
+    }
+
+    private fun parseArtifactArray(array: JSONArray): List<ArtifactItem> {
         val out = ArrayList<ArtifactItem>(array.length())
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
@@ -334,6 +365,13 @@ class RemoteArtifactsDataSource(
             )
         }
         return out
+    }
+
+    private fun artifactType(mime: String): String = when {
+        mime.startsWith("image/") -> "Image"
+        mime.startsWith("video/") -> "Video"
+        mime == "text/html" -> "Webpage"
+        else -> "Document"
     }
 }
 

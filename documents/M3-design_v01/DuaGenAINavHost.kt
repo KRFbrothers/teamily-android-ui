@@ -28,9 +28,11 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.cube.CubePickerScreen
 import ai.duagenai.design.cube.CubeStore
 import ai.duagenai.design.screens.AgentsScreen
+import ai.duagenai.design.screens.ApiConfig
 import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
 import ai.duagenai.design.screens.ArtifactsScreen
+import ai.duagenai.design.screens.RemoteArtifactsDataSource
 import ai.duagenai.design.screens.ChatScreen
 import ai.duagenai.design.screens.AGENT_CHAT_ID
 import ai.duagenai.design.screens.AGENT_CHAT_TITLE
@@ -52,6 +54,7 @@ import ai.duagenai.design.screens.HomeScreen
 import ai.duagenai.design.screens.HomeTab
 import ai.duagenai.design.screens.MemoryRepository
 import ai.duagenai.design.screens.MemoryScreen
+import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.NotificationsScreen
 import ai.duagenai.design.screens.ProfileScreen
 import ai.duagenai.design.screens.SettingsScreen
@@ -179,11 +182,20 @@ fun DuaGenAINavHost(
     // The Artifacts data source. Created once here and passed into the screen,
     // so the screen holds no data of its own and a real backend later means
     // changing only the repository.
-    val artifactsRepository = remember { ArtifactsRepository() }
+    // A signed-in session reads the Node API. A blank token keeps the in-memory
+    // demo, which is what previews and UI tests render.
+    val signedIn = ApiConfig.accessToken.isNotBlank()
+    val artifactsRepository = remember(signedIn) {
+        if (signedIn) ArtifactsRepository(dataSource = RemoteArtifactsDataSource())
+        else ArtifactsRepository()
+    }
     // The Memory data source, the same shape as the Artifacts one: created once
     // here and passed down, so the screen holds no data of its own and
     // pull-to-refresh has a `load()` to re-run.
-    val memoryRepository = remember { MemoryRepository() }
+    val memoryRepository = remember(signedIn) {
+        if (signedIn) MemoryRepository(dataSource = RemoteMemoryDataSource())
+        else MemoryRepository()
+    }
     val scope = rememberCoroutineScope()
 
     // The one and only read of the saved cube in the whole app.

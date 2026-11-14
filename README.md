@@ -103,6 +103,17 @@ they are meant to be dropped into a Compose app that provides an M3 theme.
   URL opener (`UrlOpener`), and one generic repository base class (`BaseRemoteRepository`) shared
   by both Artifacts and Memory.
 
+## Backend
+
+The Kotlin client talks to [dua-backend](https://github.com/KRFbrothers/dua-backend). Addresses live in `documents/M3-design_v01/ApiConfig.kt`.
+
+| Setting | Default | Used for |
+|---|---|---|
+| `API_BASE_URL` | `http://127.0.0.1:3000` | Personal chat `POST /api/chat`, files `GET /api/files/list`, memory `GET /api/cloud` |
+| `ENGINE_BASE_URL` | `http://127.0.0.1:8080` | Dua Agent chat `POST /api/chat` with `mode: "agent"` and the five skill ids |
+
+Set `ApiConfig.accessToken` to the Supabase access token before showing `DuaGenAINavHost`. Leave it blank and Artifacts, Memory, and chat stay on the offline demo. Android sends no `Origin` header. An emulator uses `10.0.2.2` instead of `127.0.0.1`. Request and response shapes are in that backend's `API_CONTRACT.md`.
+
 ---
 
 ## Version

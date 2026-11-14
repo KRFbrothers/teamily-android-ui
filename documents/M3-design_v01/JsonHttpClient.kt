@@ -65,6 +65,16 @@ class UrlConnectionTransport(
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             setRequestProperty("Accept", "application/json")
+            // Android clients send no Origin. Native account calls expect this header.
+            setRequestProperty("X-Dua-Native", "1")
+            val accessToken = ApiConfig.accessToken.trim()
+            if (accessToken.isNotEmpty()) {
+                setRequestProperty("Authorization", "Bearer $accessToken")
+            }
+            val appToken = ApiConfig.appToken.trim()
+            if (appToken.isNotEmpty()) {
+                setRequestProperty("X-Dua-App-Token", appToken)
+            }
             if (body != null) {
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
