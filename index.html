@@ -63,6 +63,24 @@
   .badge.latest{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b0d12;border-color:transparent}
   .desc{margin:9px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5}
   .path{margin:11px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);opacity:.75}
+  /* Live thumbnail: the version's own page, scaled down inside a fixed box.
+     The iframe is 4x the box and transform-scaled to 25%, so the prototype
+     renders at its real layout width instead of a squeezed mobile viewport. */
+  .thumb{
+    position:relative;margin:0 0 13px;border-radius:12px;overflow:hidden;
+    border:1px solid var(--line);background:var(--surface2);
+    aspect-ratio:16/10;
+  }
+  .thumb iframe{
+    position:absolute;top:0;left:0;width:1200px;height:750px;border:0;
+    transform:scale(.25);transform-origin:0 0;pointer-events:none;
+    background:#fff;
+  }
+  .thumb .ph{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.3px;
+  }
+  .thumb.loaded .ph{display:none}
   footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
   footer a{color:var(--accent);text-decoration:none}
   footer a:hover{text-decoration:underline}
@@ -82,7 +100,7 @@
   </header>
 
   <div class="meta">
-    <span class="chip"><b>12</b> versions</span>
+    <span class="chip"><b id="vcount">13</b> versions</span>
     <span class="chip">Repo <b>KRFbrothers/teamily-android-ui</b></span>
     <span class="chip">Served from <b>main</b></span>
   </div>
@@ -100,7 +118,9 @@
 /* The version list is data, so adding a version is one line here. `dir` is the
    folder under webpages/; the link is that folder's own index.html. */
 var VERSIONS = [
-  { dir: 'm3-prototype_v12', name: 'v12', latest: true,
+  { dir: 'm3-prototype_v13', name: 'v13', latest: true,
+    desc: 'Undo toast after Disconnect all + drag-to-reorder connectors with a persisted order.' },
+  { dir: 'm3-prototype_v12', name: 'v12',
     desc: 'Restores the v9 live connected-app count in the Disconnect all dialog and row, on top of v11.' },
   { dir: 'm3-prototype_v11', name: 'v11',
     desc: 'Clear recents action in the Recently used heading + recents cap raised to 10.' },
@@ -132,6 +152,8 @@ var VERSIONS = [
   for (var i = 0; i < VERSIONS.length; i++) {
     var v = VERSIONS[i];
     html += '<a class="card" href="webpages/' + v.dir + '/index.html">' +
+      '<div class="thumb" data-thumb="webpages/' + v.dir + '/index.html">' +
+        '<span class="ph">Loading preview\u2026</span></div>' +
       '<div class="card-top"><span class="vname">' + v.name + '</span>' +
       (v.latest ? '<span class="badge latest">Latest</span>' : '<span class="badge">Prototype</span>') +
       '</div>' +
@@ -140,6 +162,46 @@ var VERSIONS = [
       '</a>';
   }
   grid.innerHTML = html;
+  document.getElementById('vcount').textContent = VERSIONS.length;
+
+  /* Each thumbnail is the version's real page in an iframe, loaded only when
+     the card scrolls into view \u2014 13 full prototypes at once would be far too
+     heavy. `pointer-events:none` keeps the card's own link clickable. */
+  var thumbs = grid.querySelectorAll('[data-thumb]');
+  function loadThumb(box) {
+    if (box.getAttribute('data-done')) return;
+    box.setAttribute('data-done', '1');
+    var f = document.createElement('iframe');
+    f.setAttribute('loading', 'lazy');
+    f.setAttribute('tabindex', '-1');
+    f.setAttribute('aria-hidden', 'true');
+    f.setAttribute('scrolling', 'no');
+    f.src = box.getAttribute('data-thumb');
+    f.addEventListener('load', function () {
+      box.classList.add('loaded');
+      // The prototype page opens on its own hero; scroll it to the first phone
+      // so the thumbnail shows the actual UI, not the page's title block.
+      try {
+        var w = f.contentWindow, d = f.contentDocument;
+        var ph = d && d.querySelector('[data-phone]');
+        if (w && ph) {
+          var r = ph.getBoundingClientRect();
+          w.scrollTo(Math.max(0, r.left + w.scrollX - 40), Math.max(0, r.top + w.scrollY - 40));
+        }
+      } catch (e) {}
+    });
+    box.appendChild(f);
+  }
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].isIntersecting) { loadThumb(entries[i].target); io.unobserve(entries[i].target); }
+      }
+    }, { rootMargin: '200px' });
+    for (var ti = 0; ti < thumbs.length; ti++) io.observe(thumbs[ti]);
+  } else {
+    for (var tj = 0; tj < thumbs.length; tj++) loadThumb(thumbs[tj]);
+  }
 
   var root = document.documentElement;
   var btn = document.getElementById('themeBtn');
