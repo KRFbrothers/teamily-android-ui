@@ -62,6 +62,13 @@
   }
   .badge.latest{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b0d12;border-color:transparent}
   .desc{margin:9px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5}
+  /* "Last updated" sits under the description, above the path, so the card
+     reads: preview -> name -> what changed -> when -> where. */
+  .updated{margin:9px 0 0;display:flex;align-items:center;gap:6px;font-size:12px;
+    font-weight:600;color:var(--muted);letter-spacing:.1px}
+  .updated svg{width:13px;height:13px;flex:0 0 13px;stroke:currentColor;fill:none;
+    stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
+  .updated time{font-variant-numeric:tabular-nums}
   .path{margin:11px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);opacity:.75}
   /* Live thumbnail: the version's own page, scaled down inside a fixed box.
      The iframe is 4x the box and transform-scaled to 25%, so the prototype
@@ -118,33 +125,47 @@
 /* The version list is data, so adding a version is one line here. `dir` is the
    folder under webpages/; the link is that folder's own index.html. */
 var VERSIONS = [
-  { dir: 'm3-prototype_v13', name: 'v13', latest: true,
+  { dir: 'm3-prototype_v14', name: 'v14', latest: true, date: '2026-11-15',
+    desc: 'Haptic-style lift while dragging a connector row: scale + shadow + a short vibrate tick, with the rows it passes easing aside (FLIP).' },
+  { dir: 'm3-prototype_v13', name: 'v13', date: '2026-11-15',
     desc: 'Undo toast after Disconnect all + drag-to-reorder connectors with a persisted order.' },
-  { dir: 'm3-prototype_v12', name: 'v12',
+  { dir: 'm3-prototype_v12', name: 'v12', date: '2026-11-15',
     desc: 'Restores the v9 live connected-app count in the Disconnect all dialog and row, on top of v11.' },
-  { dir: 'm3-prototype_v11', name: 'v11',
+  { dir: 'm3-prototype_v11', name: 'v11', date: '2026-11-15',
     desc: 'Clear recents action in the Recently used heading + recents cap raised to 10.' },
-  { dir: 'm3-prototype_v10', name: 'v10',
+  { dir: 'm3-prototype_v10', name: 'v10', date: '2026-11-15',
     desc: 'Suggested apps orders recently used first.' },
-  { dir: 'm3-prototype_v9', name: 'v9',
+  { dir: 'm3-prototype_v9', name: 'v9', date: '2026-11-15',
     desc: 'Live connected-app count in the Disconnect all confirm dialog.' },
-  { dir: 'm3-prototype_v8', name: 'v8',
+  { dir: 'm3-prototype_v8', name: 'v8', date: '2026-11-15',
     desc: 'Disconnect all confirm dialog + Suggested apps section.' },
-  { dir: 'm3-prototype_v7', name: 'v7',
+  { dir: 'm3-prototype_v7', name: 'v7', date: '2026-11-15',
     desc: 'Disconnect all row + Add connector search.' },
-  { dir: 'm3-prototype_v6', name: 'v6',
+  { dir: 'm3-prototype_v6', name: 'v6', date: '2026-11-15',
     desc: 'Connector pill state persists + Add connector screen.' },
-  { dir: 'm3-prototype_v5', name: 'v5',
+  { dir: 'm3-prototype_v5', name: 'v5', date: '2026-11-15',
     desc: 'App Connectors pills toggle Connected <-> Connect.' },
-  { dir: 'm3-prototype_v4', name: 'v4',
+  { dir: 'm3-prototype_v4', name: 'v4', date: '2026-11-15',
     desc: 'Create tiles open their own screens + Settings sub-screens.' },
-  { dir: 'm3-prototype_v3', name: 'v3',
+  { dir: 'm3-prototype_v3', name: 'v3', date: '2026-11-15',
     desc: 'Quick Actions sheet, header + menu, public profile & settings.' },
-  { dir: 'm3-prototype_v2', name: 'v2',
+  { dir: 'm3-prototype_v2', name: 'v2', date: '2026-11-15',
     desc: 'M3 interactive prototype with screen-list sidebar.' },
-  { dir: 'M3-design_v01', name: 'v01',
+  { dir: 'M3-design_v01', name: 'v01', date: '2026-11-14',
     desc: 'Cube logo replaces the old Teamily bot badge (header, avatars, badges).' }
 ];
+
+/* "2026-11-15" -> "15 Nov 2026". Built from the parts, not `new Date(str)`,
+   so the date can never shift a day in a timezone behind UTC. */
+var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return (+p[2]) + ' ' + MONTHS[(+p[1]) - 1] + ' ' + p[0];
+}
+var CAL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/>' +
+  '<path d="M8 3v4M16 3v4M3 10h18"/></svg>';
 
 (function () {
   var grid = document.getElementById('grid');
@@ -158,6 +179,8 @@ var VERSIONS = [
       (v.latest ? '<span class="badge latest">Latest</span>' : '<span class="badge">Prototype</span>') +
       '</div>' +
       '<p class="desc">' + v.desc + '</p>' +
+      (v.date ? '<p class="updated">' + CAL_ICON + '<span>Updated <time datetime="' + v.date + '">' +
+        fmtDate(v.date) + '</time></span></p>' : '') +
       '<p class="path">webpages/' + v.dir + '/index.html</p>' +
       '</a>';
   }
