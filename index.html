@@ -113,7 +113,7 @@
   </header>
 
   <div class="meta">
-    <span class="chip"><b id="vcount">21</b> versions</span>
+    <span class="chip"><b id="vcount">24</b> versions</span>
     <span class="chip">Repo <b>KRFbrothers/teamily-android-ui</b></span>
     <span class="chip">Served from <b>main</b></span>
   </div>
@@ -131,7 +131,13 @@
 /* The version list is data, so adding a version is one line here. `dir` is the
    folder under webpages/; the link is that folder's own index.html. */
 var VERSIONS = [
-  { dir: 'm3-prototype_v22', name: 'v22', latest: true, date: '2026-11-16', sha: 'bd2193e',
+  { dir: 'm3-prototype_v25', name: 'v25', latest: true, date: '2026-11-16', sha: '4092e76',
+    desc: 'Sign out confirm karne ke baad poora app read-only: ek dimmed/blurred veil poore phone ko dhak leta hai aur ek capture-phase guard har click, typing, keyboard aur drag cancel karta hai \u2014 sirf \u201cSign back in\u201d chalta hai, us pe tap se state reset ho kar app pehle jaisa chalu.' },
+  { dir: 'm3-prototype_v24', name: 'v24', date: '2026-11-16', sha: '4092e76',
+    desc: 'Settings ke top pe search field jo rows filter karta hai \u2014 group headings sirf tab dikhte hain jab us group me match ho, kuch match na ho to saaf \u201cno results\u201d state, clear karne pe poori list wapas. Sign out ke baad \u201cSign back in\u201d button jo state reset karta hai.' },
+  { dir: 'm3-prototype_v23', name: 'v23', date: '2026-11-16', sha: '4092e76',
+    desc: 'Profile ke teeno stat tiles tappable \u2014 CHATS / AGENTS / ARTIFACTS pe tap karne se usi ka list screen khulta hai (live data ke saath), aur Back se Profile pe wapas.' },
+  { dir: 'm3-prototype_v22', name: 'v22', date: '2026-11-16', sha: 'bd2193e',
     desc: 'Profile ke CHATS / AGENTS / ARTIFACTS ab live data se aate hain (create ya delete karne pe number turant badalta hai), aur \u201cSign out\u201d Profile se hata kar Settings \u2192 Profile & Device me shift \u2014 confirm dialog ke saath, sirf ek hi jagah.' },
   { dir: 'm3-prototype_v21', name: 'v21', date: '2026-11-16', sha: 'f24f391',
     desc: 'Saare settings ek hi jagah: Profile ke Quick Actions se Appearance / Storage / Notifications hata kar Settings list me shift \u2014 Profile me sirf ek \u201cSettings\u201d entry point, koi duplicate row nahi.' },
