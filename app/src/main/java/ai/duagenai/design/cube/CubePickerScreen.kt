@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ai.duagenai.design.screens.MinTouchTarget
 import ai.duagenai.design.screens.minTouchTarget
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -277,6 +279,10 @@ fun CubePickerScreen(
                     // TooltipBox's own long-press handling is used (the standard
                     // M3 behaviour), so the chip's tap still applies the filter
                     // and the long-press never does.
+                    // Hoisted so the long-press and TooltipBox share one state.
+                    // TooltipBox shows it; the chip does not handle the gesture
+                    // itself, so a tap still only applies the filter.
+                    val tooltipState = rememberTooltipState()
                     TooltipBox(
                         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
                         tooltip = {
@@ -289,7 +295,7 @@ fun CubePickerScreen(
                                 )
                             }
                         },
-                        state = rememberTooltipState(),
+                        state = tooltipState,
                     ) {
                         FilterChip(
                             selected = entry == category,
@@ -300,13 +306,13 @@ fun CubePickerScreen(
                             // addressable, and the selected state is published by
                             // FilterChip itself. The description carries the FULL
                             // label, so accessibility reads the whole name too.
+                            //
+                            // sizeIn + semantics sit BEFORE minTouchTarget so the
+                            // semantics node is the 48dp box the audit measures.
                             modifier = Modifier
-                                // The M3 48dp minimum, from the SHARED helper \u2014 the
-                                // chip's drawn size is unchanged, only its tappable
-                                // box grows. Same rule the Memory and Artifacts chips
-                                // follow, so all three filter rows agree.
-                                .minTouchTarget()
-                                .semantics { contentDescription = "Filter: ${entry.label}" },
+                                .sizeIn(minHeight = MinTouchTarget)
+                                .semantics { contentDescription = "Filter: ${entry.label}" }
+                                .minTouchTarget(),
                             label = { Text(entry.label) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = DuaGenAITheme.colors.brandSoft,

@@ -459,10 +459,13 @@ fun DuaGenAINavHost(
                         // lands would let a fast back-press show the old avatar
                         // on Profile for a frame, and a process death in that
                         // window would lose the choice entirely.
-                        scope.launch {
+                        // Persist on a worker, then pop on this (main) thread.
+                        // DataStore resumes a plain coroutine off the main
+                        // thread, and NavController rejects that pop.
+                        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                             store.save(picked)
-                            navController.popBackStack()
                         }
+                        navController.popBackStack()
                     },
                     // Cancel writes nothing — the draft dies with the screen.
                     onCancel = { navController.popBackStack() },

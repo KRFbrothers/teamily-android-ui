@@ -233,6 +233,12 @@ class UrlConnectionTransport(
             connectTimeout = connectTimeoutMs
             readTimeout = readTimeoutMs
             setRequestProperty("Accept", "application/json")
+            // dua-backend treats a client that sends this header, and no Origin,
+            // as the Android app. Account sign-in then returns the refresh token
+            // in JSON. HttpURLConnection does not send Origin, so this is the
+            // marker the server needs. It is set on every call, including
+            // anonymous ones, because the contract asks the native client for it.
+            setRequestProperty("X-Dua-Native", "1")
             // The auth header. Without this line the whole TokenProvider seam
             // was decorative: the client read a token and then dropped it.
             sanitizeToken(token)?.let { setRequestProperty("Authorization", "Bearer $it") }

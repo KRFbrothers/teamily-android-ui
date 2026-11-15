@@ -94,6 +94,44 @@ object ApiConfig {
         BASE_URL + if (path.startsWith("/")) path else "/$path"
 
     /**
+     * The last-resort engine host, used only when the generated field is blank.
+     *
+     * Dua Agent chat (`mode: "agent"`) goes here. Personal chat stays on
+     * [BASE_URL]. It matches the build file's default so an empty
+     * `ENGINE_BASE_URL` still reaches the real engine.
+     */
+    const val FALLBACK_ENGINE_BASE_URL: String =
+        "https://dua-ai-engine-228305912525.us-central1.run.app"
+
+    /**
+     * A runtime override for the engine host, or null to use the build-time value.
+     *
+     * `@Volatile` for the same reason as [overrideBaseUrl]: a test may set it
+     * from another thread while a request URL is being built.
+     */
+    @Volatile
+    var overrideEngineBaseUrl: String? = null
+
+    /**
+     * The engine host, used by Dua Agent chat.
+     *
+     * Resolved per access, like [BASE_URL], and normalised the same way so
+     * `engineUrl("/api/chat")` cannot produce a double slash.
+     */
+    val ENGINE_BASE_URL: String
+        get() = normalize(
+            overrideEngineBaseUrl ?: BuildConfig.ENGINE_BASE_URL.ifBlank { FALLBACK_ENGINE_BASE_URL },
+        )
+
+    /**
+     * Builds a full engine URL from a path.
+     *
+     * @param path the endpoint path, with or without a leading slash.
+     */
+    fun engineUrl(path: String): String =
+        ENGINE_BASE_URL + if (path.startsWith("/")) path else "/$path"
+
+    /**
      * Trims a host and drops trailing slashes.
      *
      * WHY: a base URL pasted from a console routinely ends in `/`, and

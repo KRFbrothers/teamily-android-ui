@@ -3,6 +3,7 @@ package ai.duagenai.design.nav
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -11,25 +12,31 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
 import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.cube.CubeStore
+import ai.duagenai.design.BuildConfig
+import ai.duagenai.design.screens.ApiConfig
 import ai.duagenai.design.screens.ApiError
 import ai.duagenai.design.screens.ArtifactItem
 import ai.duagenai.design.screens.ArtifactsDataSource
@@ -56,14 +63,28 @@ import ai.duagenai.design.screens.sampleMemories
 import ai.duagenai.design.screens.UrlLauncher
 import ai.duagenai.design.screens.UrlOpener
 import ai.duagenai.design.screens.WriteResult
+import ai.duagenai.design.screens.DuaAgentSkills
+import ai.duagenai.design.screens.RemoteAccountDataSource
 import ai.duagenai.design.screens.RemoteArtifactsDataSource
+import ai.duagenai.design.screens.RemoteChatDataSource
+import ai.duagenai.design.screens.SETTINGS_ACCOUNT_HELPER
+import ai.duagenai.design.screens.SETTINGS_EDIT_PROFILE_LABEL
+import ai.duagenai.design.screens.SETTINGS_SIGN_IN_LABEL
+import ai.duagenai.design.screens.SETTINGS_SIGN_OUT_LABEL
+import ai.duagenai.design.screens.SettingsScreen
 import ai.duagenai.design.screens.RemoteDataSource
 import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.demoArtifacts
 import ai.duagenai.design.screens.AGENT_CHAT_ID
 import ai.duagenai.design.screens.AGENT_CHAT_TITLE
 import ai.duagenai.design.theme.DuaGenAITheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch as coroutineLaunch
+import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -601,17 +622,22 @@ private class FailingWriteMemoryDataSource(
 private class RecordingTransport(
     private val response: String = "[]",
     private val failWith: Int? = null,
+    private val respond: ((url: String) -> String)? = null,
 ) : HttpTransport {
     val calls: MutableList<Pair<String, String>> = mutableListOf()
 
     /** The token handed to the transport for each call, in call order. */
     val tokens: MutableList<String?> = mutableListOf()
 
+    /** The JSON body of each call, in call order. */
+    val bodies: MutableList<String?> = mutableListOf()
+
     override fun execute(method: String, url: String, body: String?, token: String?): String {
         calls += method to url
         tokens += token
+        bodies += body
         failWith?.let { throw HttpStatusException(it) }
-        return response
+        return respond?.invoke(url) ?: response
     }
 }
 
@@ -632,11 +658,27 @@ private class RecordingSharer : MemorySharer {
 }
 
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [34])
+// Robolectric's default window is too short for this kit: the drawer footer,
+// the last artifact card and the last chat row sit below the fold, and
+// isOnScreen then reports them missing. A Pixel-class window keeps every
+// asserted row inside the root. It does not change what the app draws.
+@Config(sdk = [34], qualifiers = "w411dp-h1400dp")
 class DuaGenAINavHostTest {
 
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    /**
+     * Session and host overrides are process-wide. A test that signs in or
+     * repoints [ApiConfig] must not leak into the next one: the UI tests depend
+     * on a null token, which is what keeps chat on the canned reply.
+     */
+    @After
+    fun resetSessionAndHostOverrides() {
+        TokenStore.token = null
+        ApiConfig.overrideBaseUrl = null
+        ApiConfig.overrideEngineBaseUrl = null
+    }
 
     /**
      * A real [NavHostController] bound to the test activity, so the test can
@@ -672,13 +714,45 @@ class DuaGenAINavHostTest {
     // The drawer is composed while closed, so "exists in the tree" is not the
     // same as "the user can see it". These helpers count only what is on screen.
 
-    /** True when [node]'s bounds sit inside the root and it has a real size. */
+    /**
+     * Clicks [this] node.
+     *
+     * The library `performClick` injects a touch. A modal bottom sheet is a
+     * second window, and Robolectric delivers that touch to the activity, so
+     * the control inside the sheet never runs. The semantics click is the
+     * action the control publishes and it runs in the sheet's composition.
+     * A node with no click action still receives a touch.
+     */
+    private fun SemanticsNodeInteraction.performClick(): SemanticsNodeInteraction {
+        val click = fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)
+        return if (click != null) performSemanticsAction(SemanticsActions.OnClick)
+        else performTouchInput { click() }
+    }
+
+    /**
+     * True when [node] is on screen and has a real size.
+     *
+     * A [androidx.compose.material3.ModalBottomSheet] or
+     * [androidx.compose.material3.TooltipBox] popup is a second semantics root.
+     * `onRoot()` requires exactly one and throws while one is open. The activity
+     * root is the first root. Content that lives in a dialog or popup root is
+     * on screen when it has a real size — its coordinates are not the activity's.
+     */
     private fun isOnScreen(node: androidx.compose.ui.semantics.SemanticsNode): Boolean {
-        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
         val b = node.boundsInRoot
-        return b.width > 0f && b.height > 0f &&
-            b.left >= root.left - 1f && b.right <= root.right + 1f &&
-            b.top >= root.top - 1f && b.bottom <= root.bottom + 1f
+        if (b.width <= 0f || b.height <= 0f) return false
+        val mainRoot = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first()
+        val main = mainRoot.boundsInRoot
+        var root = node
+        var parent = root.parent
+        while (parent != null) {
+            root = parent
+            parent = root.parent
+        }
+        // Dialog, sheet, and tooltip content lives in its own root.
+        if (root.id != mainRoot.id) return true
+        return b.left >= main.left - 1f && b.right <= main.right + 1f &&
+            b.top >= main.top - 1f && b.bottom <= main.bottom + 1f
     }
 
     /** How many nodes carrying [text] are actually visible. */
@@ -1160,7 +1234,10 @@ class DuaGenAINavHostTest {
             currentRoute(),
         )
         assertVisible(ARTIFACTS_HEADING)
-        assertVisible(ARTIFACTS_EMPTY)
+        // launch() seeds demoArtifacts, so the grid is showing. The empty line is
+        // what production draws when that seed is absent.
+        assertVisible(ARTIFACTS_FIRST_ITEM)
+        assertNotVisible(ARTIFACTS_EMPTY)
         assertNotVisible(MEMORY_EMPTY)
     }
 
@@ -1295,7 +1372,9 @@ class DuaGenAINavHostTest {
     fun theDisabledProfileControlsAreNotClickable() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Settings").performClick()
+        // The drawer gear is "Profile". The home gear is "Settings" and opens
+        // the settings screen; this test is about the profile controls.
+        compose.onNodeWithContentDescription("Profile").performClick()
         compose.waitForIdle()
 
         // Both inert controls are announced as disabled.
@@ -2481,6 +2560,10 @@ class DuaGenAINavHostTest {
 
     @Test
     fun theDrawerFooterShowsTheSavedCube() {
+        // A previous test may have saved another cube into the process-wide store.
+        runBlocking {
+            CubeStore(compose.activity.applicationContext).save(CubeIds.DEFAULT)
+        }
         launch()
         openDrawer()
 
@@ -3754,6 +3837,218 @@ class DuaGenAINavHostTest {
             "an injected client must not be the shared one",
             source.client !== HttpClientProvider.client,
         )
+    }
+
+    // ------------------------------------------------- live backend wiring
+
+    /**
+     * The engine host follows the build value, then a runtime override, always
+     * without a trailing slash.
+     */
+    @Test
+    fun engineBaseUrlResolvesAndHonoursTheOverride() {
+        ApiConfig.overrideEngineBaseUrl = null
+        val fromBuild = BuildConfig.ENGINE_BASE_URL.ifBlank { ApiConfig.FALLBACK_ENGINE_BASE_URL }
+            .trim()
+            .trimEnd('/')
+        assertEquals(fromBuild, ApiConfig.ENGINE_BASE_URL)
+        assertEquals("$fromBuild/api/chat", ApiConfig.engineUrl("/api/chat"))
+        assertEquals("$fromBuild/api/chat", ApiConfig.engineUrl("api/chat"))
+
+        ApiConfig.overrideEngineBaseUrl = "https://engine.example/ "
+        assertEquals("https://engine.example", ApiConfig.ENGINE_BASE_URL)
+        assertEquals("https://engine.example/api/chat", ApiConfig.engineUrl("/api/chat"))
+
+        ApiConfig.overrideEngineBaseUrl = null
+        assertEquals("clearing the override restores the build value", fromBuild, ApiConfig.ENGINE_BASE_URL)
+    }
+
+    /**
+     * [TokenStore.state] emits the normalised token, so a collector sees sign-in
+     * and sign-out without reading the property again.
+     */
+    @Test
+    fun tokenStoreStateEmitsNormalisedUpdates() {
+        TokenStore.token = null
+        val seen = mutableListOf<String?>()
+        runBlocking {
+            val job = coroutineLaunch(Dispatchers.Unconfined) {
+                TokenStore.state.collect { seen += it }
+            }
+            try {
+                TokenStore.token = "  live-token  "
+                TokenStore.token = "   "
+            } finally {
+                job.cancel()
+            }
+        }
+        assertEquals(listOf(null, "live-token", null), seen)
+        assertEquals(null, TokenStore.token)
+        assertEquals(null, TokenStore.state.value)
+        assertTrue(TokenStore.state === TokenStore.session)
+    }
+
+    /** Email sign-in reads `session.accessToken`, trims it, and stores it. */
+    @Test
+    fun emailLoginStoresTheSessionAccessToken() {
+        ApiConfig.overrideBaseUrl = "https://api.example"
+        val transport = RecordingTransport(
+            response = """
+                {"configured":true,"session":{"accessToken":"  access-123  ","refreshToken":"r"}}
+            """.trimIndent(),
+        )
+        val source = RemoteAccountDataSource(
+            client = JsonHttpClient(transport = transport, label = "Sign in"),
+        )
+
+        val token = kotlinx.coroutines.runBlocking {
+            source.emailLogin("  owner@dua.ai  ", "secret")
+        }
+
+        assertEquals("access-123", token)
+        assertEquals("access-123", TokenStore.token)
+        assertEquals("access-123", TokenStore.state.value)
+        assertEquals("POST", transport.calls[0].first)
+        assertEquals("https://api.example/api/account/email-login", transport.calls[0].second)
+        val sent = JSONObject(transport.bodies[0])
+        assertEquals("owner@dua.ai", sent.getString("email"))
+        assertEquals("secret", sent.getString("password"))
+    }
+
+    /** A body with no access token is not a sign-in, and the stored token stays. */
+    @Test
+    fun emailLoginRefusesABodyWithoutAnAccessToken() {
+        TokenStore.token = "keep-me"
+        val transport = RecordingTransport(response = """{"session":{}}""")
+        val source = RemoteAccountDataSource(
+            client = JsonHttpClient(transport = transport, label = "Sign in"),
+        )
+
+        val error = runCatching {
+            kotlinx.coroutines.runBlocking { source.emailLogin("a@b.c", "pw") }
+        }.exceptionOrNull()
+
+        assertTrue(error is ApiError)
+        assertEquals("keep-me", TokenStore.token)
+    }
+
+    /** Sign-out posts `{}` and clears the token even when the server refuses. */
+    @Test
+    fun logoutClearsTheTokenWhenTheCallFails() {
+        ApiConfig.overrideBaseUrl = "https://api.example"
+        TokenStore.token = "session"
+        val transport = RecordingTransport(failWith = 500)
+        val source = RemoteAccountDataSource(
+            client = JsonHttpClient(transport = transport, label = "Sign out"),
+        )
+
+        kotlinx.coroutines.runBlocking { source.logout() }
+
+        assertEquals(null, TokenStore.token)
+        assertEquals("POST", transport.calls[0].first)
+        assertEquals("https://api.example/api/account/logout", transport.calls[0].second)
+        assertEquals("{}", transport.bodies[0])
+    }
+
+    /**
+     * A normal thread posts `mode: "auto"` to the API. Dua Agent posts
+     * `mode: "agent"` plus the skill ids to the engine, and SSE text chunks
+     * are joined. A non-SSE agent body falls back to `{"text":"..."}`.
+     */
+    @Test
+    fun remoteChatRoutesAutoAndAgentAndParsesSse() {
+        ApiConfig.overrideBaseUrl = "https://api.example"
+        ApiConfig.overrideEngineBaseUrl = "https://engine.example"
+        val sse = listOf(
+            "event: text",
+            "data: {\"type\":\"text\",\"text\":\"Hello \"}",
+            "data: {\"type\":\"thinking\",\"text\":\"hmm\"}",
+            "data: {\"type\":\"text\",\"text\":\"world\"}",
+            "",
+        ).joinToString("\n")
+        val transport = RecordingTransport { url ->
+            if (url.startsWith("https://engine.example")) sse else """{"text":"from api"}"""
+        }
+        val source = RemoteChatDataSource(
+            client = JsonHttpClient(transport = transport, label = "Chat request"),
+        )
+        val skills = DuaAgentSkills.ids.toSet()
+
+        val auto = kotlinx.coroutines.runBlocking {
+            source.sendMessage("chat_webpage", "Hi there", skills)
+        }
+        val agent = kotlinx.coroutines.runBlocking {
+            source.sendMessage(AGENT_CHAT_ID, "Build it", skills)
+        }
+
+        assertEquals("from api", auto)
+        assertEquals("Hello world", agent)
+        assertEquals("https://api.example/api/chat", transport.calls[0].second)
+        assertEquals("https://engine.example/api/chat", transport.calls[1].second)
+
+        val autoBody = JSONObject(transport.bodies[0])
+        assertEquals("Dua", autoBody.getString("model"))
+        assertEquals("auto", autoBody.getString("mode"))
+        assertEquals(false, autoBody.getBoolean("stream"))
+        assertFalse(autoBody.has("skills"))
+        val autoMessage = autoBody.getJSONArray("messages").getJSONObject(0)
+        assertEquals("user", autoMessage.getString("role"))
+        assertEquals("Hi there", autoMessage.getString("text"))
+
+        val agentBody = JSONObject(transport.bodies[1])
+        assertEquals("agent", agentBody.getString("mode"))
+        assertEquals(true, agentBody.getBoolean("stream"))
+        val sentSkills = agentBody.getJSONArray("skills")
+        assertEquals(DuaAgentSkills.ids.size, sentSkills.length())
+        assertEquals("frontend-developer", sentSkills.getString(0))
+        assertEquals("backend-architect", sentSkills.getString(1))
+
+        val plain = RemoteChatDataSource(
+            client = JsonHttpClient(
+                transport = RecordingTransport(response = """{"text":"plain agent"}"""),
+                label = "Chat request",
+            ),
+        )
+        val fallback = kotlinx.coroutines.runBlocking {
+            plain.sendMessage(AGENT_CHAT_ID, "Hi", setOf("code-reviewer"))
+        }
+        assertEquals("plain agent", fallback)
+    }
+
+    /**
+     * Signed out, Settings keeps the disabled account rows and offers Sign in.
+     * A token enables Sign out and drops the Sign in row.
+     */
+    @Test
+    fun settingsAccountRowsFollowTheSessionToken() {
+        TokenStore.token = null
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) { SettingsScreen() }
+        }
+        compose.waitForIdle()
+
+        assertVisible(SETTINGS_SIGN_IN_LABEL)
+        assertVisible(SETTINGS_ACCOUNT_HELPER)
+        assertVisible("Signing out is not available in this build.")
+        val editDisabled = compose.onAllNodes(
+            hasText(SETTINGS_EDIT_PROFILE_LABEL) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("Edit profile must stay disabled", editDisabled >= 1)
+        val signOutDisabled = compose.onAllNodes(
+            hasText(SETTINGS_SIGN_OUT_LABEL) and isNotEnabled(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("Sign out must stay disabled while signed out", signOutDisabled >= 1)
+
+        compose.runOnIdle { TokenStore.token = "session-token" }
+        compose.waitForIdle()
+
+        assertVisible("End this session on this device.")
+        assertNotVisible("Signing out is not available in this build.")
+        assertNotVisible("Use your Dua account email and password.")
+        val signOutEnabled = compose.onAllNodes(
+            hasText(SETTINGS_SIGN_OUT_LABEL) and hasClickAction(),
+        ).fetchSemanticsNodes().count { isOnScreen(it) }
+        assertTrue("Sign out must be clickable once a session exists", signOutEnabled >= 1)
     }
 
     // ------------------------------------------------------------- labels

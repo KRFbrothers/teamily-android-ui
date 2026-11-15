@@ -103,6 +103,15 @@ object TokenStore {
     val session: StateFlow<String?> = _session.asStateFlow()
 
     /**
+     * The same flow as [session].
+     *
+     * Account and chat screens collect this name. It is not a second store:
+     * both properties are the one flow the setter writes, so a sign-in updates
+     * every collector at once.
+     */
+    val state: StateFlow<String?> = session
+
+    /**
      * The current bearer token, or null when signed out.
      *
      * Kept as a property so existing call sites and tests read the same value
@@ -110,6 +119,10 @@ object TokenStore {
      */
     var token: String?
         get() = _session.value
+        // The Kotlin setter would otherwise be `setToken` on the JVM, which
+        // is the same signature as [setToken] below. Call sites keep using
+        // `TokenStore.token =`; only the bytecode name changes.
+        @JvmName("assignToken")
         set(value) {
             _session.value = normalize(value)
         }
@@ -128,7 +141,7 @@ object TokenStore {
      * the app.
      */
     fun setToken(value: String?) {
-        _session.value = normalize(value)
+        token = value
     }
 
     /** Signs out: clears the token, so every request goes back to anonymous. */

@@ -26,6 +26,9 @@ plugins {
 /** The live Cloud Run service, used when nothing overrides it. */
 val defaultApiBaseUrl = "https://dua-api-228305912525.us-central1.run.app"
 
+/** The live Cloud Run engine, used when nothing overrides it. */
+val defaultEngineBaseUrl = "https://dua-ai-engine-228305912525.us-central1.run.app"
+
 /**
  * Resolves the base URL for one build type.
  *
@@ -39,6 +42,24 @@ fun apiBaseUrlFor(buildTypeSuffix: String): String {
     )
     return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()?.trimEnd('/')
         ?: defaultApiBaseUrl
+}
+
+/**
+ * Resolves the engine URL for one build type.
+ *
+ * Same precedence as [apiBaseUrlFor]: a per-build-type property, then the
+ * shared property, then the environment, then [defaultEngineBaseUrl].
+ *
+ * @param buildTypeSuffix the per-build-type property suffix ("Debug" / "Release").
+ */
+fun engineBaseUrlFor(buildTypeSuffix: String): String {
+    val candidates = listOf(
+        providers.gradleProperty("duaEngineBaseUrl$buildTypeSuffix").orNull,
+        providers.gradleProperty("duaEngineBaseUrl").orNull,
+        providers.environmentVariable("DUA_ENGINE_BASE_URL").orNull,
+    )
+    return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()?.trimEnd('/')
+        ?: defaultEngineBaseUrl
 }
 
 android {
@@ -62,6 +83,7 @@ android {
             // "the placeholder". Override with -PduaApiBaseUrlDebug=... to point
             // at a local emulator host (http://10.0.2.2:8080) instead.
             buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlFor("Debug")}\"")
+            buildConfigField("String", "ENGINE_BASE_URL", "\"${engineBaseUrlFor("Debug")}\"")
         }
         release {
             isMinifyEnabled = false
@@ -70,6 +92,7 @@ android {
                 "proguard-rules.pro",
             )
             buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlFor("Release")}\"")
+            buildConfigField("String", "ENGINE_BASE_URL", "\"${engineBaseUrlFor("Release")}\"")
         }
     }
 
@@ -84,9 +107,9 @@ android {
 
     buildFeatures {
         compose = true
-        // Required for the generated API_BASE_URL field above. AGP 8.x turns
-        // BuildConfig generation off by default, so without this the field does
-        // not exist and ApiConfig would not compile.
+        // Required for the generated API_BASE_URL and ENGINE_BASE_URL fields
+        // above. AGP 8.x turns BuildConfig generation off by default, so without
+        // this the fields do not exist and ApiConfig would not compile.
         buildConfig = true
     }
 

@@ -51,9 +51,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ai.duagenai.design.cube.CubeAvatar
 import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.cube.CubeIds
@@ -193,9 +196,9 @@ private fun Message.toSaved(): SavedMessage = SavedMessage(
 /**
  * Agent's canned reply.
  *
- * Deliberately static: this kit has no model behind it, and the brief asked for
- * a simple reply rather than a real call. It is written to Agent's role — it
- * reports on the agents it controls — so the thread stays in character.
+ * Used only while [TokenStore.token] is null and no [ChatDataSource] is
+ * injected, so previews and the existing UI tests stay offline. A signed-in
+ * session sends the turn to the live backend instead.
  */
 private const val AGENT_REPLY =
     "Got it — I've picked that up and I'm on it. I'll report back here as soon as it's done."
@@ -271,6 +274,10 @@ fun ChatScreen(
     // saved-instance Bundle. Hoisted by the nav host so every thread shares one
     // retained store; the default keeps the @Previews working.
     transcriptStore: ChatTranscriptStore = viewModel(),
+    // Where a live reply comes from. Null uses [RemoteChatDataSource] once a
+    // session token exists, and the canned offline reply when it does not. A
+    // test injects a fake; the default keeps every existing caller compiling.
+    chatDataSource: ChatDataSource? = null,
 ) {
     val profileClick = if (onOpenAgentProfile != null) {
         Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
@@ -347,10 +354,31 @@ fun ChatScreen(
         transcriptStore.append(chatId, SavedMessage(SavedMessage.USER, text, nowLabel()))
         draft = ""
         agentTyping = true
+        // Offline until there is a session or an injected source. This branch is
+        // what the existing UI tests drive: a 900ms beat, then [AGENT_REPLY].
+        val source = chatDataSource
+        val useLive = source != null || TokenStore.token != null
+        val skillSnapshot = skills
         replyJob = scope.launch {
-            delay(AGENT_REPLY_DELAY_MS)
-            agentTyping = false
-            transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()))
+            if (!useLive) {
+                delay(AGENT_REPLY_DELAY_MS)
+                agentTyping = false
+                transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()))
+            } else {
+                val replyText = try {
+                    withContext(Dispatchers.IO) {
+                        (source ?: RemoteChatDataSource()).sendMessage(chatId, text, skillSnapshot)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: ApiError) {
+                    e.userMessage
+                } catch (e: Exception) {
+                    e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
+                }
+                agentTyping = false
+                transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, replyText, nowLabel()))
+            }
         }
     }
 

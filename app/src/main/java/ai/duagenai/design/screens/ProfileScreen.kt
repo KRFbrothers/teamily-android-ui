@@ -447,7 +447,15 @@ internal fun SettingsRow(
             )
             .sizeIn(minHeight = 48.dp)
             .padding(horizontal = spacing.md, vertical = spacing.md)
-            .then(if (enabled) Modifier else Modifier.semantics { disabled() }),
+            .then(
+                if (enabled) {
+                    Modifier
+                } else {
+                    // Merge so the row title itself is what is announced as
+                    // disabled. A separate text node would still sound tappable.
+                    Modifier.semantics(mergeDescendants = true) { disabled() }
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null) {

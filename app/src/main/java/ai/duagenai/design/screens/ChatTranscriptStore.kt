@@ -1,9 +1,13 @@
 package ai.duagenai.design.screens
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  ChatTranscriptStore — where a thread's messages LIVE.
@@ -101,5 +105,118 @@ class ChatTranscriptStore : ViewModel() {
             val next = transform(current)
             if (compareAndSet(current, next)) return
         }
+    }
+}
+
+/* ============================================================================
+ *  Live chat — one turn against dua-backend.
+ *
+ *  A normal thread goes to the Node API (`mode: "auto"`, `stream: false`).
+ *  Dua Agent ([AGENT_CHAT_ID]) goes to the Python engine (`mode: "agent"`,
+ *  `stream: true`) with the enabled skill ids. The screen stays on the canned
+ *  offline reply until a session token exists, unless a caller injects a source.
+ * ==========================================================================*/
+
+/**
+ * Sends one user turn and returns the assistant text.
+ *
+ * @param skills the enabled Dua Agent skill ids. A normal thread ignores them.
+ */
+interface ChatDataSource {
+    suspend fun sendMessage(chatId: String, text: String, skills: Set<String>): String
+}
+
+/**
+ * The live `POST /api/chat` source.
+ *
+ * @param client where the request goes. Defaults to a client that reads
+ *   [TokenStore] and waits longer than the shared 10s read timeout, because an
+ *   agent SSE stream often outlives that. A test injects a fake-transport client.
+ */
+class RemoteChatDataSource(
+    private val client: JsonHttpClient = JsonHttpClient(
+        transport = UrlConnectionTransport(readTimeoutMs = 120_000),
+        label = "Chat request",
+        tokenProvider = TokenStore.provider,
+    ),
+) : ChatDataSource {
+
+    override suspend fun sendMessage(
+        chatId: String,
+        text: String,
+        skills: Set<String>,
+    ): String = withContext(Dispatchers.IO) {
+        val agent = chatId == AGENT_CHAT_ID
+        val payload = JSONObject()
+            .put("model", "Dua")
+            .put("mode", if (agent) "agent" else "auto")
+            .put("stream", agent)
+            .put(
+                "messages",
+                JSONArray().put(
+                    JSONObject()
+                        .put("role", "user")
+                        .put("text", text),
+                ),
+            )
+        if (agent) {
+            payload.put("skills", skillIds(skills))
+        }
+        val url = if (agent) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
+        val body = client.requestOrThrow("POST", url, payload.toString(), label = "Chat request")
+        if (agent) parseAgentReply(body) else plainChatText(body)
+    }
+}
+
+/**
+ * Skill ids in catalog order, then any extra id the caller enabled.
+ *
+ * The engine rejects unknown ids, and a stable order keeps the request body
+ * comparable. Catalog order matches the contract's skill table.
+ */
+private fun skillIds(enabled: Set<String>): JSONArray {
+    val ordered = ArrayList<String>(enabled.size)
+    for (id in DuaAgentSkills.ids) {
+        if (id in enabled) ordered += id
+    }
+    for (id in enabled) {
+        if (id !in ordered) ordered += id
+    }
+    return JSONArray().apply { ordered.forEach { put(it) } }
+}
+
+/**
+ * Reads an agent reply.
+ *
+ * SSE lines of the form `data: {"type":"text","text":"..."}` are concatenated.
+ * A body with no `data:` line is treated as a plain `{"text":"..."}` JSON
+ * response, which is what the engine returns when streaming did not happen.
+ */
+internal fun parseAgentReply(body: String): String {
+    val chunks = StringBuilder()
+    var sawData = false
+    for (raw in body.lineSequence()) {
+        val line = raw.trim()
+        if (!line.startsWith("data:")) continue
+        sawData = true
+        val payload = line.removePrefix("data:").trim()
+        if (payload.isEmpty() || payload == "[DONE]") continue
+        val obj = runCatching { JSONObject(payload) }.getOrNull() ?: continue
+        if (obj.optString("type") == "text") {
+            chunks.append(obj.optString("text"))
+        }
+    }
+    if (!sawData) return plainChatText(body)
+    return chunks.toString()
+}
+
+/** Reads `{"text":"..."}`. A body that is not that object is a malformed reply. */
+private fun plainChatText(body: String): String {
+    val trimmed = body.trim()
+    if (trimmed.isEmpty()) throw ApiError.forMalformedResponse("Chat request")
+    return try {
+        JSONObject(trimmed).optString("text")
+    } catch (e: org.json.JSONException) {
+        throw ApiError.forMalformedResponse("Chat request")
     }
 }
