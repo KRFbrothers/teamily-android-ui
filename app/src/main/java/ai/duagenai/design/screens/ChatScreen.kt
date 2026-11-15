@@ -11,10 +11,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -450,18 +455,27 @@ fun ChatScreen(
         // two call sites. Only the placeholder is thread-specific; the value /
         // change / send parameters are what make it live.
         bottomBar = {
-            DuaComposer(
-                placeholder = "Message $chatTitle…",
-                value = draft,
-                onValueChange = { draft = it },
-                onSend = { send() },
-                sending = agentTyping,
-                onStop = { stop() },
-                enabledSkillIds = skills,
-                onToggleSkill = toggleSkill,
-                mcpEnabled = mcp,
-                onToggleMcp = toggleMcp,
-            )
+            // The scaffold pins this bar to the screen bottom, which on an
+            // edge-to-edge window is behind the navigation bar and the keyboard.
+            // The inset keeps the composer inside the phone screen.
+            Box(
+                Modifier.windowInsetsPadding(
+                    WindowInsets.navigationBars.union(WindowInsets.ime),
+                ),
+            ) {
+                DuaComposer(
+                    placeholder = "Message $chatTitle…",
+                    value = draft,
+                    onValueChange = { draft = it },
+                    onSend = { send() },
+                    sending = agentTyping,
+                    onStop = { stop() },
+                    enabledSkillIds = skills,
+                    onToggleSkill = toggleSkill,
+                    mcpEnabled = mcp,
+                    onToggleMcp = toggleMcp,
+                )
+            }
         },
     ) { inner ->
         LazyColumn(
