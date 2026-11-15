@@ -26,12 +26,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,6 +94,27 @@ fun ProfileScreen(
     storageLabel: String = "3.2 GB of 15 GB",
     /** The Notifications row's subtitle, e.g. "5 of 7 on". */
     notificationsLabel: String = "5 of 7 on",
+    /**
+     * Whether a session token is present.
+     *
+     * Drives the sign-in card: signed out shows the token field, signed in shows
+     * the sign-out button. The nav host passes `TokenStore.session != null`.
+     */
+    signedIn: Boolean = false,
+    /**
+     * Hands a pasted session token to the app.
+     *
+     * THE ONLY WRITE PATH for a token in the whole app. Before this existed,
+     * nothing in `app/src/main` ever set `TokenStore.token`, so the remote data
+     * sources were never constructed and the app could not reach the backend at
+     * all — the single biggest blocker in the review.
+     *
+     * A real build replaces this field with a Supabase/OAuth sign-in flow; the
+     * seam is the same either way (`TokenStore.setToken`).
+     */
+    onSignIn: (String) -> Unit = {},
+    /** Clears the session token. */
+    onSignOut: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -142,15 +168,26 @@ fun ProfileScreen(
                             contentDescription = "Your avatar, ${CubeIds.label(cubeId)}",
                         )
                         Spacer(Modifier.height(spacing.md))
+                        // NO HARDCODED IDENTITY.
+                        //
+                        // This used to be a literal name and email address in
+                        // the source, which shipped one real person's PII in
+                        // every build. The header now says what the app actually
+                        // knows: whether there is a session.
                         Text(
-                            text = "Fareed Khan",
+                            text = if (signedIn) "Signed in" else "Not signed in",
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "fareed.khan@gmail.com",
+                            text = if (signedIn) {
+                                "Session active \u00b7 Artifacts and Memory are live"
+                            } else {
+                                "Sign in below to load Artifacts and Memory"
+                            },
                             style = DuaGenAITextStyles.snippet,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(spacing.sm))
                         Box(
@@ -159,7 +196,11 @@ fun ProfileScreen(
                                 .background(colors.logoMint)
                                 .padding(horizontal = 10.dp, vertical = 3.dp),
                         ) {
-                            Text("DUA GEN AI PRO", style = DuaGenAITextStyles.eyebrow, color = colors.onLogoMint)
+                            Text(
+                                text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
+                                style = DuaGenAITextStyles.eyebrow,
+                                color = colors.onLogoMint,
+                            )
                         }
                         Spacer(Modifier.height(spacing.lg))
                         // Audit fix #9: this used to be `onClick = {}` — a button
@@ -260,26 +301,90 @@ fun ProfileScreen(
                 }
             }
             item {
-                // Audit fix #9: same guard as "Edit profile" above. Signing out
-                // is not wired in this kit, so the button is disabled rather
-                // than looking live and swallowing the tap.
-                OutlinedButton(
-                    onClick = {},
-                    enabled = false,
+                // THE SIGN-IN CARD.
+                //
+                // This is the control the review said was missing: the backend's
+                // 401 body literally says "Sign in from Profile to use
+                // Artifacts.", and Profile had no way to do it. Without a token
+                // the app cannot reach the live service at all.
+                //
+                // It is deliberately a plain token field, not an OAuth flow: this
+                // module has no auth dependency, and adding one is a product
+                // decision. What it does provide is the real, working seam —
+                // paste a session token, and both repositories flip to the remote
+                // sources immediately (the nav host collects the StateFlow).
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = DuaGenAITheme.shapes.pill,
+                    shape = DuaGenAITheme.shapes.card,
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Text("Sign out", style = DuaGenAITextStyles.button)
+                    Column(modifier = Modifier.padding(spacing.lg)) {
+                        Text(
+                            text = "SESSION",
+                            style = DuaGenAITextStyles.eyebrow,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(spacing.sm))
+                        if (signedIn) {
+                            Text(
+                                text = "A session token is active. Artifacts and Memory load from the live service.",
+                                style = DuaGenAITextStyles.meta,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(spacing.md))
+                            OutlinedButton(
+                                onClick = onSignOut,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = DuaGenAITheme.shapes.pill,
+                            ) {
+                                Text("Sign out", style = DuaGenAITextStyles.button)
+                            }
+                        } else {
+                            Text(
+                                text = "Paste a session token to load Artifacts and Memory from the live service.",
+                                style = DuaGenAITextStyles.meta,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(spacing.md))
+                            // Local draft only. The token is never logged, never
+                            // persisted, and never rendered back once submitted.
+                            var draft by remember { mutableStateOf("") }
+                            OutlinedTextField(
+                                value = draft,
+                                onValueChange = { draft = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                label = { Text("Session token") },
+                                placeholder = { Text("eyJ\u2026") },
+                            )
+                            Spacer(Modifier.height(spacing.md))
+                            Button(
+                                onClick = {
+                                    if (draft.isNotBlank()) {
+                                        onSignIn(draft)
+                                        // Clear the field so the token is not
+                                        // left sitting in a text box.
+                                        draft = ""
+                                    }
+                                },
+                                enabled = draft.isNotBlank(),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = DuaGenAITheme.shapes.pill,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                            ) {
+                                Text("Sign in", style = DuaGenAITextStyles.button)
+                            }
+                        }
+                    }
                 }
-                Spacer(Modifier.height(spacing.xs))
-                Text(
-                    text = "Sign out is not available in this build.",
-                    style = DuaGenAITextStyles.meta,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
+            // The old disabled "Sign out" block lived here. It is gone: sign-out
+            // is now a real control inside the SESSION card above, so a second,
+            // permanently-disabled button would be a lie about what the app can
+            // do.
         }
     }
 }

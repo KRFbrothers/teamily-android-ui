@@ -72,7 +72,17 @@ sealed interface MemoryUiState {
     data class Loaded(val memories: List<MemoryItem>) : MemoryUiState
 
     /** The load failed. [message] is shown with a Retry action. */
-    data class Error(val message: String) : MemoryUiState
+    data class Error(
+        val message: String,
+        /**
+         * Whether trying again could plausibly succeed.
+         *
+         * A 401/403 is false: the request goes out anonymous again and fails
+         * identically, so offering "Retry" for it was a dead button. The screen
+         * shows "Sign in" instead.
+         */
+        val retryable: Boolean = true,
+    ) : MemoryUiState
 }
 
 /**
@@ -117,80 +127,33 @@ interface MemoryDataSource : RemoteDataSource<MemoryItem> {
     /** Fetches the full list. Throws on network / parse failure. */
     override suspend fun fetch(): List<MemoryItem>
 
-    /** Inserts [item] at the top of the list. Throws on failure. */
-    override suspend fun add(item: MemoryItem)
+    /**
+     * Inserts [item] and returns what the SERVER stored.
+     *
+     * Returning the stored item (not Unit) is the fix for a real data-loss bug:
+     * the POST response was discarded, so the server-assigned `id` and
+     * `timestamp` were thrown away and the screen kept showing the client's
+     * guess. A later DELETE then used an id the server had never issued.
+     */
+    override suspend fun add(item: MemoryItem): MemoryItem
 
     /** Removes the memory with [id]. Throws on failure. */
     override suspend fun delete(id: String)
 }
 
 /**
- * The demo memories the in-memory source seeds itself with.
- *
- * This is a design kit, so the entries are realistic sample data rather than a
- * live store — the same choice `sampleChats` and `sampleAgents` make. They are
- * written to the product model: things Dua and Agent would actually remember
- * about this user.
- */
-internal val sampleMemories = listOf(
-    MemoryItem(
-        id = "mem_launch_q3",
-        title = "Q3 launch is the current priority",
-        summary = "Deck, competitor research and invoice reconciliation are split across three agents.",
-        timestamp = "2 din pehle",
-        category = "Project",
-        // Has a URL: the long-press "Open" hands it to the shared UrlOpener.
-        url = "https://static.teamily.ai/sites/demo/q3-launch-brief/index.html",
-    ),
-    MemoryItem(
-        id = "mem_brand_green",
-        title = "Brand green is #087C45",
-        summary = "Prefers the Dua Gen AI green with the mint accent — never purple or blue.",
-        timestamp = "4 din pehle",
-        category = "Preference",
-        // Deliberately has NO url: it is the memory that makes the long-press
-        // "Open" fall back to the detail dialog, so that path is reachable and
-        // testable rather than theoretical.
-        url = null,
-    ),
-    MemoryItem(
-        id = "mem_deck_style",
-        title = "Decks: 12 slides, brand theme",
-        summary = "Slides Assistant should always export with the brand theme applied.",
-        timestamp = "1 hafta pehle",
-        category = "Preference",
-        url = "https://static.teamily.ai/sites/demo/brand-theme-guide.pdf",
-    ),
-    MemoryItem(
-        id = "mem_market_brief",
-        title = "Competitor brief needs cited sources",
-        summary = "Market Research must cite every claim; eight sources was the last accepted count.",
-        timestamp = "1 hafta pehle",
-        category = "Project",
-        url = "https://static.teamily.ai/sites/demo/competitor-brief.pdf",
-    ),
-    MemoryItem(
-        id = "mem_invoice_2211",
-        title = "Invoice #2211 flagged for review",
-        summary = "Accounting Assistant is waiting on a human decision before it reconciles this one.",
-        timestamp = "2 hafte pehle",
-        category = "Finance",
-        url = "https://static.teamily.ai/sites/demo/invoice-2211.pdf",
-    ),
-)
-
-/**
  * The in-memory data source — the demo set, and the default.
  *
- * @param seed the initial list. Defaults to [sampleMemories]; a test can pass
- *   `emptyList()` to exercise the empty state.
+ * @param seed the initial list. Defaults to EMPTY: a production build must never
+ *   ship fake rows. [sampleMemories] is a preview/test fixture and is passed
+ *   explicitly by the `@Preview` functions and the tests that need data.
  * @param failOnLoad when true, [fetch] throws — the hook the error-state test
  *   uses.
  * @param loadDelayMs how long [fetch] takes. Non-zero so the Loading state is
  *   observable; a test can pass 0 to skip the wait.
  */
 class InMemoryMemoryDataSource(
-    seed: List<MemoryItem> = sampleMemories,
+    seed: List<MemoryItem> = emptyList(),
     private val failOnLoad: Boolean = false,
     private val loadDelayMs: Long = 350L,
 ) : MemoryDataSource {
@@ -203,8 +166,9 @@ class InMemoryMemoryDataSource(
         return items.toList()
     }
 
-    override suspend fun add(item: MemoryItem) {
+    override suspend fun add(item: MemoryItem): MemoryItem {
         items.add(0, item)
+        return item
     }
 
     override suspend fun delete(id: String) {
@@ -236,7 +200,7 @@ class RemoteMemoryDataSource(
         parseMemories(client.requestOrThrow("GET", baseUrl, label = "Memory request"))
     }
 
-    override suspend fun add(item: MemoryItem) = withContext(Dispatchers.IO) {
+    override suspend fun add(item: MemoryItem): MemoryItem = withContext(Dispatchers.IO) {
         // Built with JSONObject, NOT string interpolation.
         //
         // WHY: a summary containing a quote or a newline used to produce invalid
@@ -253,8 +217,10 @@ class RemoteMemoryDataSource(
             put("url", item.url ?: JSONObject.NULL)
         }.toString()
         // requestOrThrow so a refused write surfaces as a typed ApiError.
-        client.requestOrThrow("POST", baseUrl, payload, label = "Memory request")
-        Unit
+        val response = client.requestOrThrow("POST", baseUrl, payload, label = "Memory request")
+        // The response is the SERVER's copy of the row — see the Artifacts twin
+        // for why discarding it lost the server-assigned id and timestamp.
+        parseMemoryOrFallback(response, item)
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
@@ -276,13 +242,17 @@ class RemoteMemoryDataSource(
         val array = unwrapList(body, key = "memories", label = "Memory request")
         val out = ArrayList<MemoryItem>(array.length())
         for (i in 0 until array.length()) {
-            val o = array.getJSONObject(i)
+            // PER-ITEM ISOLATION — see the Artifacts twin. One malformed row used
+            // to throw out of the whole parse and replace the entire list with an
+            // error screen; now it costs one row.
+            val o = array.optJSONObject(i) ?: continue
+            val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: continue
             out += MemoryItem(
-                id = o.getString("id"),
-                title = o.getString("title"),
+                id = id,
+                title = o.optString("title", "").ifBlank { "Untitled memory" },
                 summary = o.optString("summary", ""),
                 timestamp = o.optString("timestamp", ""),
-                category = o.optString("category", ""),
+                category = o.optString("category", "").ifBlank { "Note" },
                 // A blank or absent url is null, not an empty string: the screen
                 // branches on null to pick the detail-dialog fallback, so an
                 // empty string would slip past that check and open nothing.
@@ -290,6 +260,29 @@ class RemoteMemoryDataSource(
             )
         }
         return out
+    }
+
+    /**
+     * Parses the POST response into the stored item, falling back to [sent].
+     *
+     * Accepts the created object directly or wrapped in `{"memory":{...}}`. A
+     * write that SUCCEEDED must not be reported as a failure just because the
+     * response shape was unexpected.
+     */
+    private fun parseMemoryOrFallback(body: String, sent: MemoryItem): MemoryItem {
+        val text = body.trim()
+        if (!text.startsWith("{")) return sent
+        val root = runCatching { JSONObject(text) }.getOrNull() ?: return sent
+        val o = root.optJSONObject("memory") ?: root
+        val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: return sent
+        return MemoryItem(
+            id = id,
+            title = o.optString("title", "").ifBlank { sent.title },
+            summary = o.optString("summary", "").ifBlank { sent.summary },
+            timestamp = o.optString("timestamp", "").ifBlank { sent.timestamp },
+            category = o.optString("category", "").ifBlank { sent.category },
+            url = o.optString("url", "").takeIf { it.isNotBlank() } ?: sent.url,
+        )
     }
 }
 
@@ -302,13 +295,14 @@ class RemoteMemoryDataSource(
  * nothing above this class.
  *
  * @param dataSource where the memories actually come from. Defaults to the
- *   in-memory demo source, so the kit runs with no backend.
+ *   in-memory source, which starts EMPTY — a production build must never ship
+ *   fake rows.
  * @param seed / @param failOnLoad / @param loadDelayMs configure the in-memory
  *   source when [dataSource] is left at its default.
  */
 class MemoryRepository(
     dataSource: MemoryDataSource? = null,
-    seed: List<MemoryItem> = sampleMemories,
+    seed: List<MemoryItem> = emptyList(),
     failOnLoad: Boolean = false,
     loadDelayMs: Long = 350L,
 ) : BaseRemoteRepository<MemoryItem, MemoryUiState>(
@@ -327,12 +321,15 @@ class MemoryRepository(
         MemoryUiState.Loaded(items)
 
     /** The state wrapping a failure message, shown with a Retry action. */
-    override fun errorState(message: String): MemoryUiState =
-        MemoryUiState.Error(message)
+    override fun errorState(message: String, retryable: Boolean): MemoryUiState =
+        MemoryUiState.Error(message, retryable)
 
     /** The loaded list inside [state], or null while loading / in error. */
     override fun itemsOf(state: MemoryUiState): List<MemoryItem>? =
         (state as? MemoryUiState.Loaded)?.memories
+
+    /** A copy of [item] carrying [id] — the undo path's new identity. */
+    override fun withId(item: MemoryItem, id: String): MemoryItem = item.copy(id = id)
 
     /** The message used when an exception carries none of its own. */
     override val errorFallback: String = "Memories load nahi ho paye."

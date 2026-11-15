@@ -90,7 +90,17 @@ sealed interface ArtifactsUiState {
     data class Loaded(val artifacts: List<ArtifactItem>) : ArtifactsUiState
 
     /** The load failed. [message] is shown with a Retry action. */
-    data class Error(val message: String) : ArtifactsUiState
+    data class Error(
+        val message: String,
+        /**
+         * Whether trying again could plausibly succeed.
+         *
+         * A 401/403 is false: the request goes out anonymous again and fails
+         * identically, so offering "Retry" for it was a dead button. The screen
+         * shows "Sign in" instead.
+         */
+        val retryable: Boolean = true,
+    ) : ArtifactsUiState
 }
 
 /**
@@ -137,89 +147,19 @@ interface ArtifactsDataSource : RemoteDataSource<ArtifactItem> {
     /** Fetches the full list. Throws on network / parse failure. */
     override suspend fun fetch(): List<ArtifactItem>
 
-    /** Persists a new artifact. Throws on failure. */
-    override suspend fun add(item: ArtifactItem)
+    /**
+     * Persists a new artifact and returns what the SERVER stored.
+     *
+     * Returning the stored item (not Unit) is the fix for a real data-loss bug:
+     * the POST response was discarded, so the server-assigned `id` and
+     * `timestamp` were thrown away and the screen kept showing the client's
+     * guess. A later DELETE then used an id the server had never issued.
+     */
+    override suspend fun add(item: ArtifactItem): ArtifactItem
 
     /** Removes an artifact by id. Throws on failure. */
     override suspend fun delete(id: String)
 }
-
-/**
- * The demo artifacts the in-memory source seeds itself with.
- *
- * This is a design kit, so the entries are realistic sample data rather than a
- * live store — the same choice `sampleMemories` and `sampleChats` make. They are
- * written to the product model: files, pages and decks Dua and Agent would
- * actually have produced for this user.
- */
-val demoArtifacts: List<ArtifactItem> = listOf(
-    ArtifactItem(
-        id = "art_q3_deck",
-        title = "Q3 Launch Deck",
-        type = "Webpage",
-        timestamp = "Aaj",
-        sizeBytes = 2_411_724L,
-        url = "https://static.teamily.ai/sites/demo/q3-launch-deck/index.html",
-    ),
-    ArtifactItem(
-        id = "art_competitor_brief",
-        title = "Competitor Brief",
-        type = "Document",
-        timestamp = "Aaj",
-        sizeBytes = 412_160L,
-        url = "https://static.teamily.ai/sites/demo/competitor-brief.pdf",
-    ),
-    ArtifactItem(
-        id = "art_brand_hero",
-        title = "Brand Hero Banner",
-        type = "Image",
-        timestamp = "2 din pehle",
-        sizeBytes = 1_887_437L,
-        url = "https://static.teamily.ai/sites/demo/brand-hero.png",
-    ),
-    ArtifactItem(
-        id = "art_invoice_2211",
-        title = "Invoice #2211",
-        type = "Document",
-        timestamp = "2 din pehle",
-        sizeBytes = 96_256L,
-        url = "https://static.teamily.ai/sites/demo/invoice-2211.pdf",
-    ),
-    ArtifactItem(
-        id = "art_demo_reel",
-        title = "Product Demo Reel",
-        type = "Video",
-        timestamp = "4 din pehle",
-        sizeBytes = 18_350_080L,
-        url = "https://static.teamily.ai/sites/demo/product-demo-reel.mp4",
-    ),
-    ArtifactItem(
-        id = "art_landing_page",
-        title = "Landing Page v2",
-        type = "Webpage",
-        timestamp = "1 hafta pehle",
-        sizeBytes = 743_424L,
-        url = "https://static.teamily.ai/sites/demo/landing-page-v2/index.html",
-    ),
-    ArtifactItem(
-        id = "art_market_chart",
-        title = "Market Share Chart",
-        type = "Image",
-        timestamp = "1 hafta pehle",
-        sizeBytes = 204_800L,
-        url = "https://static.teamily.ai/sites/demo/market-share-chart.png",
-    ),
-    // Deliberately has NO url: it is the artifact that makes the context menu's
-    // disabled "Open in new tab" state reachable and testable.
-    ArtifactItem(
-        id = "art_meeting_notes",
-        title = "Meeting Notes",
-        type = "Document",
-        timestamp = "2 hafte pehle",
-        sizeBytes = 28_672L,
-        url = null,
-    ),
-)
 
 /**
  * `2411724` -> `"2.3 MB"` — the preview caption's size half.
@@ -248,15 +188,16 @@ internal fun artifactSizeLabel(bytes: Long): String {
  * path honest: the artifact really is re-added to the source, not just to the
  * screen's copy.
  *
- * @param seed the initial list. Defaults to [demoArtifacts]; a test can pass
- *   `emptyList()` to exercise the empty state.
+ * @param seed the initial list. Defaults to EMPTY: a production build must never
+ *   ship fake rows. [demoArtifacts] is a preview/test fixture and is passed
+ *   explicitly by the `@Preview` functions and the tests that need data.
  * @param failOnLoad when true, [fetch] throws — the hook the error-state test
  *   uses.
  * @param loadDelayMs how long [fetch] takes. Non-zero so the Loading state is
  *   observable; a test can pass 0 to skip the wait.
  */
 class InMemoryArtifactsDataSource(
-    seed: List<ArtifactItem> = demoArtifacts,
+    seed: List<ArtifactItem> = emptyList(),
     private val failOnLoad: Boolean = false,
     private val loadDelayMs: Long = 350L,
 ) : ArtifactsDataSource {
@@ -269,8 +210,9 @@ class InMemoryArtifactsDataSource(
         return items.toList()
     }
 
-    override suspend fun add(item: ArtifactItem) {
+    override suspend fun add(item: ArtifactItem): ArtifactItem {
         items.add(0, item)
+        return item
     }
 
     override suspend fun delete(id: String) {
@@ -313,7 +255,7 @@ class RemoteArtifactsDataSource(
         parseArtifacts(body)
     }
 
-    override suspend fun add(item: ArtifactItem) = withContext(Dispatchers.IO) {
+    override suspend fun add(item: ArtifactItem): ArtifactItem = withContext(Dispatchers.IO) {
         // Built with JSONObject, NOT string interpolation.
         //
         // WHY: a title like `He said "hi"` used to produce invalid JSON, and a
@@ -333,8 +275,13 @@ class RemoteArtifactsDataSource(
         // requestOrThrow so a refused write reaches WriteResult.Failure with a
         // typed ApiError, which BaseRemoteRepository.writeFailureMessage shows
         // verbatim; a plain request() would only carry a raw status string.
-        client.requestOrThrow("POST", baseUrl, payload, label = "Artifacts request")
-        Unit
+        val response = client.requestOrThrow("POST", baseUrl, payload, label = "Artifacts request")
+        // The response is the SERVER's copy of the row, and it is what the list
+        // must show: the server may have assigned a different id, normalised the
+        // timestamp, or filled in a url. Discarding it (the old behaviour) meant
+        // the screen kept a client-side guess and a later DELETE used an id the
+        // server had never issued.
+        parseArtifactOrFallback(response, item)
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
@@ -360,17 +307,55 @@ class RemoteArtifactsDataSource(
         val array = unwrapList(body, key = "artifacts", label = "Artifacts request")
         val out = ArrayList<ArtifactItem>(array.length())
         for (i in 0 until array.length()) {
-            val o = array.getJSONObject(i)
+            // PER-ITEM ISOLATION.
+            //
+            // This used to be `array.getJSONObject(i)` + `o.getString("id")`
+            // with no guard, so ONE malformed row (a missing `type`, a null
+            // `title`, a non-object element) threw a JSONException that
+            // propagated out of the whole parse and replaced the ENTIRE list
+            // with an error screen. A single bad row must cost one row, not the
+            // page.
+            //
+            // A row is skipped when it has no usable id (it cannot be addressed
+            // for delete) or is not an object at all. Everything else is
+            // defaulted, so a partial row still renders.
+            val o = array.optJSONObject(i) ?: continue
+            val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: continue
             out += ArtifactItem(
-                id = o.getString("id"),
-                title = o.getString("title"),
-                type = o.getString("type"),
+                id = id,
+                title = o.optString("title", "").ifBlank { "Untitled artifact" },
+                type = o.optString("type", "").ifBlank { "File" },
                 timestamp = o.optString("timestamp", ""),
                 sizeBytes = o.optLong("sizeBytes", 0L),
                 url = o.optString("url", "").takeIf { it.isNotBlank() },
             )
         }
         return out
+    }
+
+    /**
+     * Parses the POST response into the stored item, falling back to [sent].
+     *
+     * The server may answer with the created object directly, or wrapped in an
+     * envelope (`{"artifact":{...}}`). Both are accepted. If the body is not a
+     * usable object the item the client sent is returned unchanged — a write
+     * that SUCCEEDED must not be reported as a failure just because the response
+     * shape was unexpected.
+     */
+    private fun parseArtifactOrFallback(body: String, sent: ArtifactItem): ArtifactItem {
+        val text = body.trim()
+        if (!text.startsWith("{")) return sent
+        val root = runCatching { JSONObject(text) }.getOrNull() ?: return sent
+        val o = root.optJSONObject("artifact") ?: root
+        val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: return sent
+        return ArtifactItem(
+            id = id,
+            title = o.optString("title", "").ifBlank { sent.title },
+            type = o.optString("type", "").ifBlank { sent.type },
+            timestamp = o.optString("timestamp", "").ifBlank { sent.timestamp },
+            sizeBytes = o.optLong("sizeBytes", sent.sizeBytes),
+            url = o.optString("url", "").takeIf { it.isNotBlank() } ?: sent.url,
+        )
     }
 }
 
@@ -383,7 +368,8 @@ class RemoteArtifactsDataSource(
  * [RemoteArtifactsDataSource] changes nothing above this class.
  *
  * @param dataSource where the artifacts actually come from. Defaults to the
- *   in-memory demo source, so the kit runs with no backend.
+ *   in-memory source, which starts EMPTY — a production build must never ship
+ *   fake rows.
  * @param seed / @param failOnLoad / @param loadDelayMs are kept as convenience
  *   parameters for the previews and tests: when [dataSource] is left at its
  *   default they configure the in-memory source. Passing an explicit
@@ -391,7 +377,7 @@ class RemoteArtifactsDataSource(
  */
 class ArtifactsRepository(
     dataSource: ArtifactsDataSource? = null,
-    seed: List<ArtifactItem> = demoArtifacts,
+    seed: List<ArtifactItem> = emptyList(),
     failOnLoad: Boolean = false,
     loadDelayMs: Long = 350L,
 ) : BaseRemoteRepository<ArtifactItem, ArtifactsUiState>(
@@ -410,12 +396,15 @@ class ArtifactsRepository(
         ArtifactsUiState.Loaded(items)
 
     /** The state wrapping a failure message, shown with a Retry action. */
-    override fun errorState(message: String): ArtifactsUiState =
-        ArtifactsUiState.Error(message)
+    override fun errorState(message: String, retryable: Boolean): ArtifactsUiState =
+        ArtifactsUiState.Error(message, retryable)
 
     /** The loaded list inside [state], or null while loading / in error. */
     override fun itemsOf(state: ArtifactsUiState): List<ArtifactItem>? =
         (state as? ArtifactsUiState.Loaded)?.artifacts
+
+    /** A copy of [item] carrying [id] — the undo path's new identity. */
+    override fun withId(item: ArtifactItem, id: String): ArtifactItem = item.copy(id = id)
 
     /** The message used when an exception carries none of its own. */
     override val errorFallback: String = "Artifacts load nahi ho paye."

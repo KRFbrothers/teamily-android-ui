@@ -69,7 +69,12 @@ suspend fun <T : Identifiable, S> BaseRemoteRepository<T, S>.deleteWithUndo(
             if (snackbar == SnackbarResult.ActionPerformed) {
                 // The restore goes through the same data source that removed
                 // it, and its failure is reported rather than swallowed.
-                val restored = add(item)
+                //
+                // `restore`, not `add`: a restore must NOT re-POST the id the
+                // server just deleted. A backend that keeps a tombstone or
+                // enforces a unique id rejects that, and the undo then fails —
+                // the one outcome the snackbar promised would not happen.
+                val restored = restore(item)
                 if (restored is WriteResult.Failure) {
                     snackbarHostState.showSnackbar(
                         message = undoFailedMessage,

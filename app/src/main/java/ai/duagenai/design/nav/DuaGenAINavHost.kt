@@ -26,6 +26,8 @@ import ai.duagenai.design.cube.CubeStore
 import ai.duagenai.design.screens.AgentsScreen
 import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
+import ai.duagenai.design.screens.ArtifactItem
+import ai.duagenai.design.screens.MemoryItem
 import ai.duagenai.design.screens.ArtifactsScreen
 import ai.duagenai.design.screens.ChatScreen
 import ai.duagenai.design.screens.AGENT_CHAT_ID
@@ -165,6 +167,17 @@ object DuaGenAIRoutes {
 fun DuaGenAINavHost(
     navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier,
+    /**
+     * Seed for the signed-out in-memory source.
+     *
+     * EMPTY by default, and that is the production behaviour: a build must never
+     * ship fake rows. It exists as a parameter so a test (or a `@Preview`) can
+     * supply fixtures and exercise the loaded grid without a backend. Nothing in
+     * `app/src/main` passes a non-empty value.
+     */
+    signedOutArtifacts: List<ArtifactItem> = emptyList(),
+    /** Seed for the signed-out in-memory Memory source. Empty by default. */
+    signedOutMemories: List<MemoryItem> = emptyList(),
 ) {
     val context = LocalContext.current
     // applicationContext: the store outlives any single Activity recreation, and
@@ -178,22 +191,31 @@ fun DuaGenAINavHost(
     // so the screen holds no data of its own.
     //
     // WHICH SOURCE: the live backend when a session token exists, the in-memory
-    // demo set otherwise. The key is [TokenStore.token], so signing in (or out)
-    // rebuilds the repositories against the right source instead of leaving the
-    // app on the demo data until the next process start. Without a token the
-    // live service answers 401 anyway, so the demo set is the honest default.
-    val sessionToken = TokenStore.token
-    val artifactsRepository = remember(sessionToken) {
+    // source otherwise. Without a token the live service answers 401 anyway, so
+    // the signed-out state is an honest EMPTY list rather than fake rows.
+    //
+    // THE KEY IS OBSERVABLE STATE, NOT A PLAIN VAR.
+    // This used to be `val sessionToken = TokenStore.token` with
+    // `remember(sessionToken)`. `TokenStore.token` was a plain `@Volatile var`,
+    // which Compose cannot observe — so signing in would NOT have recomposed
+    // this function and the app would have stayed on the demo source until the
+    // next process start. `TokenStore.session` is a StateFlow, collected here,
+    // so a sign-in rebuilds both repositories immediately.
+    val sessionToken by TokenStore.session.collectAsStateWithLifecycle()
+    val artifactsRepository = remember(sessionToken, signedOutArtifacts) {
         ArtifactsRepository(
             dataSource = if (sessionToken != null) RemoteArtifactsDataSource() else null,
+            // Signed out: no fake rows. The empty state is the truth.
+            seed = signedOutArtifacts,
         )
     }
     // The Memory data source, the same shape as the Artifacts one: created once
     // here and passed down, so the screen holds no data of its own and
     // pull-to-refresh has a `load()` to re-run.
-    val memoryRepository = remember(sessionToken) {
+    val memoryRepository = remember(sessionToken, signedOutMemories) {
         MemoryRepository(
             dataSource = if (sessionToken != null) RemoteMemoryDataSource() else null,
+            seed = signedOutMemories,
         )
     }
     val scope = rememberCoroutineScope()
@@ -260,8 +282,12 @@ fun DuaGenAINavHost(
         drawerContent = {
             SidebarDrawer(
                 cubeId = savedCubeId,
-                userName = "Fareed Khan",
-                planLabel = "PRO",
+                // No hardcoded identity. The drawer shows a neutral label until a
+                // real session supplies one — a design kit that shipped a
+                // specific person's name and email in its source was leaking PII
+                // into every build.
+                userName = if (sessionToken != null) "Signed in" else "Not signed in",
+                planLabel = if (sessionToken != null) "PRO" else "FREE",
                 // The SAME list Home renders — one source, so a history row and
                 // its Home row can never disagree about a name or a cube.
                 history = sampleChats,
@@ -377,6 +403,14 @@ fun DuaGenAINavHost(
                     themeModeLabel = themeMode.label,
                     storageLabel = storageLabel(storageUsedGb, storageTotalGb),
                     notificationsLabel = notificationSummary(notifications),
+                    // THE SIGN-IN SEAM. This is the only place in the app that
+                    // writes a token, and it is what makes the remote sources
+                    // reachable at all: before this, nothing in `app/src/main`
+                    // ever set `TokenStore.token`, so `sessionToken` was always
+                    // null and the app could never talk to the backend.
+                    signedIn = sessionToken != null,
+                    onSignIn = { token -> TokenStore.setToken(token) },
+                    onSignOut = { TokenStore.clear() },
                 )
             }
 
@@ -518,11 +552,19 @@ fun DuaGenAINavHost(
             composable(DuaGenAIRoutes.DISCOVER) { DiscoverScreen() }
             composable(DuaGenAIRoutes.MEMORY) {
                 // The screen reads from the repository, not a hardcoded list.
-                MemoryScreen(repository = memoryRepository)
+                MemoryScreen(
+                    repository = memoryRepository,
+                    // A 401 is not retryable: the honest action is to sign in,
+                    // not to tap Retry forever. Profile is where the token is set.
+                    onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                )
             }
             composable(DuaGenAIRoutes.ARTIFACTS) {
                 // The screen reads from the repository, not a hardcoded list.
-                ArtifactsScreen(repository = artifactsRepository)
+                ArtifactsScreen(
+                    repository = artifactsRepository,
+                    onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                )
             }
             composable(DuaGenAIRoutes.SETTINGS) { SettingsScreen() }
         }

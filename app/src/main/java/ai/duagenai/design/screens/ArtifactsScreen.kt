@@ -202,6 +202,15 @@ fun ArtifactsScreen(
      * leaving the process.
      */
     onOpenInNewTab: ((String) -> Unit)? = null,
+    /**
+     * Opens the sign-in surface (Profile).
+     *
+     * A 401 is NOT retryable — tapping Retry on it can never succeed, because the
+     * request will go out anonymous again. The error state therefore offers
+     * "Sign in" instead of "Retry" when the failure is an auth failure, and this
+     * is where that button goes.
+     */
+    onSignIn: () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // The shared opener. The injected lambda (or the platform handler) is the
@@ -341,6 +350,13 @@ fun ArtifactsScreen(
                             ArtifactsError(
                                 message = s.message,
                                 onRetry = { scope.launch { repository.load() } },
+                                // A 401/403 is not retryable: the honest action is
+                                // to sign in, not to tap Retry forever. The
+                                // repository already decided this via
+                                // ApiError.retryable; the screen just has to read
+                                // it instead of always offering Retry.
+                                retryable = s.retryable,
+                                onSignIn = onSignIn,
                                 modifier = Modifier.padding(horizontal = spacing.gutter),
                             )
                         }
@@ -861,11 +877,20 @@ private fun ArtifactsLoading(modifier: Modifier = Modifier) {
     }
 }
 
-/** The error state: the message plus a Retry action. */
+/** The error state: the message plus the action that can actually help. */
 @Composable
 private fun ArtifactsError(
     message: String,
     onRetry: () -> Unit,
+    /**
+     * Whether trying again could plausibly succeed.
+     *
+     * Comes from [ApiError.retryable] via the repository. A 401/403 is false, and
+     * offering "Retry" for it was a dead button: the request goes out anonymous
+     * again and fails identically. False shows "Sign in" instead.
+     */
+    retryable: Boolean = true,
+    onSignIn: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -887,14 +912,17 @@ private fun ArtifactsError(
             )
             Spacer(Modifier.height(spacing.lg))
             Button(
-                onClick = onRetry,
+                onClick = if (retryable) onRetry else onSignIn,
                 shape = DuaGenAITheme.shapes.pill,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             ) {
-                Text("Retry", style = DuaGenAITextStyles.button)
+                Text(
+                    text = if (retryable) "Retry" else "Sign in",
+                    style = DuaGenAITextStyles.button,
+                )
             }
         }
     }
@@ -1242,13 +1270,13 @@ private fun ArtifactsGlyph(tint: Color, modifier: Modifier = Modifier) {
 @Preview(name = "Artifacts — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ArtifactsLight() = DuaGenAITheme(darkTheme = false) {
-    ArtifactsScreen(repository = ArtifactsRepository(loadDelayMs = 0))
+    ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
 }
 
 @Preview(name = "Artifacts — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ArtifactsDark() = DuaGenAITheme(darkTheme = true) {
-    ArtifactsScreen(repository = ArtifactsRepository(loadDelayMs = 0))
+    ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
 }
 
 @Preview(name = "Artifacts — empty", showBackground = true, widthDp = 390, heightDp = 844)
@@ -1260,5 +1288,5 @@ private fun ArtifactsEmpty() = DuaGenAITheme(darkTheme = false) {
 @Preview(name = "Artifacts — error", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ArtifactsErrorPreview() = DuaGenAITheme(darkTheme = false) {
-    ArtifactsScreen(repository = ArtifactsRepository(failOnLoad = true, loadDelayMs = 0))
+    ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, failOnLoad = true, loadDelayMs = 0))
 }

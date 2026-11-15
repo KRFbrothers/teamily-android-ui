@@ -870,7 +870,15 @@ internal val agentHomeChats = listOf(
 )
 
 /** The personal agent hero card copy, as in the reference. */
-internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
+/**
+ * The Personal Agent's display title.
+ *
+ * Deliberately NOT a person's name. It used to be `"fareed's Personal Agent"`,
+ * which shipped one real user's name in every build of a design kit. The title
+ * is now neutral; a real build substitutes the signed-in user's name from its
+ * session, the same way the drawer does.
+ */
+internal const val PERSONAL_AGENT_TITLE = "Your Personal Agent"
 internal const val PERSONAL_AGENT_PREVIEW = "Delete ka option agent ki chat ke andar hai, \u2026"
 internal const val PERSONAL_AGENT_DATE = "Wed"
 

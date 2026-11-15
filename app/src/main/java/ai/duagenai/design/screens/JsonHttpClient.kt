@@ -214,8 +214,17 @@ fun interface HttpTransport {
  * whatever the JDK throws.
  */
 class UrlConnectionTransport(
-    private val connectTimeoutMs: Int = 10_000,
-    private val readTimeoutMs: Int = 10_000,
+    private val connectTimeoutMs: Int = 15_000,
+    /**
+     * How long to wait for the first byte of the response.
+     *
+     * 10s was too short for this backend. The service runs on Cloud Run, which
+     * scales to zero: a cold start (container boot + JVM + route init) routinely
+     * takes longer than 10s, and the request then failed with a read timeout
+     * that looked like "no connection" to the user. 30s covers a cold start
+     * while still failing in a time a person will wait.
+     */
+    private val readTimeoutMs: Int = 30_000,
 ) : HttpTransport {
 
     override fun execute(method: String, url: String, body: String?, token: String?): String {
@@ -294,6 +303,15 @@ class JsonHttpClient(
     private val transport: HttpTransport = UrlConnectionTransport(),
     private val label: String = "Request",
     private val tokenProvider: TokenProvider = TokenProvider.None,
+    /**
+     * How many times a retryable failure is attempted, and how long to wait.
+     *
+     * Defaults to [RetryPolicy.Default]: three attempts for an IDEMPOTENT method
+     * (GET / DELETE), one for a POST. Retrying a POST is not safe — the server
+     * may already have created the row, and a second attempt would either
+     * duplicate it or be rejected as a duplicate id.
+     */
+    private val retryPolicy: RetryPolicy = RetryPolicy.Default,
 ) {
 
     /**
@@ -340,15 +358,32 @@ class JsonHttpClient(
         label: String? = null,
     ): String {
         val effectiveLabel = label ?: this.label
-        return try {
-            transport.execute(method, url, body, authToken())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: HttpStatusException) {
-            throw ApiError.forStatus(e.code, effectiveLabel, errorMessageOf(e.body))
-        } catch (e: IOException) {
-            throw ApiError.forNetworkFailure(effectiveLabel)
+        val attempts = retryPolicy.attemptsFor(method)
+        var lastError: ApiError? = null
+
+        for (attempt in 1..attempts) {
+            try {
+                return transport.execute(method, url, body, authToken())
+            } catch (e: CancellationException) {
+                // A cancelled coroutine is not a failed request. Never retry it.
+                throw e
+            } catch (e: HttpStatusException) {
+                val error = ApiError.forStatus(e.code, effectiveLabel, errorMessageOf(e.body))
+                lastError = error
+                // A 4xx is not retryable: retrying a 401 or a 422 just burns the
+                // user's battery and delays the honest message.
+                if (!error.retryable || attempt == attempts) throw error
+            } catch (e: IOException) {
+                val error = ApiError.forNetworkFailure(effectiveLabel)
+                lastError = error
+                if (attempt == attempts) throw error
+            }
+            retryPolicy.backoffBeforeRetry(attempt)
         }
+
+        // Unreachable in practice (the loop either returns or throws), but the
+        // compiler needs a terminal statement.
+        throw lastError ?: ApiError.forNetworkFailure(effectiveLabel)
     }
 
     /**
@@ -363,6 +398,66 @@ class JsonHttpClient(
      * to anonymous would turn it into a confusing 401 instead.
      */
     fun authToken(): String? = tokenProvider.token()
+}
+
+/**
+ * How a retryable failure is retried.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The client had no retry at all: one transient 503 from a Cloud Run instance
+ * that was still warming up, or one dropped connection on a flaky mobile link,
+ * surfaced as a hard error the user had to dismiss and re-trigger by hand. The
+ * backend is a scale-to-zero service, so a transient failure is the NORMAL case
+ * on the first request after idle, not an exceptional one.
+ *
+ * Retrying is only safe for an IDEMPOTENT method. A GET or a DELETE can be
+ * repeated without changing the outcome; a POST cannot — the server may already
+ * have created the row, so a second attempt either duplicates it or is rejected
+ * as a duplicate id. [attemptsFor] therefore returns 1 for a POST unless a
+ * caller explicitly opts in.
+ *
+ * @param maxAttempts total attempts, including the first. 1 disables retry.
+ * @param baseDelayMs the first backoff; it doubles per attempt (400, 800, …).
+ * @param retryNonIdempotent when true, POST is retried too. Off by default.
+ */
+class RetryPolicy(
+    val maxAttempts: Int = 3,
+    val baseDelayMs: Long = 400L,
+    val retryNonIdempotent: Boolean = false,
+) {
+
+    /** How many attempts [method] gets. */
+    fun attemptsFor(method: String): Int =
+        if (retryNonIdempotent || method.uppercase() in IDEMPOTENT) {
+            maxAttempts.coerceAtLeast(1)
+        } else {
+            1
+        }
+
+    /**
+     * Waits before the next attempt.
+     *
+     * A plain [Thread.sleep] is correct here: every caller runs inside
+     * `withContext(Dispatchers.IO)`, so blocking this thread does not block the
+     * UI. Exponential backoff (400ms, 800ms) keeps a burst of retries from
+     * hammering a service that is already struggling.
+     */
+    fun backoffBeforeRetry(attempt: Int) {
+        val delay = baseDelayMs shl (attempt - 1).coerceIn(0, 4)
+        if (delay > 0) Thread.sleep(delay)
+    }
+
+    companion object {
+        /** Methods that can be repeated without changing the outcome. */
+        private val IDEMPOTENT = setOf("GET", "HEAD", "DELETE", "PUT", "OPTIONS")
+
+        /** Three attempts for idempotent calls, one for a POST. */
+        val Default = RetryPolicy()
+
+        /** No retry at all — for a test that wants to count exactly one call. */
+        val None = RetryPolicy(maxAttempts = 1)
+    }
 }
 
 /**
@@ -495,40 +590,14 @@ object HttpClientProvider {
     )
 }
 
-/**
- * The app-side holder for the current session token.
+/*
+ * [TokenStore] used to live here as a plain `@Volatile var`.
  *
- * WHY THIS EXISTS
- * ---------------
- * [TokenProvider] is the seam, but a seam with nothing plugged into it is still
- * an anonymous request. This is the smallest honest thing to plug in: a
- * process-wide slot that a sign-in flow writes and [HttpClientProvider] reads.
+ * It moved to SessionStore.kt for two reasons, both of which were review
+ * blockers: nothing in `app/src/main` ever WROTE to it (so the token was always
+ * null and the remote sources were never constructed), and a plain var is not
+ * Compose state (so a write would not have recomposed the nav host anyway).
  *
- * A real app should replace it with its own session store (DataStore, an
- * encrypted preference, a refresh-aware auth manager) and pass that provider to
- * [JsonHttpClient] instead. Nothing else has to change: the client only ever
- * calls `token()`.
- *
- * The token is deliberately NOT persisted here. Writing a bearer token to disk
- * needs encryption and an expiry policy, and a design kit that quietly stored
- * one in plain preferences would be worse than one that forgets it on process
- * death.
+ * The store is now a StateFlow with a documented [SessionBridge] seam for a real
+ * auth provider. See SessionStore.kt.
  */
-object TokenStore {
-    /**
-     * The current bearer token, or null when signed out.
-     *
-     * `@Volatile` because a sign-in flow writes it from a background coroutine
-     * while the UI thread's requests read it. Blank and whitespace-only values
-     * are normalised to null so a half-filled field cannot produce an
-     * `Authorization: Bearer ` header.
-     */
-    @Volatile
-    var token: String? = null
-        set(value) {
-            field = value?.trim()?.takeIf { it.isNotEmpty() }
-        }
-
-    /** The provider [HttpClientProvider] hands to the shared client. */
-    val provider: TokenProvider = TokenProvider { token }
-}

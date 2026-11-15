@@ -77,8 +77,14 @@ interface RemoteDataSource<T : Identifiable> {
     /** Fetches the full list. Throws on network / parse failure. */
     suspend fun fetch(): List<T>
 
-    /** Persists a new item. Throws on failure. */
-    suspend fun add(item: T)
+    /**
+     * Persists a new item and returns what the SOURCE stored.
+     *
+     * Returning the stored item rather than Unit is deliberate: a real backend
+     * assigns its own id and timestamp, and the list must show those, not the
+     * client's guess. An in-memory source simply returns [item] unchanged.
+     */
+    suspend fun add(item: T): T
 
     /** Removes an item by id. Throws on failure. */
     suspend fun delete(id: String)
@@ -126,10 +132,20 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
     protected abstract fun loadedState(items: List<T>): S
 
     /** The state wrapping a failure message, shown with a Retry action. */
-    protected abstract fun errorState(message: String): S
+    protected abstract fun errorState(message: String, retryable: Boolean): S
 
     /** The Loaded list inside [state], or null when the state is Loading / Error. */
     protected abstract fun itemsOf(state: S): List<T>?
+
+    /**
+     * Returns a copy of [item] carrying [id].
+     *
+     * Used by the undo path: a restore must not re-POST the id the server just
+     * deleted, because a backend that keeps a tombstone (or enforces unique ids)
+     * rejects it and the undo silently fails. A fresh id makes the restore a
+     * genuine new row.
+     */
+    protected abstract fun withId(item: T, id: String): T
 
     /** The message used when an exception carries none of its own. */
     protected abstract val errorFallback: String
@@ -161,6 +177,39 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
             is ApiError -> e.userMessage
             else -> if (deleting) deleteFailureFallback else addFailureFallback
         }
+
+    /**
+     * Turns a LOAD exception into a sentence that is safe to show.
+     *
+     * WHY THIS EXISTS
+     * ---------------
+     * [load] used to do `errorState(e.message ?: errorFallback)`. That is the
+     * exact thing this file's own contract forbids: `e.message` on a
+     * `JSONException` is `"No value for type"`, on an `UnknownHostException` it
+     * is `"Unable to resolve host \"dua-api…\": No address associated with
+     * hostname"`, and on a `SocketTimeoutException` it is `"Read timed out"`.
+     * None of those is a sentence for a user, and the hostname one leaks the
+     * backend's address onto the screen.
+     *
+     * [ApiError] already carries a curated [ApiError.userMessage], so it is used
+     * as-is. Anything else is replaced by the feature's own fallback.
+     */
+    protected open fun loadFailureMessage(e: Exception): String =
+        when (e) {
+            is ApiError -> e.userMessage
+            else -> errorFallback
+        }
+
+    /**
+     * Whether a load failure is worth retrying.
+     *
+     * [ApiError] already knows (a 5xx or a network failure is retryable, a 401 is
+     * not). Anything else — a parse bug, an unexpected exception — is treated as
+     * retryable, because the honest default for an unknown failure is "try
+     * again", not "this will never work".
+     */
+    protected open fun isRetryable(e: Exception): Boolean =
+        (e as? ApiError)?.retryable ?: true
 
     // ---- shared state. `loadingState()` returns a bare object singleton in
     // ---- both concrete repositories, so calling it here — before the subclass
@@ -224,26 +273,67 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
             // structured concurrency keeps working, and leave the state alone.
             throw e
         } catch (e: Exception) {
-            errorState(e.message ?: errorFallback)
+            // NEVER `e.message`: see [loadFailureMessage]. A raw JSONException or
+            // UnknownHostException message is not a sentence for a user, and the
+            // hostname one leaks the backend's address onto the screen.
+            errorState(loadFailureMessage(e), isRetryable(e))
         }
     }
 
     /**
-     * Re-runs [load] for a pull-to-refresh.
+     * Re-runs the fetch for a pull-to-refresh, WITHOUT ever blanking the list.
      *
-     * Deliberately does NOT set [loadingState]: the whole point of pull-to-refresh
-     * is that the existing content stays visible under the indicator.
-     * [isRefreshing] carries the in-flight signal instead, and it is cleared in
-     * a `finally` so a failed refresh cannot leave the spinner stuck.
+     * WHY THIS IS NOT `load(showLoading = false)`
+     * -------------------------------------------
+     * It used to be exactly that, and it was wrong in the one case that matters.
+     * `load()` ends in `errorState(...)` on failure, so a refresh that failed
+     * REPLACED the loaded list with a full-screen Error — the list the user was
+     * looking at vanished because a background re-fetch failed. The comment on
+     * this method claimed the opposite ("the list stays visible"), which is how
+     * the bug survived review.
+     *
+     * The correct behaviour: a refresh is an OPTIMISTIC re-fetch of data that is
+     * already on screen. If it fails, the data on screen is still valid — it is
+     * just not any newer. So the state is left untouched and the failure is
+     * published on [lastWriteError], which the screen already shows as a
+     * snackbar. Only a refresh with NO loaded list (i.e. the first load failed
+     * and the user pulled to retry) falls back to the Error state, because there
+     * is nothing to preserve.
      */
     suspend fun refresh() {
         _isRefreshing.value = true
         try {
-            load(showLoading = false)
+            loadCount++
+            val fresh = try {
+                source.fetch()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val message = loadFailureMessage(e)
+                // Keep whatever is on screen. Only surface a full Error when
+                // there is no list to keep.
+                if (itemsOf(_state.value) == null) {
+                    _state.value = errorState(message, isRetryable(e))
+                } else {
+                    _lastWriteError.value = message
+                }
+                return
+            }
+            _state.value = loadedState(fresh)
+            _lastWriteError.value = null
         } finally {
             _isRefreshing.value = false
         }
     }
+
+    /**
+     * A fresh id for a restored row.
+     *
+     * Deliberately NOT the deleted id: see [withId]. The suffix keeps the
+     * original id readable in a log while making the value unique.
+     */
+    protected open fun freshIdFor(originalId: String): String =
+        "${originalId}_restored_${System.currentTimeMillis()}"
 
     /**
      * Adds [item] to the top of the list, through the data source.
@@ -259,8 +349,12 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
         val current = _state.value
         val items = itemsOf(current) ?: return WriteResult.Failure(errorFallback)
         return try {
-            source.add(item)
-            _state.value = loadedState(listOf(item) + items)
+            // The source returns what it actually stored. A real backend assigns
+            // its own id / timestamp, so the list must show THAT row — keeping
+            // the client's guess meant a later DELETE used an id the server had
+            // never issued.
+            val stored = source.add(item)
+            _state.value = loadedState(listOf(stored) + items)
             _lastWriteError.value = null
             WriteResult.Success
         } catch (e: CancellationException) {
@@ -271,6 +365,22 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
             WriteResult.Failure(message)
         }
     }
+
+    /**
+     * Restores a deleted [item] as a NEW row, for the undo snackbar.
+     *
+     * WHY NOT `add(item)`
+     * -------------------
+     * The undo used to call `add(item)` with the SAME id the server had just
+     * deleted. A backend that keeps a tombstone, or that enforces a unique id,
+     * rejects that POST — so the undo failed and the row stayed gone, which is
+     * the one outcome the snackbar promised would not happen.
+     *
+     * A restore is a new row, so it gets a new id. The content is preserved; only
+     * the identity changes, which is exactly what "put it back" means to a
+     * server that has already forgotten the old one.
+     */
+    suspend fun restore(item: T): WriteResult = add(withId(item, freshIdFor(item.id)))
 
     /**
      * Removes the item with [id], through the data source.
