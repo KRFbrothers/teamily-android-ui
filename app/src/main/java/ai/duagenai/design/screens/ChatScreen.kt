@@ -120,16 +120,22 @@ import ai.duagenai.design.theme.teamilyPalette
 const val SAMPLE_CHAT_ID = "chat_webpage_developer"
 
 /**
- * Agent's OWN conversation id.
+ * The Personal Agent's conversation id.
  *
- * Agent has a thread of its own — the pinned card on Home
- * opens it through the SAME `chat/{chatId}` route every other conversation uses.
- * No new route was invented for it.
+ * Agent home's hero card opens this thread through the same `chat/{chatId}`
+ * route as every other conversation. It is a normal thread: a signed-in send
+ * posts `mode: "auto"` and `stream: false` to the Node API. It is deliberately
+ * not [AGENT_CHAT_ID].
+ */
+const val PERSONAL_AGENT_CHAT_ID = "chat_personal"
+
+/**
+ * Dua Agent's conversation id.
  *
- * It is a stable id, so `CubeCatalog.forEntity` gives Agent's thread a cube the
- * same way it gives every other thread one. It is deliberately NOT one of
- * `sampleChats`' ids: those are the conversations Agent MANAGES, and Agent's own
- * thread is a different thing.
+ * The pinned "Dua Agent" row on Agent home opens this thread. A signed-in send
+ * posts `mode: "agent"` and `stream: true` to the engine, with the enabled
+ * skill ids. It is a stable id, so `CubeCatalog.forEntity` gives the thread a
+ * cube the same way it gives every other thread one.
  */
 const val AGENT_CHAT_ID = "chat_agent"
 

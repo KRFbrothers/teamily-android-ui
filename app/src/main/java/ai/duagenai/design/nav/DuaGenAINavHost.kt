@@ -31,7 +31,9 @@ import ai.duagenai.design.screens.MemoryItem
 import ai.duagenai.design.screens.ArtifactsScreen
 import ai.duagenai.design.screens.ChatScreen
 import ai.duagenai.design.screens.AGENT_CHAT_ID
-import ai.duagenai.design.screens.AGENT_CHAT_TITLE
+import ai.duagenai.design.screens.DUA_AGENT_TITLE
+import ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID
+import ai.duagenai.design.screens.PERSONAL_AGENT_TITLE
 import ai.duagenai.design.screens.DiscoverScreen
 import ai.duagenai.design.screens.DrawerDestination
 import ai.duagenai.design.screens.AgentWorkspaceDestination
@@ -63,6 +65,7 @@ import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.screens.defaultNotificationState
 import ai.duagenai.design.screens.notificationSummary
 import ai.duagenai.design.screens.sampleChats
+import kotlin.math.round
 import kotlinx.coroutines.launch
 
 /* ============================================================================
@@ -164,9 +167,10 @@ object DuaGenAIRoutes {
  * @param navController hoisted so a caller (a test, a deep link) can drive it.
  */
 @Composable
+@Suppress("ComposableCallWithoutComposePlugin")
 fun DuaGenAINavHost(
-    navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
     /**
      * Seed for the signed-out in-memory source.
      *
@@ -252,8 +256,8 @@ fun DuaGenAINavHost(
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
-    // skills on, MCP on. Saved as an ArrayList so it survives rotation.
-    var enabledSkills by rememberSaveable { mutableStateOf(ArrayList(DuaAgentSkills.ids)) }
+    // skills on, MCP on. Saved as a List so it survives rotation.
+    var enabledSkills by rememberSaveable { mutableStateOf(DuaAgentSkills.ids) }
     var mcpEnabled by rememberSaveable { mutableStateOf(true) }
 
     // Which bottom-nav item is highlighted. HOISTED out of HomeScreen and
@@ -377,14 +381,21 @@ fun DuaGenAINavHost(
                         }
                     },
                     selectedTab = selectedTab,
-                    // The pinned Agent card opens AGENT'S OWN thread. Agent is an
-                    // agent, so it has a conversation of its own — and it goes
-                    // through the SAME `chat/{chatId}` route every other thread
-                    // uses, with Agent's own stable id. No new route was invented.
-                    onOpenAgentChat = {
+                    // Personal Agent (the hero) is a normal thread: auto mode on
+                    // the API. Dua Agent (the pinned row) is the engine thread.
+                    // The five chats below use the same chat route as the drawer.
+                    onOpenPersonalAgentChat = {
                         navController.navigate(
-                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, AGENT_CHAT_TITLE),
+                            DuaGenAIRoutes.chat(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE),
                         )
+                    },
+                    onOpenDuaAgentChat = {
+                        navController.navigate(
+                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, DUA_AGENT_TITLE),
+                        )
+                    },
+                    onOpenListedChat = { chatId, title ->
+                        navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
                 )
             }
@@ -493,9 +504,8 @@ fun DuaGenAINavHost(
                     onBack = { navController.popBackStack() },
                     enabledSkillIds = enabledSkills.toSet(),
                     onToggleSkill = { id ->
-                        enabledSkills = ArrayList(
-                            if (id in enabledSkills) enabledSkills - id else enabledSkills + id,
-                        )
+                        enabledSkills =
+                            if (id in enabledSkills) enabledSkills - id else enabledSkills + id
                     },
                     mcpEnabled = mcpEnabled,
                     onToggleMcp = { mcpEnabled = it },
@@ -582,7 +592,7 @@ fun DuaGenAINavHost(
  */
 private fun storageLabel(usedGb: Double, totalGb: Double): String {
     fun fmt(v: Double): String {
-        val r = Math.round(v * 10) / 10.0
+        val r = round(v * 10) / 10.0
         return if (r % 1.0 == 0.0) "${r.toInt()} GB" else "$r GB"
     }
     return "${fmt(usedGb)} of ${fmt(totalGb)}"
