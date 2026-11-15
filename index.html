@@ -223,19 +223,24 @@ var CAL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" wi
     f.src = box.getAttribute('data-thumb');
     f.addEventListener('load', function () {
       box.classList.add('loaded');
-      // The prototype page opens on its own hero; scroll it to a phone that
-      // actually shows UI. The FIRST phone on every version is Dua mode, which
-      // is deliberately an empty body + composer — framing that made the
-      // thumbnail look blank. So prefer the first Agent-mode phone (the chat
-      // list), and fall back to the first phone if a version has none.
+      // The prototype page opens on its own hero, and its phones sit far to the
+      // right of the page's left margin. The box only shows the iframe's top-left
+      // 300x188 (the 1200x750 frame at 25%), so scrolling alone still framed
+      // whitespace. Instead, OFFSET the frame so the chosen phone lands in the
+      // box: the phone's own top-left, minus a small margin, times the scale.
+      // The first phone on every version is Dua mode — deliberately an empty
+      // body plus the composer — so prefer the first Agent-mode phone (the chat
+      // list), falling back to the first phone if a version has none.
       try {
-        var w = f.contentWindow, d = f.contentDocument;
-        if (w && d) {
+        var d = f.contentDocument;
+        if (d) {
           var ph = d.querySelector('[data-phone][data-mode="agent"]') ||
                    d.querySelector('[data-phone]');
           if (ph) {
             var r = ph.getBoundingClientRect();
-            w.scrollTo(Math.max(0, r.left + w.scrollX - 40), Math.max(0, r.top + w.scrollY - 40));
+            var s = 0.25, pad = 16;
+            f.style.left = (-(r.left + (d.documentElement.scrollLeft || 0) - pad) * s) + 'px';
+            f.style.top = (-(r.top + (d.documentElement.scrollTop || 0) - pad) * s) + 'px';
           }
         }
       } catch (e) {}
