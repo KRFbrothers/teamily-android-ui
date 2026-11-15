@@ -50,8 +50,16 @@ jobs:
           java-version: "17"
 
       # Installs the Android SDK for compileSdk 34 (app/build.gradle.kts).
+      # v3 tries to install the legacy `tools` package by default, which the
+      # current sdkmanager no longer has ("Failed to find package 'tools'"),
+      # so the step failed. v4 with an explicit package list avoids that.
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK Platform 34 & Build-Tools 34.0.0
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
       # Caches the Gradle 8.7 distribution and dependency jars between runs.
       - name: Set up Gradle
