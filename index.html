@@ -224,23 +224,25 @@ var CAL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" wi
     f.addEventListener('load', function () {
       box.classList.add('loaded');
       // The prototype page opens on its own hero, and its phones sit far to the
-      // right of the page's left margin. The box only shows the iframe's top-left
-      // 300x188 (the 1200x750 frame at 25%), so scrolling alone still framed
-      // whitespace. Instead, OFFSET the frame so the chosen phone lands in the
-      // box: the phone's own top-left, minus a small margin, times the scale.
+      // right of the page's left margin. The box only shows the iframe's
+      // top-left 300x188 (the 1200x750 frame at 25%), so neither scrolling nor
+      // offsetting alone frames the phone. Do both:
+      //   vertical  -> scroll the iframe so the phone's top is near the top
+      //   horizontal-> offset the frame left by the phone's own left x scale
       // The first phone on every version is Dua mode — deliberately an empty
       // body plus the composer — so prefer the first Agent-mode phone (the chat
       // list), falling back to the first phone if a version has none.
       try {
-        var d = f.contentDocument;
-        if (d) {
+        var w = f.contentWindow, d = f.contentDocument;
+        if (w && d) {
           var ph = d.querySelector('[data-phone][data-mode="agent"]') ||
                    d.querySelector('[data-phone]');
           if (ph) {
-            var r = ph.getBoundingClientRect();
             var s = 0.25, pad = 16;
-            f.style.left = (-(r.left + (d.documentElement.scrollLeft || 0) - pad) * s) + 'px';
-            f.style.top = (-(r.top + (d.documentElement.scrollTop || 0) - pad) * s) + 'px';
+            var r0 = ph.getBoundingClientRect();
+            w.scrollTo(0, Math.max(0, r0.top + w.scrollY - pad));
+            var r = ph.getBoundingClientRect();
+            f.style.left = (-(r.left - pad) * s) + 'px';
           }
         }
       } catch (e) {}
