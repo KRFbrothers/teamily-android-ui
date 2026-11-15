@@ -32,10 +32,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -1401,9 +1405,19 @@ private fun AgentHomeList(
     var chatsExpanded by rememberSaveable { mutableStateOf(true) }
     val tiles = listOf(palette.tileViolet, palette.tileCyan, palette.tileYellow, palette.tileMint, palette.tileCyan)
 
+    // The dock is drawn OVER this list, so the list has to reserve room for it
+    // or the last row ends up underneath. The reservation is the dock's own
+    // height (60dp tab + 2 x 4dp vertical padding + 12dp bottom margin = 80dp)
+    // plus a gutter of breathing space, PLUS the system navigation-bar inset:
+    // the window is edge-to-edge (`enableEdgeToEdge()` in MainActivity), so the
+    // gesture bar sits inside our layout and would otherwise eat the dock's
+    // bottom margin and the last row with it.
+    val dockReserve = 80.dp + spacing.gutter +
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 112.dp),
+        contentPadding = PaddingValues(top = 4.dp, bottom = dockReserve),
     ) {
         item {
             PersonalAgentHeroCard(
@@ -1480,6 +1494,11 @@ private fun HomeBottomNav(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            // Lift the dock clear of the system gesture / navigation bar. The
+            // window is edge-to-edge, so without this the 12dp bottom margin is
+            // measured from the very bottom of the screen and the dock ends up
+            // sitting under the gesture pill.
+            .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
         shape = TeamilyShapes.capsule,
         color = palette.bottomnavBg,
