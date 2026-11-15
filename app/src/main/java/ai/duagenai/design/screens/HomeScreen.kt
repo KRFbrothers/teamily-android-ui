@@ -39,7 +39,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -276,6 +280,10 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            // The window is edge-to-edge. This keeps the header below the
+            // status bar and the camera cutout. The dock still applies its own
+            // navigation-bar inset, so the bottom is not padded twice.
+            .statusBarsPadding()
             // Teamily canvas: the zip `--nv-atmosphere` (light #E8F3EC glow
             // over #FAFBFA, dark #242B27 glow over #171C19, both at 8%/92%).
             .teamilyCanvas(teamilyPalette()),
@@ -296,7 +304,13 @@ fun HomeScreen(
                     onNewChat = onNewChat,
                 )
                 Spacer(Modifier.weight(1f).fillMaxWidth())
-                DuaComposer()
+                Box(
+                    Modifier.windowInsetsPadding(
+                        WindowInsets.navigationBars.union(WindowInsets.ime),
+                    ),
+                ) {
+                    DuaComposer()
+                }
             } else {
                 /* ================= AGENT MODE =================
                  * The reference's chat-list home: avatar · badge + "Dua Gen AI"
