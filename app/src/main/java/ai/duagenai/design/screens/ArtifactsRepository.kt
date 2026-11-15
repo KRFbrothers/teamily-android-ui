@@ -3,7 +3,6 @@ package ai.duagenai.design.screens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 
 /* ============================================================================
@@ -107,18 +106,24 @@ object ArtifactsConfig {
     /**
      * The API host.
      *
-     * NOT defined here any more: the host is a property of the backend, not of
-     * this feature, so it lives in [ApiConfig] and both Artifacts and Memory read
-     * it. Pointing the app at a real service is one edit there, not one per
-     * feature.
+     * NOT defined here: the host is a property of the backend, not of this
+     * feature, so it lives in [ApiConfig] and both Artifacts and Memory read it.
+     *
+     * A `val`, not a `const val`: [ApiConfig.BASE_URL] is resolved per access
+     * (build-type value, or a runtime override), so it cannot be a compile-time
+     * constant.
      */
-    const val BASE_URL: String = ApiConfig.BASE_URL
+    val BASE_URL: String get() = ApiConfig.BASE_URL
 
-    /** The path the artifacts list is served from, relative to [BASE_URL]. */
-    const val ARTIFACTS_PATH: String = "/artifacts"
+    /**
+     * The path the artifacts list is served from, relative to [BASE_URL].
+     *
+     * `/api/artifacts` — the live service mounts its routes under `/api`.
+     */
+    const val ARTIFACTS_PATH: String = "/api/artifacts"
 
     /** The full list endpoint. */
-    val artifactsUrl: String get() = BASE_URL + ARTIFACTS_PATH
+    val artifactsUrl: String get() = ApiConfig.url(ARTIFACTS_PATH)
 }
 
 /**
@@ -349,7 +354,10 @@ class RemoteArtifactsDataSource(
 
     /** Parses the list payload. Throws on malformed JSON. */
     private fun parseArtifacts(body: String): List<ArtifactItem> {
-        val array = JSONArray(body)
+        // The live service wraps the list: `{"artifacts":[...]}`. A bare array
+        // is still accepted (see [unwrapList]), and a 200 carrying
+        // `{"error":"..."}` becomes an ApiError instead of an empty grid.
+        val array = unwrapList(body, key = "artifacts", label = "Artifacts request")
         val out = ArrayList<ArtifactItem>(array.length())
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)

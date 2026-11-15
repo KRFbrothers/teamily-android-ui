@@ -3,7 +3,6 @@ package ai.duagenai.design.screens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 
 /* ============================================================================
@@ -94,13 +93,17 @@ object MemoryConfig {
      * it. Pointing the app at a real service is one edit there, not one per
      * feature.
      */
-    const val BASE_URL: String = ApiConfig.BASE_URL
+    val BASE_URL: String get() = ApiConfig.BASE_URL
 
-    /** The path the memory list is served from, relative to [BASE_URL]. */
-    const val MEMORY_PATH: String = "/memories"
+    /**
+     * The path the memory list is served from, relative to [BASE_URL].
+     *
+     * `/api/memories` — the live service mounts its routes under `/api`.
+     */
+    const val MEMORY_PATH: String = "/api/memories"
 
     /** The full list endpoint. */
-    val memoriesUrl: String get() = BASE_URL + MEMORY_PATH
+    val memoriesUrl: String get() = ApiConfig.url(MEMORY_PATH)
 }
 
 /**
@@ -267,7 +270,10 @@ class RemoteMemoryDataSource(
 
     /** Parses the list payload. Throws on malformed JSON. */
     private fun parseMemories(body: String): List<MemoryItem> {
-        val array = JSONArray(body)
+        // The live service wraps the list: `{"memories":[...]}`. A bare array
+        // is still accepted (see [unwrapList]), and a 200 carrying
+        // `{"error":"..."}` becomes an ApiError instead of an empty list.
+        val array = unwrapList(body, key = "memories", label = "Memory request")
         val out = ArrayList<MemoryItem>(array.length())
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)

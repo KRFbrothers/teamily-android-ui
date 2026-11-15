@@ -4,6 +4,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.CancellationException
+import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  The shared HTTP + JSON transport
@@ -78,7 +80,19 @@ import kotlinx.coroutines.CancellationException
  * through untouched — the two are different problems and should not be
  * flattened into one string.
  */
-class HttpStatusException(val code: Int) : Exception("HTTP $code")
+class HttpStatusException(
+    val code: Int,
+    /**
+     * The response body the server sent with the failure, or null.
+     *
+     * WHY: the backend answers a failure with `{"error":"..."}` — a sentence
+     * written for the user ("Sign in from Profile to use Artifacts."). Without
+     * the body the app could only say "sign-in required", throwing away the one
+     * message the server actually wanted shown. Defaulted to null so a caller
+     * (and a test) can still throw a bare status.
+     */
+    val body: String? = null,
+) : Exception("HTTP $code")
 
 /**
  * A typed API failure.
@@ -98,12 +112,20 @@ data class ApiError(
 ) : Exception(userMessage) {
 
     companion object {
-        /** Builds the error for a status code, with the feature's label. */
-        fun forStatus(code: Int, label: String): ApiError = ApiError(
+        /**
+         * Builds the error for a status code, with the feature's label.
+         *
+         * @param serverMessage the `error` field of the server's `{"error":"..."}`
+         *   body, when it sent one. It is preferred over the curated sentence
+         *   because it is the message the backend wrote for this exact failure
+         *   ("Sign in from Profile to use Artifacts."); the curated sentence is
+         *   the fallback for a body-less failure.
+         */
+        fun forStatus(code: Int, label: String, serverMessage: String? = null): ApiError = ApiError(
             status = code,
             // 5xx, 408 (timeout) and 429 (rate limit) are worth another try.
             retryable = code >= 500 || code == 408 || code == 429,
-            userMessage = when {
+            userMessage = safeServerMessage(serverMessage) ?: when {
                 code == 401 || code == 403 -> "$label: sign-in required."
                 code == 404 -> "$label: not found."
                 code == 429 -> "$label: too many requests, try again shortly."
@@ -118,6 +140,33 @@ data class ApiError(
             retryable = true,
             userMessage = "$label: no connection.",
         )
+
+        /**
+         * Builds the error for a 2xx response whose body is not the expected shape.
+         *
+         * A 200 carrying `{"error":"..."}` or a body with no list in it is a
+         * server-side problem, not a network one: retrying is reasonable, and the
+         * user must not be shown a raw JSON parse exception.
+         */
+        fun forMalformedResponse(label: String, serverMessage: String? = null): ApiError = ApiError(
+            status = null,
+            retryable = true,
+            userMessage = safeServerMessage(serverMessage) ?: "$label: unexpected response.",
+        )
+
+        /**
+         * Accepts a server message only when it is safe to render.
+         *
+         * A message is rejected when it is blank, absurdly long, or multi-line —
+         * the three shapes that turn a snackbar into a wall of text or a stack
+         * trace. Anything rejected falls back to the curated sentence.
+         */
+        internal fun safeServerMessage(raw: String?): String? {
+            val text = raw?.trim() ?: return null
+            if (text.isEmpty() || text.length > 200) return null
+            if (text.any { it == '\n' || it == '\r' }) return null
+            return text
+        }
     }
 }
 
@@ -197,7 +246,14 @@ class UrlConnectionTransport(
             }
             val code = connection.responseCode
             if (code !in 200..299) {
-                throw HttpStatusException(code)
+                // Read the ERROR stream, not the input stream: on a non-2xx the
+                // body lives in errorStream, and it is where the backend puts
+                // `{"error":"..."}`. Reading it here is what lets the UI show
+                // the server's own sentence instead of a generic one.
+                val errorBody = runCatching {
+                    connection.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                }.getOrNull()
+                throw HttpStatusException(code, errorBody)
             }
             return connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
         } finally {
@@ -289,7 +345,7 @@ class JsonHttpClient(
         } catch (e: CancellationException) {
             throw e
         } catch (e: HttpStatusException) {
-            throw ApiError.forStatus(e.code, effectiveLabel)
+            throw ApiError.forStatus(e.code, effectiveLabel, errorMessageOf(e.body))
         } catch (e: IOException) {
             throw ApiError.forNetworkFailure(effectiveLabel)
         }
@@ -337,6 +393,77 @@ fun encodePathSegment(segment: String): String {
         }
     }
     return out.toString()
+}
+
+/**
+ * Extracts the `error` field from a `{"error":"..."}` body, or null.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The backend reports every failure as `{"error":"<sentence>"}` — a message it
+ * wrote for the user. The app used to discard the body entirely and show a
+ * generic "sign-in required", so the one useful sentence never reached the
+ * screen. This reads it, and returns null for anything that is not that shape
+ * (an HTML error page, an empty body, a bare string) so the caller falls back to
+ * its curated message instead of showing markup.
+ */
+fun errorMessageOf(body: String?): String? {
+    val text = body?.trim() ?: return null
+    if (text.isEmpty() || !text.startsWith("{")) return null
+    return runCatching {
+        org.json.JSONObject(text).optString("error", "").takeIf { it.isNotBlank() }
+    }.getOrNull()
+}
+
+/**
+ * Unwraps a list from a JSON envelope.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The backend does not return a bare array. `GET /api/artifacts` answers
+ * `{"artifacts":[...]}` and `GET /api/memories` answers `{"memories":[...]}`.
+ * The app parsed the body with `JSONArray(body)`, which throws on an object — so
+ * every successful response was reported as a parse failure and the list never
+ * appeared.
+ *
+ * This accepts BOTH shapes, because a bare array is what the older contract (and
+ * the existing tests) use, and a server that starts wrapping its payload must
+ * not break the app:
+ *
+ *   • `{"<key>":[...]}`  → the array under [key]
+ *   • `[...]`            → the array itself
+ *
+ * A body that is neither — including a 200 carrying `{"error":"..."}` — throws
+ * an [ApiError] with a safe message, so the screen shows "unexpected response"
+ * rather than a raw `JSONException`.
+ *
+ * @param body the raw response body.
+ * @param key the envelope key ("artifacts" / "memories").
+ * @param label the feature label used in the failure message.
+ */
+fun unwrapList(body: String, key: String, label: String): JSONArray {
+    val text = body.trim()
+    if (text.isEmpty()) throw ApiError.forMalformedResponse(label)
+    return try {
+        when {
+            text.startsWith("[") -> JSONArray(text)
+            text.startsWith("{") -> {
+                val root = JSONObject(text)
+                // A 200 that carries an error is still a failure, not an empty list.
+                val serverError = root.optString("error", "")
+                if (serverError.isNotBlank()) {
+                    throw ApiError.forMalformedResponse(label, serverError)
+                }
+                root.optJSONArray(key)
+                    ?: throw ApiError.forMalformedResponse(label)
+            }
+            else -> throw ApiError.forMalformedResponse(label)
+        }
+    } catch (e: ApiError) {
+        throw e
+    } catch (e: org.json.JSONException) {
+        throw ApiError.forMalformedResponse(label)
+    }
 }
 
 /**

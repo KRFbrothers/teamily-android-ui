@@ -1,5 +1,7 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.BuildConfig
+
 /* ============================================================================
  *  The backend's address — ONE definition for the whole app.
  *
@@ -11,29 +13,82 @@ package ai.duagenai.design.screens
  *  talking to the placeholder. A base URL is a property of the BACKEND, not of a
  *  feature, so it belongs in one place.
  *
- *  [ArtifactsConfig] and [MemoryConfig] now both read [ApiConfig.BASE_URL]. Each
+ *  [ArtifactsConfig] and [MemoryConfig] both read [ApiConfig.BASE_URL]. Each
  *  keeps its own PATH (the two resources live at different endpoints), but the
- *  host is defined exactly once — change it here and both features follow.
+ *  host is defined exactly once.
  *
- *  The value is a clearly-named PLACEHOLDER: there is no live service behind it
- *  yet, which is why both repositories default to their in-memory data source.
- *  Replace this one constant and construct the repositories with their Remote
- *  data sources to go live.
+ *  WHERE THE VALUE COMES FROM (build-type driven, not a literal)
+ *  ------------------------------------------------------------
+ *  The host is NOT written into this file. It arrives as a generated
+ *  `BuildConfig.API_BASE_URL` field, which `app/build.gradle.kts` fills per
+ *  build type from, in order of precedence:
+ *
+ *    1. the Gradle property `duaApiBaseUrlDebug` / `duaApiBaseUrlRelease`
+ *    2. the Gradle property `duaApiBaseUrl`
+ *    3. the environment variable `DUA_API_BASE_URL`
+ *    4. the default in the build file (the live Cloud Run service)
+ *
+ *  So a debug build, a release build and a CI run can each point somewhere
+ *  different without touching a single Kotlin file:
+ *
+ *      ./gradlew assembleDebug -PduaApiBaseUrl=http://10.0.2.2:8080
+ *      DUA_API_BASE_URL=https://staging.example ./gradlew assembleRelease
+ *
+ *  [overrideBaseUrl] is the runtime seam on top of that: a test (or a debug
+ *  settings screen) can repoint the app in-process without a rebuild.
  * ==========================================================================*/
 
 /**
- * The one place the backend's address is defined.
+ * The one place the backend's address is resolved.
  *
  * A screen must never hardcode a URL, and neither should a repository: the host
- * lives here so a developer pointing the app at a real service changes exactly
- * one constant.
+ * is resolved here so every feature follows one rule.
  */
 object ApiConfig {
+
+    /**
+     * The last-resort host, used only when the generated field is blank.
+     *
+     * It duplicates the build file's default on purpose: a build that somehow
+     * produced an empty `API_BASE_URL` should still reach the real service
+     * rather than build request URLs like `/api/artifacts`.
+     */
+    const val FALLBACK_BASE_URL: String = "https://dua-api-228305912525.us-central1.run.app"
+
+    /**
+     * A runtime override, or null to use the build-time value.
+     *
+     * `@Volatile` because a debug screen (or a test) may set it from another
+     * thread while requests are being built. Setting it to null restores the
+     * build-time value.
+     */
+    @Volatile
+    var overrideBaseUrl: String? = null
+
     /**
      * The API host, shared by every feature.
      *
-     * Placeholder on purpose: replace this with the real service's base URL and
-     * construct the repositories with their Remote data sources to go live.
+     * Resolved per access rather than frozen in a `const`, so [overrideBaseUrl]
+     * takes effect immediately. Always normalised: trimmed, and with no trailing
+     * slash, so `BASE_URL + "/api/artifacts"` can never produce a double slash.
      */
-    const val BASE_URL: String = "https://api.duagenai.example/v1"
+    val BASE_URL: String
+        get() = normalize(overrideBaseUrl ?: BuildConfig.API_BASE_URL.ifBlank { FALLBACK_BASE_URL })
+
+    /**
+     * Builds a full endpoint URL from a path.
+     *
+     * @param path the endpoint path, with or without a leading slash.
+     */
+    fun url(path: String): String =
+        BASE_URL + if (path.startsWith("/")) path else "/$path"
+
+    /**
+     * Trims a host and drops trailing slashes.
+     *
+     * WHY: a base URL pasted from a console routinely ends in `/`, and
+     * `"https://host/" + "/api/artifacts"` is `https://host//api/artifacts` —
+     * a different path, which some servers 404.
+     */
+    internal fun normalize(raw: String): String = raw.trim().trimEnd('/')
 }

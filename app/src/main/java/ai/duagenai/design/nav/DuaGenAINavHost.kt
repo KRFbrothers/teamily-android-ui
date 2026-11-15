@@ -48,6 +48,9 @@ import ai.duagenai.design.screens.HomeScreen
 import ai.duagenai.design.screens.HomeTab
 import ai.duagenai.design.screens.MemoryRepository
 import ai.duagenai.design.screens.MemoryScreen
+import ai.duagenai.design.screens.RemoteArtifactsDataSource
+import ai.duagenai.design.screens.RemoteMemoryDataSource
+import ai.duagenai.design.screens.TokenStore
 import ai.duagenai.design.screens.NotificationsScreen
 import ai.duagenai.design.screens.ProfileScreen
 import ai.duagenai.design.screens.SettingsScreen
@@ -172,13 +175,27 @@ fun DuaGenAINavHost(
     // the Profile rows' subtitles and the screens they open read one copy.
     val settings = remember(context) { SettingsStore(context.applicationContext) }
     // The Artifacts data source. Created once here and passed into the screen,
-    // so the screen holds no data of its own and a real backend later means
-    // changing only the repository.
-    val artifactsRepository = remember { ArtifactsRepository() }
+    // so the screen holds no data of its own.
+    //
+    // WHICH SOURCE: the live backend when a session token exists, the in-memory
+    // demo set otherwise. The key is [TokenStore.token], so signing in (or out)
+    // rebuilds the repositories against the right source instead of leaving the
+    // app on the demo data until the next process start. Without a token the
+    // live service answers 401 anyway, so the demo set is the honest default.
+    val sessionToken = TokenStore.token
+    val artifactsRepository = remember(sessionToken) {
+        ArtifactsRepository(
+            dataSource = if (sessionToken != null) RemoteArtifactsDataSource() else null,
+        )
+    }
     // The Memory data source, the same shape as the Artifacts one: created once
     // here and passed down, so the screen holds no data of its own and
     // pull-to-refresh has a `load()` to re-run.
-    val memoryRepository = remember { MemoryRepository() }
+    val memoryRepository = remember(sessionToken) {
+        MemoryRepository(
+            dataSource = if (sessionToken != null) RemoteMemoryDataSource() else null,
+        )
+    }
     val scope = rememberCoroutineScope()
 
     // The one and only read of the saved cube in the whole app.

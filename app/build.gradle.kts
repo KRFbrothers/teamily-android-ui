@@ -3,6 +3,44 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+/* ============================================================================
+ *  Where the backend lives — resolved ONCE, per build type.
+ *
+ *  The base URL is NOT a Kotlin literal. It is a generated `BuildConfig` field,
+ *  so a debug build, a release build and a CI run can each point at a different
+ *  service without editing source. Precedence, highest first:
+ *
+ *    1. -PduaApiBaseUrlDebug / -PduaApiBaseUrlRelease   (per build type)
+ *    2. -PduaApiBaseUrl                                 (all build types)
+ *    3. DUA_API_BASE_URL                                (environment)
+ *    4. the default below                               (the live Cloud Run service)
+ *
+ *  Examples:
+ *    ./gradlew assembleDebug -PduaApiBaseUrl=http://10.0.2.2:8080
+ *    DUA_API_BASE_URL=https://staging.example ./gradlew assembleRelease
+ *
+ *  No secret belongs here: the base URL is a public host, and the bearer token
+ *  is supplied at runtime by TokenStore, never baked into the APK.
+ * ==========================================================================*/
+
+/** The live Cloud Run service, used when nothing overrides it. */
+val defaultApiBaseUrl = "https://dua-api-228305912525.us-central1.run.app"
+
+/**
+ * Resolves the base URL for one build type.
+ *
+ * @param buildTypeSuffix the per-build-type property suffix ("Debug" / "Release").
+ */
+fun apiBaseUrlFor(buildTypeSuffix: String): String {
+    val candidates = listOf(
+        providers.gradleProperty("duaApiBaseUrl$buildTypeSuffix").orNull,
+        providers.gradleProperty("duaApiBaseUrl").orNull,
+        providers.environmentVariable("DUA_API_BASE_URL").orNull,
+    )
+    return candidates.firstOrNull { !it.isNullOrBlank() }?.trim()?.trimEnd('/')
+        ?: defaultApiBaseUrl
+}
+
 android {
     namespace = "ai.duagenai.design"
     compileSdk = 34
@@ -18,12 +56,20 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The default for a debug build is the live service too: the app is
+            // being wired to a real backend, so "debug" must not silently mean
+            // "the placeholder". Override with -PduaApiBaseUrlDebug=... to point
+            // at a local emulator host (http://10.0.2.2:8080) instead.
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlFor("Debug")}\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrlFor("Release")}\"")
         }
     }
 
@@ -38,6 +84,10 @@ android {
 
     buildFeatures {
         compose = true
+        // Required for the generated API_BASE_URL field above. AGP 8.x turns
+        // BuildConfig generation off by default, so without this the field does
+        // not exist and ApiConfig would not compile.
+        buildConfig = true
     }
 
     composeOptions {
