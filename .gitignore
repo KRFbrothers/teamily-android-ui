@@ -39,6 +39,7 @@ release/
 *.keystore
 keystore.properties
 signing.properties
+google-services.json
 
 # ---------- OS ----------
 .DS_Store
