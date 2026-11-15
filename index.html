@@ -70,6 +70,12 @@
     stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
   .updated time{font-variant-numeric:tabular-nums}
   .path{margin:11px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);opacity:.75}
+  /* The commit that last touched this version's folder, so a card can be
+     traced to the exact build it shows. Same monospace voice as the path. */
+  .sha{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);opacity:.85}
+  .sha code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+    background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--text)}
+  .sha .sha-lbl{letter-spacing:.02em}
   /* Live thumbnail: the version's own page, scaled down inside a fixed box.
      The iframe is 4x the box and transform-scaled to 25%, so the prototype
      renders at its real layout width instead of a squeezed mobile viewport. */
@@ -125,37 +131,39 @@
 /* The version list is data, so adding a version is one line here. `dir` is the
    folder under webpages/; the link is that folder's own index.html. */
 var VERSIONS = [
-  { dir: 'm3-prototype_v16', name: 'v16', latest: true, date: '2026-11-15',
+  { dir: 'm3-prototype_v17', name: 'v17', latest: true, date: '2026-11-15', sha: '8525f25',
+    desc: 'Dedicated \u201cChannels for Dua Agent\u201d screen behind the Settings row, and every Settings row now wears the same mint cube-family tile.' },
+  { dir: 'm3-prototype_v16', name: 'v16', date: '2026-11-15', sha: '826cd4d',
     desc: 'Settings’ “Channels for Dua Agent” row now wears the app’s own cube logo, and Dua mode’s composer reads “Ask Dua Gen AI…”.' },
-  { dir: 'm3-prototype_v15', name: 'v15', date: '2026-11-15',
+  { dir: 'm3-prototype_v15', name: 'v15', date: '2026-11-15', sha: 'bfd8cc8',
     desc: 'Branding pass: app name is Dua Gen AI, tabs are Dua / Agent, cube logo kept — screens stay demo.' },
-  { dir: 'm3-prototype_v14', name: 'v14', date: '2026-11-15',
+  { dir: 'm3-prototype_v14', name: 'v14', date: '2026-11-15', sha: '75d08bc',
     desc: 'Haptic-style lift while dragging a connector row: scale + shadow + a short vibrate tick, with the rows it passes easing aside (FLIP).' },
-  { dir: 'm3-prototype_v13', name: 'v13', date: '2026-11-15',
+  { dir: 'm3-prototype_v13', name: 'v13', date: '2026-11-15', sha: '4165f71',
     desc: 'Undo toast after Disconnect all + drag-to-reorder connectors with a persisted order.' },
-  { dir: 'm3-prototype_v12', name: 'v12', date: '2026-11-15',
+  { dir: 'm3-prototype_v12', name: 'v12', date: '2026-11-15', sha: '479d542',
     desc: 'Restores the v9 live connected-app count in the Disconnect all dialog and row, on top of v11.' },
-  { dir: 'm3-prototype_v11', name: 'v11', date: '2026-11-15',
+  { dir: 'm3-prototype_v11', name: 'v11', date: '2026-11-15', sha: '5a29c22',
     desc: 'Clear recents action in the Recently used heading + recents cap raised to 10.' },
-  { dir: 'm3-prototype_v10', name: 'v10', date: '2026-11-15',
+  { dir: 'm3-prototype_v10', name: 'v10', date: '2026-11-15', sha: 'eb7106d',
     desc: 'Suggested apps orders recently used first.' },
-  { dir: 'm3-prototype_v9', name: 'v9', date: '2026-11-15',
+  { dir: 'm3-prototype_v9', name: 'v9', date: '2026-11-15', sha: 'b4d6e55',
     desc: 'Live connected-app count in the Disconnect all confirm dialog.' },
-  { dir: 'm3-prototype_v8', name: 'v8', date: '2026-11-15',
+  { dir: 'm3-prototype_v8', name: 'v8', date: '2026-11-15', sha: 'fd7467f',
     desc: 'Disconnect all confirm dialog + Suggested apps section.' },
-  { dir: 'm3-prototype_v7', name: 'v7', date: '2026-11-15',
+  { dir: 'm3-prototype_v7', name: 'v7', date: '2026-11-15', sha: 'c6e569c',
     desc: 'Disconnect all row + Add connector search.' },
-  { dir: 'm3-prototype_v6', name: 'v6', date: '2026-11-15',
+  { dir: 'm3-prototype_v6', name: 'v6', date: '2026-11-15', sha: '4fd129b',
     desc: 'Connector pill state persists + Add connector screen.' },
-  { dir: 'm3-prototype_v5', name: 'v5', date: '2026-11-15',
+  { dir: 'm3-prototype_v5', name: 'v5', date: '2026-11-15', sha: 'd978adb',
     desc: 'App Connectors pills toggle Connected <-> Connect.' },
-  { dir: 'm3-prototype_v4', name: 'v4', date: '2026-11-15',
+  { dir: 'm3-prototype_v4', name: 'v4', date: '2026-11-15', sha: 'd589d7a',
     desc: 'Create tiles open their own screens + Settings sub-screens.' },
-  { dir: 'm3-prototype_v3', name: 'v3', date: '2026-11-15',
+  { dir: 'm3-prototype_v3', name: 'v3', date: '2026-11-15', sha: '784ff54',
     desc: 'Quick Actions sheet, header + menu, public profile & settings.' },
-  { dir: 'm3-prototype_v2', name: 'v2', date: '2026-11-15',
+  { dir: 'm3-prototype_v2', name: 'v2', date: '2026-11-15', sha: '9d63721',
     desc: 'M3 interactive prototype with screen-list sidebar.' },
-  { dir: 'M3-design_v01', name: 'v01', date: '2026-11-14',
+  { dir: 'M3-design_v01', name: 'v01', date: '2026-11-14', sha: '32eac3c',
     desc: 'Cube logo replaces the old Teamily bot badge (header, avatars, badges).' }
 ];
 
@@ -185,6 +193,7 @@ var CAL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" wi
       '<p class="desc">' + v.desc + '</p>' +
       (v.date ? '<p class="updated">' + CAL_ICON + '<span>Updated <time datetime="' + v.date + '">' +
         fmtDate(v.date) + '</time></span></p>' : '') +
+      (v.sha ? '<p class="sha"><span class="sha-lbl">commit</span><code>' + v.sha + '</code></p>' : '') +
       '<p class="path">webpages/' + v.dir + '/index.html</p>' +
       '</a>';
   }
