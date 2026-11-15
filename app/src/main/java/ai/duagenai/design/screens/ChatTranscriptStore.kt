@@ -188,7 +188,11 @@ private fun skillIds(enabled: Set<String>): JSONArray {
 /**
  * Reads an agent reply.
  *
- * SSE lines of the form `data: {"type":"text","text":"..."}` are concatenated.
+ * SSE lines of the form `data: {"type":"text","delta":"..."}` are concatenated.
+ * `delta` is the field the servers actually send (see the backend's
+ * `apps/api/src/core/sse.mjs` wire-format comment and the engine's
+ * `app.py` `sse({"type": "text", "delta": ...})`). `text` is still accepted as a
+ * fallback so an older server that used that key keeps working.
  * A body with no `data:` line is treated as a plain `{"text":"..."}` JSON
  * response, which is what the engine returns when streaming did not happen.
  */
@@ -203,7 +207,9 @@ internal fun parseAgentReply(body: String): String {
         if (payload.isEmpty() || payload == "[DONE]") continue
         val obj = runCatching { JSONObject(payload) }.getOrNull() ?: continue
         if (obj.optString("type") == "text") {
-            chunks.append(obj.optString("text"))
+            // `delta` is what both servers send; `text` is the older key.
+            val piece = obj.optString("delta").ifEmpty { obj.optString("text") }
+            chunks.append(piece)
         }
     }
     if (!sawData) return plainChatText(body)
