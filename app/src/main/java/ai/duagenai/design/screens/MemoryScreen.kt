@@ -266,6 +266,14 @@ fun MemoryScreen(
      * ACTION_SEND intent). No new library.
      */
     onShare: ((String, String?) -> Unit)? = null,
+    /**
+     * Opens the sign-in surface (Profile).
+     *
+     * A 401 is NOT retryable — tapping Retry on it can never succeed, because the
+     * request will go out anonymous again. The error state therefore offers
+     * "Sign in" instead of "Retry" when the failure is an auth failure.
+     */
+    onSignIn: () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // The shared opener. The null/blank guard and the "did it open?" answer live
@@ -429,6 +437,9 @@ fun MemoryScreen(
                             MemoryError(
                                 message = s.message,
                                 onRetry = { scope.launch { repository.load() } },
+                                // A 401/403 is not retryable — see ArtifactsScreen.
+                                retryable = s.retryable,
+                                onSignIn = onSignIn,
                                 modifier = Modifier.padding(horizontal = spacing.gutter),
                             )
                         }
@@ -711,11 +722,20 @@ private fun MemoryLoading(modifier: Modifier = Modifier) {
     }
 }
 
-/** The error state: the message plus a Retry action. */
+/** The error state: the message plus the action that can actually help. */
 @Composable
 private fun MemoryError(
     message: String,
     onRetry: () -> Unit,
+    /**
+     * Whether trying again could plausibly succeed.
+     *
+     * Comes from [ApiError.retryable] via the repository. A 401/403 is false, and
+     * offering "Retry" for it was a dead button: the request goes out anonymous
+     * again and fails identically. False shows "Sign in" instead.
+     */
+    retryable: Boolean = true,
+    onSignIn: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -737,14 +757,17 @@ private fun MemoryError(
             )
             Spacer(Modifier.height(spacing.lg))
             Button(
-                onClick = onRetry,
+                onClick = if (retryable) onRetry else onSignIn,
                 shape = DuaGenAITheme.shapes.pill,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             ) {
-                Text("Retry", style = DuaGenAITextStyles.button)
+                Text(
+                    text = if (retryable) "Retry" else "Sign in",
+                    style = DuaGenAITextStyles.button,
+                )
             }
         }
     }
@@ -1149,13 +1172,13 @@ private fun MemoryGlyph(tint: Color, modifier: Modifier = Modifier) {
 @Preview(name = "Memory — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoryLight() = DuaGenAITheme(darkTheme = false) {
-    MemoryScreen(repository = MemoryRepository(loadDelayMs = 0))
+    MemoryScreen(repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0))
 }
 
 @Preview(name = "Memory — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoryDark() = DuaGenAITheme(darkTheme = true) {
-    MemoryScreen(repository = MemoryRepository(loadDelayMs = 0))
+    MemoryScreen(repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0))
 }
 
 @Preview(name = "Memory — empty", showBackground = true, widthDp = 390, heightDp = 844)
@@ -1167,5 +1190,5 @@ private fun MemoryEmpty() = DuaGenAITheme(darkTheme = false) {
 @Preview(name = "Memory — error", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoryErrorPreview() = DuaGenAITheme(darkTheme = false) {
-    MemoryScreen(repository = MemoryRepository(failOnLoad = true, loadDelayMs = 0))
+    MemoryScreen(repository = MemoryRepository(seed = sampleMemories, failOnLoad = true, loadDelayMs = 0))
 }

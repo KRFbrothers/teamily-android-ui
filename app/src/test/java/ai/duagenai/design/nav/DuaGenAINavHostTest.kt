@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isNotEnabled
@@ -13,11 +14,13 @@ import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
@@ -204,7 +207,7 @@ private const val AGENT_COMPOSER_HINT = "Message $AGENT_CHAT_TITLE\u2026"
  * Used to FIND the card: it is the one filled card on Agent home and tapping
  * it opens Agent's thread. The title is unique to the card.
  */
-private const val AGENT_ROLE_LINE = "fareed's Personal Agent"
+private const val AGENT_ROLE_LINE = "Your Personal Agent"
 
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
@@ -455,7 +458,8 @@ private const val SHARED_OPENER_URL = "https://static.teamily.ai/sites/demo/q3-l
 
 /** The Profile screen's two inert controls and the reason shown for one. */
 private const val EDIT_PROFILE_LABEL = "Edit profile"
-private const val SIGN_OUT_LABEL = "Sign out"
+private const val SIGN_IN_LABEL = "Sign in"
+private const val SESSION_TOKEN_LABEL = "Session token"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
 /**
@@ -491,7 +495,7 @@ private class FlakyArtifactsDataSource(private val failures: Int) : ArtifactsDat
         return demoArtifacts
     }
 
-    override suspend fun add(item: ArtifactItem) = Unit
+    override suspend fun add(item: ArtifactItem): ArtifactItem = item
     override suspend fun delete(id: String) = Unit
 }
 
@@ -517,8 +521,9 @@ private class FlakyMemoryDataSource(private val failures: Int) : MemoryDataSourc
         return sampleMemories
     }
 
-    override suspend fun add(item: MemoryItem) {
+    override suspend fun add(item: MemoryItem): MemoryItem {
         addCount++
+        return item
     }
 
     override suspend fun delete(id: String) {
@@ -549,9 +554,10 @@ private class FailingWriteArtifactsDataSource(
 
     override suspend fun fetch(): List<ArtifactItem> = demoArtifacts
 
-    override suspend fun add(item: ArtifactItem) {
+    override suspend fun add(item: ArtifactItem): ArtifactItem {
         addCount++
         if (failAdd) throw IllegalStateException("boom")
+        return item
     }
 
     override suspend fun delete(id: String) {
@@ -572,9 +578,10 @@ private class FailingWriteMemoryDataSource(
 
     override suspend fun fetch(): List<MemoryItem> = sampleMemories
 
-    override suspend fun add(item: MemoryItem) {
+    override suspend fun add(item: MemoryItem): MemoryItem {
         addCount++
         if (failAdd) throw IllegalStateException("boom")
+        return item
     }
 
     override suspend fun delete(id: String) {
@@ -646,7 +653,15 @@ class DuaGenAINavHostTest {
         }
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
-                DuaGenAINavHost(navController = navController)
+                // The nav host's signed-out source is EMPTY in production (a build
+                // must never ship fake rows), so the UI tests that assert on a
+                // populated grid/list pass the fixtures explicitly. This is the
+                // same seam a `@Preview` uses.
+                DuaGenAINavHost(
+                    navController = navController,
+                    signedOutArtifacts = demoArtifacts,
+                    signedOutMemories = sampleMemories,
+                )
             }
         }
         compose.waitForIdle()
@@ -1289,10 +1304,20 @@ class DuaGenAINavHostTest {
         ).fetchSemanticsNodes().count { isOnScreen(it) }
         assertTrue("\"$EDIT_PROFILE_LABEL\" must be announced as disabled", disabled >= 1)
 
-        val signOutDisabled = compose.onAllNodes(
-            hasText(SIGN_OUT_LABEL) and isNotEnabled(),
-        ).fetchSemanticsNodes().count { isOnScreen(it) }
-        assertTrue("\"$SIGN_OUT_LABEL\" must be announced as disabled", signOutDisabled >= 1)
+        // "Sign out" is no longer a permanently-disabled placeholder: it is a
+        // real control inside the SESSION card, and it only exists when a token
+        // is present. Signed out (the default here) the card shows the token
+        // field instead, so the assertion is that the sign-in affordance is
+        // reachable — not that a dead button is announced as dead.
+        //
+        // The card sits below the fold, so it is scrolled into view first: a
+        // LazyColumn does not compose an off-screen item, and asserting on one
+        // would fail for a reason that has nothing to do with the fix.
+        compose.onAllNodes(hasScrollAction()).onFirst()
+            .performScrollToNode(hasText(SESSION_TOKEN_LABEL))
+        compose.waitForIdle()
+        assertVisible(SESSION_TOKEN_LABEL)
+        assertVisible(SIGN_IN_LABEL)
 
         // The reason is on screen, not left to the user to guess.
         assertVisible(EDIT_PROFILE_HELPER)
@@ -1479,7 +1504,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun pullToRefreshReloadsTheArtifacts() {
-        val repository = ArtifactsRepository(loadDelayMs = 0)
+        val repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 ArtifactsScreen(repository = repository)
@@ -1606,7 +1631,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theContextMenuHasFourItemsAndOpenInNewTabFiresTheIntent() {
         val opened = mutableListOf<String>()
-        val repository = ArtifactsRepository(loadDelayMs = 0)
+        val repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 ArtifactsScreen(
@@ -1648,7 +1673,7 @@ class DuaGenAINavHostTest {
     @Test
     fun openInNewTabIsDisabledWhenTheArtifactHasNoUrl() {
         val opened = mutableListOf<String>()
-        val repository = ArtifactsRepository(loadDelayMs = 0)
+        val repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 ArtifactsScreen(
@@ -1687,7 +1712,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun swipingAMemoryRowDeletesItAndUndoRestoresIt() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -1721,7 +1746,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun cancellingTheMemoryDeleteKeepsTheRow() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -1752,7 +1777,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun memoryPullToRefreshReloadsTheList() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -1838,7 +1863,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun longPressOnAMemoryRowOpensTheContextMenu() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -1865,7 +1890,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryMenuOpenFallsBackToTheDetailDialogWhenThereIsNoUrl() {
         val opened = mutableListOf<String>()
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
@@ -1894,7 +1919,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryMenuOpenHandsTheUrlToTheSharedOpener() {
         val opened = mutableListOf<String>()
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
@@ -1923,7 +1948,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun theMemoryMenuDeleteOpensTheSameConfirmationAndUndoRestores() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -1964,7 +1989,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryDetailOpenSourceButtonAppearsOnlyWithAUrl() {
         val opened = mutableListOf<String>()
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository, onOpenInNewTab = { opened += it })
@@ -2003,7 +2028,7 @@ class DuaGenAINavHostTest {
      */
     @Test
     fun theMemoryDetailCopyTextButtonCopiesTheMemoryAndConfirms() {
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository)
@@ -2046,7 +2071,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theMemoryDetailShareButtonSharesTheMemoryTextAndUrl() {
         val sharer = RecordingSharer()
-        val repository = MemoryRepository(loadDelayMs = 0)
+        val repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0)
         compose.setContent {
             DuaGenAITheme(darkTheme = false) {
                 MemoryScreen(repository = repository, onShare = { text, url -> sharer.share(text, url) })
@@ -3462,11 +3487,11 @@ class DuaGenAINavHostTest {
     fun bothRepositoriesShareTheBaseClass() {
         assertTrue(
             "ArtifactsRepository must extend the shared base",
-            ArtifactsRepository(loadDelayMs = 0) is BaseRemoteRepository<*, *>,
+            ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0) is BaseRemoteRepository<*, *>,
         )
         assertTrue(
             "MemoryRepository must extend the shared base",
-            MemoryRepository(loadDelayMs = 0) is BaseRemoteRepository<*, *>,
+            MemoryRepository(seed = sampleMemories, loadDelayMs = 0) is BaseRemoteRepository<*, *>,
         )
     }
 
