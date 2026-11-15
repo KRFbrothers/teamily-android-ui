@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teamily Android UI — M3 Prototypes</title>
+<style>
+  :root{
+    --bg:#0b0d12; --surface:#141821; --surface2:#1b2130; --line:#252c3b;
+    --text:#e8ecf4; --muted:#8b95a9; --accent:#7c9cff; --accent2:#5eead4;
+    --chip:#1e2534;
+  }
+  html[data-theme="light"]{
+    --bg:#f5f7fb; --surface:#ffffff; --surface2:#eef2f9; --line:#dde4f0;
+    --text:#131722; --muted:#5b6577; --accent:#3b5bdb; --accent2:#0d9488;
+    --chip:#eef2f9;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:48px 20px 72px}
+  header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{
+    width:46px;height:46px;border-radius:14px;flex:0 0 46px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:19px;color:#0b0d12;letter-spacing:-.5px;
+  }
+  h1{margin:0;font-size:26px;letter-spacing:-.4px}
+  .sub{margin:4px 0 0;color:var(--muted);font-size:14px}
+  .theme-btn{
+    background:var(--surface);border:1px solid var(--line);color:var(--text);
+    border-radius:999px;padding:9px 16px;font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .theme-btn:hover{background:var(--surface2)}
+  .meta{
+    margin:28px 0 8px;display:flex;gap:10px;flex-wrap:wrap;
+  }
+  .chip{
+    background:var(--chip);border:1px solid var(--line);border-radius:999px;
+    padding:6px 13px;font-size:12.5px;color:var(--muted);font-weight:600;
+  }
+  .chip b{color:var(--text)}
+  h2{margin:36px 0 14px;font-size:15px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  a.card{
+    display:block;text-decoration:none;color:inherit;
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:16px 18px;transition:transform .12s ease,border-color .12s ease,background .12s ease;
+  }
+  a.card:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface2)}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .vname{font-weight:700;font-size:16px;letter-spacing:-.2px}
+  .badge{
+    font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--muted);
+    border:1px solid var(--line);white-space:nowrap;
+  }
+  .badge.latest{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b0d12;border-color:transparent}
+  .desc{margin:9px 0 0;color:var(--muted);font-size:13.5px;line-height:1.5}
+  .path{margin:11px 0 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:var(--muted);opacity:.75}
+  footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  footer a{color:var(--accent);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">M3</div>
+      <div>
+        <h1>Teamily Android UI — M3 Prototypes</h1>
+        <p class="sub">Interactive Material 3 prototype versions, newest first.</p>
+      </div>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">Switch to light</button>
+  </header>
+
+  <div class="meta">
+    <span class="chip"><b>12</b> versions</span>
+    <span class="chip">Repo <b>KRFbrothers/teamily-android-ui</b></span>
+    <span class="chip">Served from <b>main</b></span>
+  </div>
+
+  <h2>Prototype versions</h2>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Source: <a href="https://github.com/KRFbrothers/teamily-android-ui">github.com/KRFbrothers/teamily-android-ui</a>
+    &nbsp;·&nbsp; Pages: <a href="https://krfbrothers.github.io/teamily-android-ui/">krfbrothers.github.io/teamily-android-ui</a>
+  </footer>
+</div>
+
+<script>
+/* The version list is data, so adding a version is one line here. `dir` is the
+   folder under webpages/; the link is that folder's own index.html. */
+var VERSIONS = [
+  { dir: 'm3-prototype_v12', name: 'v12', latest: true,
+    desc: 'Restores the v9 live connected-app count in the Disconnect all dialog and row, on top of v11.' },
+  { dir: 'm3-prototype_v11', name: 'v11',
+    desc: 'Clear recents action in the Recently used heading + recents cap raised to 10.' },
+  { dir: 'm3-prototype_v10', name: 'v10',
+    desc: 'Suggested apps orders recently used first.' },
+  { dir: 'm3-prototype_v9', name: 'v9',
+    desc: 'Live connected-app count in the Disconnect all confirm dialog.' },
+  { dir: 'm3-prototype_v8', name: 'v8',
+    desc: 'Disconnect all confirm dialog + Suggested apps section.' },
+  { dir: 'm3-prototype_v7', name: 'v7',
+    desc: 'Disconnect all row + Add connector search.' },
+  { dir: 'm3-prototype_v6', name: 'v6',
+    desc: 'Connector pill state persists + Add connector screen.' },
+  { dir: 'm3-prototype_v5', name: 'v5',
+    desc: 'App Connectors pills toggle Connected <-> Connect.' },
+  { dir: 'm3-prototype_v4', name: 'v4',
+    desc: 'Create tiles open their own screens + Settings sub-screens.' },
+  { dir: 'm3-prototype_v3', name: 'v3',
+    desc: 'Quick Actions sheet, header + menu, public profile & settings.' },
+  { dir: 'm3-prototype_v2', name: 'v2',
+    desc: 'M3 interactive prototype with screen-list sidebar.' },
+  { dir: 'M3-design_v01', name: 'v01',
+    desc: 'Cube logo replaces the old Teamily bot badge (header, avatars, badges).' }
+];
+
+(function () {
+  var grid = document.getElementById('grid');
+  var html = '';
+  for (var i = 0; i < VERSIONS.length; i++) {
+    var v = VERSIONS[i];
+    html += '<a class="card" href="webpages/' + v.dir + '/index.html">' +
+      '<div class="card-top"><span class="vname">' + v.name + '</span>' +
+      (v.latest ? '<span class="badge latest">Latest</span>' : '<span class="badge">Prototype</span>') +
+      '</div>' +
+      '<p class="desc">' + v.desc + '</p>' +
+      '<p class="path">webpages/' + v.dir + '/index.html</p>' +
+      '</a>';
+  }
+  grid.innerHTML = html;
+
+  var root = document.documentElement;
+  var btn = document.getElementById('themeBtn');
+  var stored = null;
+  try { stored = localStorage.getItem('m3-index-theme'); } catch (e) {}
+  if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+  function label() {
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? 'Switch to light' : 'Switch to dark';
+  }
+  label();
+  btn.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('m3-index-theme', next); } catch (e) {}
+    label();
+  });
+})();
+</script>
+</body>
+</html>
