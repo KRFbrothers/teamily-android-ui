@@ -76,7 +76,9 @@ import ai.duagenai.design.screens.RemoteDataSource
 import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.demoArtifacts
 import ai.duagenai.design.screens.AGENT_CHAT_ID
-import ai.duagenai.design.screens.AGENT_CHAT_TITLE
+import ai.duagenai.design.screens.DUA_AGENT_TITLE
+import ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID
+import ai.duagenai.design.screens.PERSONAL_AGENT_TITLE
 import ai.duagenai.design.theme.DuaGenAITheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch as coroutineLaunch
@@ -146,11 +148,11 @@ import org.robolectric.annotation.Config
  *
  *  AGENT'S OWN THREAD
  *  ------------------
- *  Agent has a conversation of its own. The pinned card on
- *  Agent's home opens it through the SAME `chat/{chatId}` route every other
- *  thread uses, with Agent's own stable id ([AGENT_CHAT_ID]) \u2014 no new route was
- *  invented. Its pain area holds Agent's and the user's messages, and it carries
- *  the composer so the thread is usable.
+ *  Dua Agent has a conversation of its own. The pinned "Dua Agent" row opens
+ *  it through the SAME `chat/{chatId}` route every other thread uses, with
+ *  [AGENT_CHAT_ID]. The hero card opens the Personal Agent on
+ *  [PERSONAL_AGENT_CHAT_ID]. No new route was invented. Dua Agent's pain area
+ *  holds Agent's and the user's messages, and it carries the composer.
  *
  *  THE MEMORY TAB, THE FILTER AND THE INERT GUARD
  *  ----------------------------------------------
@@ -217,16 +219,16 @@ private const val COMPOSER_PLACEHOLDER = "Type a message"
 /**
  * The placeholder Agent's own thread must show.
  *
- * `ChatScreen` passes `"Message $chatTitle..."`, and Agent's title is
- * [AGENT_CHAT_TITLE], so this is the exact string the pill renders.
+ * `ChatScreen` passes `"Message $chatTitle..."`, and the pinned row opens
+ * [DUA_AGENT_TITLE], so this is the exact string the pill renders.
  */
-private const val AGENT_COMPOSER_HINT = "Message $AGENT_CHAT_TITLE\u2026"
+private const val AGENT_COMPOSER_HINT = "Message $DUA_AGENT_TITLE\u2026"
 
 /**
  * The Agent-home hero card's title (the user's personal agent).
  *
  * Used to FIND the card: it is the one filled card on Agent home and tapping
- * it opens Agent's thread. The title is unique to the card.
+ * it opens the Personal Agent thread. The title is unique to the card.
  */
 private const val AGENT_ROLE_LINE = "Your Personal Agent"
 
@@ -864,11 +866,11 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount(MCP_LABEL, 0)
     }
 
-    /** Opens Agent's own thread the way a user does: Agent mode -> pinned card. */
+    /** Opens Dua Agent's thread the way a user does: Agent mode -> pinned row. */
     private fun openAgentThread() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
     }
 
@@ -2925,34 +2927,66 @@ class DuaGenAINavHostTest {
     // ------------------------------------------------- Agent's own thread
 
     /**
-     * The pinned Agent card opens AGENT'S OWN conversation.
+     * The hero card opens the Personal Agent thread.
      *
-     * Agent has a thread of its own, and it goes through the
-     * SAME `chat/{chatId}` route every other conversation uses \u2014 with Agent's
-     * own stable id. No new route was invented for it.
-     *
-     * The card is Agent home's one filled hero card (the personal agent), found
-     * by its title.
+     * That thread is a normal chat ([PERSONAL_AGENT_CHAT_ID]), so a signed-in
+     * send posts `mode: "auto"` to the API. It uses the same `chat/{chatId}`
+     * route as every other conversation.
      */
     @Test
     fun tappingThePinnedAgentCardOpensAgentsOwnThread() {
         launch()
         switchTo(HomeMode.Agent)
 
-        // The card is on Agent's home, under the search row.
         assertVisible(AGENT_ROLE_LINE)
 
         compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
 
         assertEquals(
-            "the pinned card must open the chat route, not a new screen",
+            "the hero card must open the chat route, not a new screen",
             DuaGenAIRoutes.CHAT,
             currentRoute(),
         )
         val args = navController.currentBackStackEntry?.arguments
+        assertEquals(PERSONAL_AGENT_CHAT_ID, args?.getString("chatId"))
+        assertEquals(PERSONAL_AGENT_TITLE, args?.getString("title"))
+    }
+
+    /**
+     * The pinned Dua Agent row opens Dua Agent's thread.
+     *
+     * The id is [AGENT_CHAT_ID], which is what sends `mode: "agent"` and the
+     * skill ids to the engine. The row stays the same visual; it is now a button.
+     */
+    @Test
+    fun tappingTheDuaAgentRowOpensTheAgentThread() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        assertVisible(DUA_AGENT_ROW)
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val args = navController.currentBackStackEntry?.arguments
         assertEquals(AGENT_CHAT_ID, args?.getString("chatId"))
-        assertEquals(AGENT_CHAT_TITLE, args?.getString("title"))
+        assertEquals(DUA_AGENT_TITLE, args?.getString("title"))
+    }
+
+    /** One of the five listed chats opens its own existing thread id. */
+    @Test
+    fun tappingAListedChatOpensThatThread() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        compose.onNodeWithText("Code Reviewer").performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals("chat_code_reviewer", args?.getString("chatId"))
+        assertEquals("Code Reviewer", args?.getString("title"))
     }
 
     /**
@@ -2967,14 +3001,14 @@ class DuaGenAINavHostTest {
     fun agentsThreadShowsTheConversationAndTheComposer() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
 
         // The thread is open\u2026
         assertVisible(CHAT_MARKER)
 
-        // \u2026it is Agent's, so its top bar carries Agent's name\u2026
-        assertVisible(AGENT_CHAT_TITLE)
+        // \u2026it is Dua Agent's, so its top bar carries that name\u2026
+        assertVisible(DUA_AGENT_TITLE)
 
         // \u2026and the pain area holds both sides of the conversation. These are
         // distinctive fragments of the first user line and the first agent line
@@ -2998,7 +3032,7 @@ class DuaGenAINavHostTest {
     fun sendingAMessageAddsItToTheThreadAndAgentReplies() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
 
         // Type into the composer's field: the trailing control turns from the
@@ -3136,7 +3170,7 @@ class DuaGenAINavHostTest {
     fun backFromAgentsThreadReturnsToAgentsHome() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
         assertVisible(CHAT_MARKER)
 
@@ -3975,7 +4009,7 @@ class DuaGenAINavHostTest {
         val skills = DuaAgentSkills.ids.toSet()
 
         val auto = kotlinx.coroutines.runBlocking {
-            source.sendMessage("chat_webpage", "Hi there", skills)
+            source.sendMessage(PERSONAL_AGENT_CHAT_ID, "Hi there", skills)
         }
         val agent = kotlinx.coroutines.runBlocking {
             source.sendMessage(AGENT_CHAT_ID, "Build it", skills)
@@ -4002,6 +4036,9 @@ class DuaGenAINavHostTest {
         assertEquals(DuaAgentSkills.ids.size, sentSkills.length())
         assertEquals("frontend-developer", sentSkills.getString(0))
         assertEquals("backend-architect", sentSkills.getString(1))
+        assertEquals("api-tester", sentSkills.getString(2))
+        assertEquals("devops-automator", sentSkills.getString(3))
+        assertEquals("code-reviewer", sentSkills.getString(4))
 
         val plain = RemoteChatDataSource(
             client = JsonHttpClient(

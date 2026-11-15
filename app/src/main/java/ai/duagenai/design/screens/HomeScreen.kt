@@ -243,11 +243,21 @@ fun HomeScreen(
      */
     selectedTab: HomeTab = HomeTab.Chats,
     /**
-     * Opens AGENT'S OWN thread. The pinned Agent card is the entry point: Agent
-     * is an agent, so it has a conversation of its own, and tapping its card
-     * opens it through the same `chat/{chatId}` route every other thread uses.
+     * Opens the Personal Agent thread. The hero card is the entry point, and
+     * the host routes [PERSONAL_AGENT_CHAT_ID] through the same `chat/{chatId}`
+     * path every other thread uses.
      */
-    onOpenAgentChat: () -> Unit = {},
+    onOpenPersonalAgentChat: () -> Unit = {},
+    /**
+     * Opens Dua Agent's thread. The pinned "Dua Agent" row is the entry point.
+     * The host routes [AGENT_CHAT_ID] through the same chat path.
+     */
+    onOpenDuaAgentChat: () -> Unit = {},
+    /**
+     * Opens one of the "Chats · 5" rows. Each row already has a stable id; the
+     * host uses the same chat route as the drawer history.
+     */
+    onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
     /**
      * Agent home's header photo (user-avatar.jpg). This package has no `res/`,
      * so the app passes `painterResource(...)`; the reference image ships in
@@ -314,7 +324,9 @@ fun HomeScreen(
                         .fillMaxWidth(),
                 ) {
                     AgentHomeList(
-                        onOpenAgentChat = onOpenAgentChat,
+                        onOpenPersonalAgentChat = onOpenPersonalAgentChat,
+                        onOpenDuaAgentChat = onOpenDuaAgentChat,
+                        onOpenListedChat = onOpenListedChat,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -1132,8 +1144,8 @@ private fun SearchRow(
  * The ONE filled card on Agent home: the user's personal agent.
  *
  * `cardHeroColor` fill, 20dp corners, 1dp `borderGradient` edge, resting glass
- * shadow and the 0.98 press scale. Tapping it opens the existing Agent thread
- * ([onClick] = `onOpenAgentChat`).
+ * shadow and the 0.98 press scale. Tapping it opens the Personal Agent thread
+ * ([onClick] = `onOpenPersonalAgentChat`).
  */
 @Composable
 private fun PersonalAgentHeroCard(
@@ -1249,13 +1261,22 @@ private fun CanvasChatRow(
     subtitle: String,
     time: String,
     verified: Boolean = false,
+    onClick: (() -> Unit)? = null,
     avatar: @Composable () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
+    // Click is optional so a row that is only copy stays inert. The modifier
+    // is appended after the existing padding, so a wired row keeps the same
+    // 16dp side inset and 14dp vertical inset.
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = spacing.gutter, vertical = 14.dp)
+        .let { base ->
+            if (onClick == null) base
+            else base.clickable(role = Role.Button, onClick = onClick)
+        }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = spacing.gutter, vertical = 14.dp),
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         avatar()
@@ -1396,7 +1417,9 @@ private fun SectionHeader(
  */
 @Composable
 private fun AgentHomeList(
-    onOpenAgentChat: () -> Unit,
+    onOpenPersonalAgentChat: () -> Unit,
+    onOpenDuaAgentChat: () -> Unit,
+    onOpenListedChat: (chatId: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1421,7 +1444,7 @@ private fun AgentHomeList(
     ) {
         item {
             PersonalAgentHeroCard(
-                onClick = onOpenAgentChat,
+                onClick = onOpenPersonalAgentChat,
                 modifier = Modifier.padding(horizontal = spacing.sm),
             )
         }
@@ -1443,6 +1466,7 @@ private fun AgentHomeList(
                     subtitle = DUA_AGENT_SUBTITLE,
                     time = DUA_AGENT_TIME,
                     verified = true,
+                    onClick = onOpenDuaAgentChat,
                 ) {
                     ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
                         AppBadge(size = 48.dp, shape = CircleShape)
@@ -1467,7 +1491,12 @@ private fun AgentHomeList(
         }
         if (chatsExpanded) {
             itemsIndexed(agentHomeChats, key = { _, c -> c.chatId }) { index, chat ->
-                CanvasChatRow(title = chat.title, subtitle = chat.subtitle, time = chat.time) {
+                CanvasChatRow(
+                    title = chat.title,
+                    subtitle = chat.subtitle,
+                    time = chat.time,
+                    onClick = { onOpenListedChat(chat.chatId, chat.title) },
+                ) {
                     ChatAvatar(ring = palette.bgCanvas, miniBadge = true) {
                         TileAvatar(tile = tiles[index % tiles.size])
                     }
