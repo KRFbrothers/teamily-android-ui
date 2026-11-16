@@ -631,12 +631,16 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
 }
 
 @Preview(name = "Chat — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Chat — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Chat — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ChatLight() = DuaGenAITheme(darkTheme = false) {
     ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
 }
 
 @Preview(name = "Chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Chat — dark — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Chat — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ChatDark() = DuaGenAITheme(darkTheme = true) {
     ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")

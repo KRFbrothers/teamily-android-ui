@@ -35,6 +35,11 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Settings — the destination behind Home's gear.
@@ -109,7 +114,7 @@ fun SettingsScreen(
     val sessionToken by TokenStore.state.collectAsStateWithLifecycle()
     val signedIn = sessionToken != null
     val scope = rememberCoroutineScope()
-    var showSignIn by remember { mutableStateOf(false) }
+    var showSignIn by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -129,10 +134,16 @@ fun SettingsScreen(
             )
         },
     ) { inner ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
+                .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = spacing.gutter, vertical = spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
@@ -227,6 +238,7 @@ fun SettingsScreen(
                 onEnterReadOnly = onEnterReadOnly,
             )
         }
+        }
     }
 
     if (showSignIn) {
@@ -263,9 +275,10 @@ private fun SignInDialog(
     onSubmit: (email: String, password: String, onResult: (String?) -> Unit) -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    // In-flight flag is remember-only: the coroutine dies with the composition.
     var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -331,9 +344,13 @@ private fun SignInDialog(
 }
 
 @Preview(name = "Settings \u2014 light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Settings \u2014 light \u2014 tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Settings \u2014 light \u2014 foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun SettingsLight() = DuaGenAITheme(darkTheme = false) { SettingsScreen() }
 
 @Preview(name = "Settings \u2014 dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Settings \u2014 dark \u2014 tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Settings \u2014 dark \u2014 foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun SettingsDark() = DuaGenAITheme(darkTheme = true) { SettingsScreen() }

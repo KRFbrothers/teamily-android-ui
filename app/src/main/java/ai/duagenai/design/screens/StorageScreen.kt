@@ -36,6 +36,11 @@ import androidx.compose.ui.unit.dp
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Storage — M3 components used:
@@ -69,9 +74,8 @@ fun StorageScreen(
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
 
-    // The confirmation dialog is local UI state — it is not persisted and it
-    // dies with the screen, so it does not belong in the host.
-    var confirming by remember { mutableStateOf(false) }
+    // Confirmation dialog: rememberSaveable so a rotation or resize keeps it open.
+    var confirming by rememberSaveable { mutableStateOf(false) }
 
     val fraction = if (totalGb > 0) (usedGb / totalGb).toFloat().coerceIn(0f, 1f) else 0f
 
@@ -102,10 +106,16 @@ fun StorageScreen(
             )
         },
     ) { inner ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize(),
             contentPadding = PaddingValues(
                 start = spacing.gutter,
                 end = spacing.gutter,
@@ -167,6 +177,7 @@ fun StorageScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
         }
     }
 

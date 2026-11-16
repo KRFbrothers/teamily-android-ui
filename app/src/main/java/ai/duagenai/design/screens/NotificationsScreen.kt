@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Notifications — M3 components used:
@@ -116,10 +119,16 @@ fun NotificationsScreen(
             )
         },
     ) { inner ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize(),
             contentPadding = PaddingValues(
                 start = spacing.gutter,
                 end = spacing.gutter,
@@ -160,6 +169,7 @@ fun NotificationsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
         }
     }
 }

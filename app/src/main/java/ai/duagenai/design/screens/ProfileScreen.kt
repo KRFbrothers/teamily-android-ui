@@ -52,6 +52,7 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
+import androidx.compose.runtime.saveable.rememberSaveable
 
 /* ============================================================================
  *  Profile — M3 components used:
@@ -366,7 +367,7 @@ fun ProfileScreen(
                             Spacer(Modifier.height(spacing.md))
                             // Local draft only. The token is never logged, never
                             // persisted, and never rendered back once submitted.
-                            var draft by remember { mutableStateOf("") }
+                            var draft by rememberSaveable { mutableStateOf("") }
                             OutlinedTextField(
                                 value = draft,
                                 onValueChange = { draft = it },

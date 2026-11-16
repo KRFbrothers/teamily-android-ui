@@ -387,6 +387,12 @@ object TeamilyMotion {
 }
 
 /**
+ * Max width for home, list, settings, and sheet bodies on large screens.
+ * Phone widths (390dp) sit below this, so compact appearance is unchanged.
+ */
+val MaxContentWidth = 840.dp
+
+/**
  * The palette for the theme currently in effect.
  *
  * Follows `DuaGenAITheme(darkTheme = ...)` by reading the active M3 background:

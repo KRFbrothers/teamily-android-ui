@@ -45,6 +45,8 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import androidx.compose.foundation.layout.widthIn
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Composer sheets — Attach (+), Skills and MCP Tools
@@ -290,20 +292,26 @@ internal fun ComposerMcpSheet(
 @Composable
 private fun SheetColumn(title: String, content: @Composable () -> Unit) {
     val spacing = LocalDuaGenAISpacing.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(bottom = spacing.lg),
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
     ) {
-        // Same heading recipe as the Artifacts filter sheet.
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter, bottom = spacing.sm),
-        )
-        content()
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = spacing.lg),
+        ) {
+            // Same heading recipe as the Artifacts filter sheet.
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = spacing.gutter, end = spacing.gutter, bottom = spacing.sm),
+            )
+            content()
+        }
     }
 }
 

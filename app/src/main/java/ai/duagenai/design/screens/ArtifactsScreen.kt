@@ -88,6 +88,8 @@ import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
+import androidx.compose.foundation.layout.widthIn
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Artifacts — M3 components used:
@@ -106,7 +108,7 @@ import ai.duagenai.design.theme.teamilyRestingShadow
  *  exactly one of:
  *
  *    • Loading -> a centred CircularProgressIndicator
- *    • Loaded, non-empty -> a LazyVerticalGrid (2 columns) of [ArtifactCard]s
+ *    • Loaded, non-empty -> a LazyVerticalGrid (Adaptive 160dp, 2 columns on a 390dp phone) of [ArtifactCard]s
  *    • Loaded, empty     -> the original centred empty state, kept verbatim
  *    • Error   -> the message plus a Retry action
  *
@@ -229,13 +231,14 @@ fun ArtifactsScreen(
     // repository's own `load()`, called from the error state's button.
     LaunchedEffect(repository) { repository.load() }
 
-    // Which artifact is awaiting delete confirmation, or null. Local UI state —
-    // it is not persisted and dies with the screen.
-    var pendingDelete by remember { mutableStateOf<ArtifactItem?>(null) }
+    // Which artifact is awaiting delete confirmation, or null. The id is
+    // rememberSaveable (ArtifactItem is not a saveable type); the item is
+    // looked up from the loaded list.
+    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
 
     // The long-press context menu's subject, or null when the menu is closed.
-    // Local UI state, like `pendingDelete`: the menu is a transient surface, not
-    // something a rotation should resurrect.
+    // Local UI state: the menu is a transient surface, not something a
+    // rotation should resurrect.
     var menuFor by remember { mutableStateOf<ArtifactItem?>(null) }
 
     // The type filter (fix #7) and which card is being previewed (fix #8). Both
@@ -309,10 +312,16 @@ fun ArtifactsScreen(
             )
         },
     ) { inner ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize(),
         ) {
             // Fix #8: the caption sits directly under the top bar, above the
             // grid, so it describes the card the user is looking at. It is only
@@ -383,7 +392,8 @@ fun ArtifactsScreen(
                             }
 
                             else -> LazyVerticalGrid(
-                                columns = GridCells.Fixed(2),
+                                // 160dp keeps 2 columns at 390dp (gutter 14 + spacedBy 6).
+                                columns = GridCells.Adaptive(160.dp),
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(
                                     start = spacing.gutter,
@@ -421,9 +431,9 @@ fun ArtifactsScreen(
                                         },
                                         onDelete = {
                                             menuFor = null
-                                            pendingDelete = artifact
+                                            pendingDeleteId = artifact.id
                                         },
-                                        onSwipeDelete = { pendingDelete = artifact },
+                                        onSwipeDelete = { pendingDeleteId = artifact.id },
                                     )
                                 }
                             }
@@ -431,6 +441,7 @@ fun ArtifactsScreen(
                     }
                 }
             }
+        }
         }
     }
 
@@ -456,9 +467,10 @@ fun ArtifactsScreen(
 
     // The delete confirmation. Confirming calls the repository; the screen never
     // touches the list itself.
+    val pendingDelete = all.firstOrNull { it.id == pendingDeleteId }
     pendingDelete?.let { artifact ->
         AlertDialog(
-            onDismissRequest = { pendingDelete = null },
+            onDismissRequest = { pendingDeleteId = null },
             title = { Text("Delete artifact?") },
             text = { Text("\"${artifact.title}\" hamesha ke liye hat jayega.") },
             confirmButton = {
@@ -468,7 +480,7 @@ fun ArtifactsScreen(
                         // swipe both land here, so there is no duplicate logic to
                         // drift. The repository call is suspend (it goes through
                         // the data source), so it runs in the screen's scope.
-                        pendingDelete = null
+                        pendingDeleteId = null
                         scope.launch {
                             // The ONE delete + undo + failure flow, shared with
                             // Memory (see WriteFeedback.kt). The success snackbar
@@ -488,7 +500,7 @@ fun ArtifactsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
+                TextButton(onClick = { pendingDeleteId = null }) {
                     Text("Cancel")
                 }
             },
@@ -554,11 +566,16 @@ private fun FilterSheetContent(
 ) {
     val spacing = LocalDuaGenAISpacing.current
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = spacing.lg),
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
     ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxWidth()
+                .padding(bottom = spacing.lg),
+        ) {
         Text(
             text = "Filter by type",
             style = MaterialTheme.typography.titleMedium,
@@ -611,6 +628,7 @@ private fun FilterSheetContent(
             TextButton(onClick = onDone, modifier = Modifier.minTouchTarget()) {
                 Text("Done", style = DuaGenAITextStyles.button)
             }
+        }
         }
     }
 }
@@ -1268,12 +1286,16 @@ private fun ArtifactsGlyph(tint: Color, modifier: Modifier = Modifier) {
 }
 
 @Preview(name = "Artifacts — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Artifacts — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Artifacts — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ArtifactsLight() = DuaGenAITheme(darkTheme = false) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
 }
 
 @Preview(name = "Artifacts — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Artifacts — dark — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Artifacts — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ArtifactsDark() = DuaGenAITheme(darkTheme = true) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
