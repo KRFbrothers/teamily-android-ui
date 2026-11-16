@@ -378,6 +378,7 @@ fun HomeScreen(
                 ) {
                     AgentHomeList(
                         onOpenDuaAgentChat = onOpenDuaAgentChat,
+                        onOpenListedChat = onOpenListedChat,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -961,8 +962,8 @@ internal val agentHomeChats = listOf(
 
 /** Hero card title. The thread opened from the card uses the same string. */
 internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
-internal const val PERSONAL_AGENT_PREVIEW = "Delete ka option agent ki chat ke andar hai, \u2026"
-internal const val PERSONAL_AGENT_DATE = "Wed"
+internal const val PERSONAL_AGENT_PREVIEW = "Here's what I'm working on for you.\n\nOne-off tasks:\nAI Model Comparison \u2014 Compar..."
+internal const val PERSONAL_AGENT_DATE = "02:18"
 
 /** Distinct 3D character icons for the five chat rows. Not the wireframe cube. */
 private val agentHomeAvatarRes = mapOf(
@@ -973,13 +974,18 @@ private val agentHomeAvatarRes = mapOf(
     "chat_frontend_developer" to R.drawable.avatar_frontend_developer,
 )
 
-/** The pinned official agent row. */
-internal const val DUA_AGENT_TITLE = "Dua Agent"
-internal const val DUA_AGENT_SUBTITLE = "I'm Dua Agent \u2014 the official agent of Dua Gen AI"
-internal const val DUA_AGENT_TIME = "15:19"
+/** The pinned official agent row. Matches Teamily AI mobile app. */
+internal const val DUA_AGENT_TITLE = "Teamily Agent"
+internal const val DUA_AGENT_SUBTITLE = "P1+P2+P3 ek hi PR me fix karo (v27)"
+internal const val DUA_AGENT_TIME = "17:40"
 
-/** Header brand text. */
-internal const val APP_NAME = "Dua Gen AI"
+/** Header brand text. Matches Teamily AI mobile app. */
+internal const val APP_NAME = "Teamily AI"
+
+/** Teamily AI mobile app active recent conversation row. */
+internal val teamilyHomeChats = listOf(
+    AgentHomeChat("chat_frontend_developer", "Frontend Developer", "Hi", "18:06"),
+)
 
 /**
  * Agent home's header: 48dp circular user avatar (opens the drawer) · 32dp
@@ -1031,7 +1037,7 @@ private fun AgentHomeTopBar(
                     .clip(CircleShape)
                     .background(palette.chromeFill)
                     .clickable(role = Role.Button, onClick = onOpenDrawer)
-                    .semantics { contentDescription = "Open menu" },
+                    .semantics { contentDescription = "Me" },
             ) {
                 Image(
                     painter = photo,
@@ -1084,7 +1090,7 @@ private fun AgentHomeTopBar(
                     .clip(CircleShape)
                     .background(palette.plusFill)
                     .clickable(role = Role.Button) { menuOpen = true }
-                    .semantics { contentDescription = "New chat" },
+                    .semantics { contentDescription = "New" },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1205,7 +1211,7 @@ private fun SearchRow(
                 .border(1.dp, palette.border, CircleShape)
                 .clickable(role = Role.Button, onClick = onToggleFilter)
                 .semantics {
-                    contentDescription = "Filter"
+                    contentDescription = "Filter conversations: All"
                     if (filterActive) selected = true
                 },
             contentAlignment = Alignment.Center,
@@ -1290,7 +1296,10 @@ internal fun PersonalAgentHeroCard(
                 indication = LocalIndication.current,
                 role = Role.Button,
                 onClick = onClick,
-            ),
+            )
+            .semantics {
+                contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW, $PERSONAL_AGENT_DATE"
+            },
         shape = TeamilyShapes.card,
         color = palette.cardHeroColor,
         border = BorderStroke(1.dp, palette.heroCardBorder),
@@ -1336,11 +1345,11 @@ internal fun PersonalAgentHeroCard(
                     text = PERSONAL_AGENT_PREVIEW,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -1620,18 +1629,20 @@ private fun SectionHeader(
 }
 
 /**
- * Agent home's scrolling body: Pinned Dua Agent (permanent agent) and its
- * capabilities. The Personal Agent hero card remains fixed at the top during scroll.
- * Other chat agents are removed for clarity.
+ * Agent home's scrolling body: Pinned section (Teamily Agent) and Chats section
+ * (Frontend Developer), matching the exact Teamily AI mobile app hierarchy.
+ * Personal Agent hero card remains fixed at the top during scroll.
  */
 @Composable
 private fun AgentHomeList(
     onOpenDuaAgentChat: () -> Unit,
+    onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
+    var chatsExpanded by rememberSaveable { mutableStateOf(true) }
 
     val dockReserve = 80.dp + spacing.gutter +
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -1644,7 +1655,7 @@ private fun AgentHomeList(
             Column {
                 SectionHeader(
                     icon = SectionIcon.Pin,
-                    label = "Permanent Agent \u00b7 Dua Agent",
+                    label = "Pinned \u00b7 1",
                     expanded = pinnedExpanded,
                     onToggle = { pinnedExpanded = !pinnedExpanded },
                 )
@@ -1664,71 +1675,32 @@ private fun AgentHomeList(
                     }
                 }
             }
-            item {
-                // Feature summary for Dua Agent inside the scrollable body
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter, vertical = 6.dp)
-                        .clip(TeamilyShapes.card)
-                        .clickable(onClick = onOpenDuaAgentChat),
-                    shape = TeamilyShapes.card,
-                    color = palette.cardHeroColor,
-                    border = BorderStroke(1.dp, palette.heroCardBorder),
+        }
+        item {
+            Column {
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    thickness = 0.5.dp,
+                    color = palette.border,
+                )
+                SectionHeader(
+                    icon = SectionIcon.Chat,
+                    label = "Chats \u00b7 ${teamilyHomeChats.size}",
+                    expanded = chatsExpanded,
+                    onToggle = { chatsExpanded = !chatsExpanded },
+                )
+            }
+        }
+        if (chatsExpanded) {
+            items(teamilyHomeChats, key = { it.chatId }) { chat ->
+                CanvasChatRow(
+                    title = chat.title,
+                    subtitle = chat.subtitle,
+                    time = chat.time,
+                    onClick = { onOpenListedChat(chat.chatId, chat.title) },
                 ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(palette.signalGreen),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Dua Agent Engine Status",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            VerifiedCheck()
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = "Supervises multi-agent workflows, runs 5 built-in skills, and interfaces with external MCP tool servers.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Surface(
-                                shape = TeamilyShapes.capsule,
-                                color = palette.surfaceRecessed,
-                                border = BorderStroke(0.5.dp, palette.border),
-                            ) {
-                                Text(
-                                    text = "🤖 Multi-Agent Ready",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                    color = palette.signalGreen,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                )
-                            }
-                            Surface(
-                                shape = TeamilyShapes.capsule,
-                                color = palette.surfaceRecessed,
-                                border = BorderStroke(0.5.dp, palette.border),
-                            ) {
-                                Text(
-                                    text = "🛠️ 5 Skills Active",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                    color = palette.signalGreen,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                )
-                            }
-                        }
+                    ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
+                        CharacterAvatar(chat.chatId)
                     }
                 }
             }
@@ -1791,8 +1763,8 @@ private fun HomeBottomNav(
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
                                 this.selected = active
-                                // The unread dot is drawn only; say it too.
-                                if (tab == HomeTab.Memory) contentDescription = "${tab.label}, unread"
+                                // Matches Teamily mobile app accessibility label
+                                if (tab == HomeTab.Memory) contentDescription = "${tab.label}, New updates"
                             },
                         contentAlignment = Alignment.Center,
                     ) {

@@ -301,8 +301,8 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Dua | Agent. rememberSaveable so rotation / theme change keeps the choice.
-    var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
+    // Default is Agent home, matching Teamily AI mobile app launch.
+    var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
@@ -449,6 +449,7 @@ fun DuaGenAINavHost(
                     HomeTab.Chats
                 } else {
                     selectedTab
+
                 }
                 if (selectedTab == HomeTab.Managed) {
                     SideEffect { selectedTab = HomeTab.Chats }
