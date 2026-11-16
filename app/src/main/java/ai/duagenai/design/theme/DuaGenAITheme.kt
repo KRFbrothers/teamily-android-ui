@@ -296,8 +296,9 @@ object DuaGenAITheme {
                 SideEffect {
                     val window = (view.context as? Activity)?.window ?: return@SideEffect
                     // Dark theme: light icons. Light theme: dark icons.
-                    WindowCompat.getInsetsController(window, view)
-                        .isAppearanceLightStatusBars = !darkTheme
+                    val insetsController = WindowCompat.getInsetsController(window, view)
+                    insetsController.isAppearanceLightStatusBars = !darkTheme
+                    insetsController.isAppearanceLightNavigationBars = !darkTheme
                 }
             }
             CompositionLocalProvider(LocalDuaGenAISpacing provides DuaGenAISpacing()) {

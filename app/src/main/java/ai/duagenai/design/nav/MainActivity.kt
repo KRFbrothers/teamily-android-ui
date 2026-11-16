@@ -4,6 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ai.duagenai.design.screens.SettingsStore
+import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.theme.DuaGenAITheme
 
 /**
@@ -23,7 +30,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            DuaGenAITheme {
+            val context = LocalContext.current
+            val settings = remember(context) { SettingsStore(context.applicationContext) }
+            val themeMode by settings.themeMode.collectAsStateWithLifecycle(ThemeMode.System)
+            val isDark = when (themeMode) {
+                ThemeMode.Light -> false
+                ThemeMode.Dark -> true
+                ThemeMode.System -> isSystemInDarkTheme()
+            }
+            DuaGenAITheme(darkTheme = isDark) {
                 DuaGenAINavHost()
             }
         }
