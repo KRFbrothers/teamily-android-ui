@@ -667,13 +667,8 @@ fun DuaGenAINavHost(
                         },
                         mcpEnabled = mcpEnabled,
                         onToggleMcp = { mcpEnabled = it },
-                        // Only the Agent chat has a profile: its header avatar and
-                        // title open the Dua Agent profile (SVG 01).
-                        onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
-                            { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
-                        } else {
-                            null
-                        },
+                        // Agent chats have a profile: header avatar and title open the Agent profile.
+                        onOpenAgentProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
                         onOpenCreate = { kind ->
                             navController.navigate(DuaGenAIRoutes.create(kind))
                         },
@@ -716,6 +711,7 @@ fun DuaGenAINavHost(
                         navController.navigate(
                             when (dest) {
                                 AgentWorkspaceDestination.Overview -> DuaGenAIRoutes.AGENT_OVERVIEW
+                                AgentWorkspaceDestination.Channels -> DuaGenAIRoutes.AGENT_CONNECT_APP
                                 AgentWorkspaceDestination.LiveSites -> DuaGenAIRoutes.AGENT_LIVE_SITES
                                 AgentWorkspaceDestination.Mail -> DuaGenAIRoutes.AGENT_MAIL
                                 AgentWorkspaceDestination.Artifacts -> DuaGenAIRoutes.AGENT_ARTIFACTS

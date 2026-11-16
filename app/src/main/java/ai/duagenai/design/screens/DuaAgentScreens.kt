@@ -191,6 +191,12 @@ private val ICONS: Map<String, List<Part>> = mapOf(
     "close" to listOf(Part("M6 6l12 12M18 6L6 18")),
     "more" to listOf(Part(circle(6f, 12f, 1.4f), true), Part(circle(12f, 12f, 1.4f), true), Part(circle(18f, 12f, 1.4f), true)),
     "robot" to listOf(Part("M12 3.2v3.4"), Part(rrect(5f, 6.6f, 14f, 12.2f, 2.6f)), Part("M9.4 11.4v2.4M14.6 11.4v2.4M3.2 12.2v2.4M20.8 12.2v2.4")),
+    "workspace" to listOf(
+        Part(rrect(4f, 6.5f, 16f, 12.5f, 2.2f)),
+        Part("M 9 6.5 V 4.5 a 1 1 0 0 1 1 -1 h 4 a 1 1 0 0 1 1 1 v 2"),
+        Part("M 4 10.5 h 16"),
+        Part("M 10 13.5 v 2.5 M 14 13.5 v 2.5"),
+    ),
     "idcard" to listOf(Part(rrect(4f, 5.5f, 16f, 13f, 2.2f)), Part(circle(9.2f, 11.2f, 2.1f)), Part("M13.2 10.2h5.2M13.2 13.4h4.2")),
     "person_plus" to listOf(Part(circle(10f, 8.2f, 3f)), Part("M5.2 18c.4-3.2 2.4-4.8 4.8-4.8S14.4 14.8 14.8 18"), Part("M17.2 10.5v5M14.7 13h5")),
     "search" to listOf(Part(circle(11f, 11f, 6.2f)), Part("M20 20l-3.4-3.4")),
@@ -505,6 +511,7 @@ fun DuaAgentProfileScreen(
     onOpenNewGroup: () -> Unit = {},
     onOpenConnectApp: () -> Unit = {},
     modifier: Modifier = Modifier,
+    agentName: String = "Teamily Agent",
     initialSkillsExpanded: Boolean = false,
     initialConnectorsExpanded: Boolean = false,
     initialSheetOpen: Boolean = false,
@@ -522,7 +529,7 @@ fun DuaAgentProfileScreen(
 
     Box(modifier.fillMaxSize().agentAtmosphere(c.body, c)) {
         Column(Modifier.fillMaxSize()) {
-            AgentTop(c) { AgentAppBar("Dua Agent", c, onBack, titleColor = titleInk) }
+            AgentTop(c) { AgentAppBar(agentName, c, onBack, titleColor = titleInk) }
             Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 // Hero — top-bar colour down to content y 369.
                 Box(Modifier.fillMaxWidth().height(284.dp).background(c.topbar)) {
@@ -532,7 +539,7 @@ fun DuaAgentProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text("Dua Agent", style = t(20, 28, true), color = titleInk)
+                        Text(agentName, style = t(20, 28, true), color = titleInk)
                         Box(
                             Modifier.size(32.dp, 18.dp).clip(RoundedCornerShape(9.dp)).background(c.aiFill),
                             contentAlignment = Alignment.Center,
@@ -540,9 +547,9 @@ fun DuaAgentProfileScreen(
                     }
                     Row(Modifier.offset(53.dp, 196.5.dp).size(283.dp, 60.dp).clip(RoundedCornerShape(30.dp)).background(c.chrome)) {
                         val actions = listOf<Triple<String, String, (() -> Unit)?>>(
-                            Triple("robot", "Agent", null),
-                            Triple("idcard", "Agent workspace", onOpenWorkspace),
-                            Triple("person_plus", "New Group", onOpenNewGroup),
+                            Triple("workspace", "Open agent workspace", onOpenWorkspace),
+                            Triple("robot", "View full profile", null),
+                            Triple("person_plus", "Create New Group", onOpenNewGroup),
                             Triple("more", "More", { sheet = true }),
                         )
                         for ((icon, label, action) in actions) {
@@ -836,18 +843,19 @@ private fun SearchField(c: AgentColors, label: String) {
 // 07  Agent workspace
 // ---------------------------------------------------------------------------
 
-enum class AgentWorkspaceDestination { Overview, LiveSites, Mail, Artifacts, AgentApi }
+enum class AgentWorkspaceDestination { Overview, Channels, LiveSites, Mail, Artifacts, AgentApi }
 
 /**
- * SVG 07 — Agent workspace. The Manage grid has five tiles; Channels lives only
- * in the profile. [userAvatar] draws fareed's photo (dua-user-avatar.jpg) — the
- * package has no image loader, so the host app supplies it.
+ * SVG 07 — Agent workspace matching official Teamily AI app parity.
+ * The Manage grid features all 6 tiles; CHAT section displays active team conversations.
  */
 @Composable
 fun DuaAgentWorkspaceScreen(
     onBack: () -> Unit = {},
     onOpen: (AgentWorkspaceDestination) -> Unit = {},
     modifier: Modifier = Modifier,
+    agentName: String = "Teamily Agent",
+    onAgentHome: () -> Unit = onBack,
     userAvatar: (@Composable () -> Unit)? = null,
 ) {
     val c = rememberAgentColors()
@@ -857,8 +865,12 @@ fun DuaAgentWorkspaceScreen(
             Spacer(Modifier.height(15.dp))
             Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(64.dp).clip(RoundedCornerShape(16.dp)).background(c.chrome)) {
                 AgentCubeAvatar(40.dp, Modifier.offset(16.dp, 12.dp), badge = 14.dp, ring = c.chrome)
-                Text("Dua Agent", style = t(16, 22, true), color = c.ink, modifier = Modifier.offset(64.dp, 10.dp))
-                Row(Modifier.offset(64.dp, 32.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(agentName, style = t(16, 22, true), color = c.ink, modifier = Modifier.offset(64.dp, 10.dp))
+                Row(
+                    Modifier.offset(64.dp, 32.dp).clickable(onClick = onAgentHome),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text("Agent home", style = t(13, 18), color = c.primaryInk)
                     AgentIcon("arrow_up_right", 14.dp, c.primaryInk, Modifier.offset(y = 2.dp))
                 }
@@ -868,6 +880,7 @@ fun DuaAgentWorkspaceScreen(
             Spacer(Modifier.height(6.dp))
             val tiles = listOf(
                 Triple("bars", "Overview", AgentWorkspaceDestination.Overview),
+                Triple("channels", "Channels", AgentWorkspaceDestination.Channels),
                 Triple("window", "Live Sites", AgentWorkspaceDestination.LiveSites),
                 Triple("mail", "Mail", AgentWorkspaceDestination.Mail),
                 Triple("layers", "Artifacts", AgentWorkspaceDestination.Artifacts),
@@ -891,16 +904,22 @@ fun DuaAgentWorkspaceScreen(
             Spacer(Modifier.height(20.dp))
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Text("CHAT", style = t(11, 16, true), color = c.ink2)
-                Text("3", style = t(12, 16), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd))
+                Text("5", style = t(12, 16), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd))
             }
             Spacer(Modifier.height(6.dp))
             SearchField(c, "Search")
             Spacer(Modifier.height(8.dp))
-            ConversationRow(c, "fareed", "You are now friends", "Thu", plus = true, avatar = {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF3A4540))) { userAvatar?.invoke() }
-            })
-            ConversationRow(c, "Full-Stack Delivery Guild", "Frontend Developer, Backend Archite…", "Wed", unread = "1")
-            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Dua Agent: [Cust…", "11/03/26", unread = "2")
+            ConversationRow(
+                c, "fareed",
+                "Teamily Android ai app Open karo rea Open frontend developer than click upper baar it agent profile,",
+                "19:50", plus = true, unread = "2", avatar = {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF3A4540))) { userAvatar?.invoke() }
+                },
+            )
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Code Reviewer: [Custom Message]", "Sun", unread = "4")
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Frontend Developer: PR ready hai: https://github.com/KRFbrothers/teamily-android-ui/pull/9", "Sun")
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Teamily Agent: [Custom Message]", "11/03/26", unread = "4")
+            ConversationRow(c, "AI Feature Build Room", "Prompt Engineer, Data Engineer, Frontend Developer were invited to", "10/17/26", unread = "1")
         }
     }
 }

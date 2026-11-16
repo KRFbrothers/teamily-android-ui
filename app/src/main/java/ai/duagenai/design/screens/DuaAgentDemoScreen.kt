@@ -62,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -192,24 +193,34 @@ fun DuaAgentDemoScreen(
                     )
                 }
                 Spacer(Modifier.width(spacing.xs))
-                SignalBotBadge(40.dp)
-                Spacer(Modifier.width(spacing.sm))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(role = Role.Button, onClickLabel = "Open Agent Profile", onClick = onOpenProfile)
+                        .padding(vertical = 4.dp, horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SignalBotBadge(40.dp)
+                    Spacer(Modifier.width(spacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Teamily Agent",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            VerifiedCheck()
+                        }
                         Text(
-                            text = "Teamily Agent",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface,
+                            text = "Official Permanent Agent · Engine",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = palette.signalGreen,
                         )
-                        Spacer(Modifier.width(6.dp))
-                        VerifiedCheck()
                     }
-                    Text(
-                        text = "Official Permanent Agent \u00b7 Engine",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = palette.signalGreen,
-                    )
                 }
+                Spacer(Modifier.width(spacing.xs))
                 OutlinedButton(
                     onClick = onOpenWorkspace,
                     shape = TeamilyShapes.capsule,
