@@ -40,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -115,6 +117,15 @@ fun ProfileScreen(
     onSignIn: (String) -> Unit = {},
     /** Clears the session token. */
     onSignOut: () -> Unit = {},
+    /** Live counts. The tiles open the lists that produce these numbers. */
+    chatCount: Int = 128,
+    agentCount: Int = 4,
+    artifactCount: Int = 37,
+    onOpenChats: () -> Unit = {},
+    onOpenAgents: () -> Unit = {},
+    onOpenArtifacts: () -> Unit = {},
+    /** Consolidated settings. Appearance, Storage and Notifications stay here too. */
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -235,9 +246,9 @@ fun ProfileScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                    StatTile("128", "CHATS", Modifier.weight(1f))
-                    StatTile("4", "AGENTS", Modifier.weight(1f))
-                    StatTile("37", "ARTIFACTS", Modifier.weight(1f))
+                    StatTile(chatCount.toString(), "CHATS", Modifier.weight(1f), onOpenChats)
+                    StatTile(agentCount.toString(), "AGENTS", Modifier.weight(1f), onOpenAgents)
+                    StatTile(artifactCount.toString(), "ARTIFACTS", Modifier.weight(1f), onOpenArtifacts)
                 }
             }
             item {
@@ -296,6 +307,13 @@ fun ProfileScreen(
                             subtitle = notificationsLabel,
                             icon = null,
                             onClick = onOpenNotifications,
+                        )
+                        HorizontalDivider(color = colors.hairline)
+                        SettingsRow(
+                            title = "Settings",
+                            subtitle = "Appearance, storage, notifications, agents",
+                            icon = null,
+                            onClick = onOpenSettings,
                         )
                     }
                 }
@@ -390,10 +408,15 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun StatTile(number: String, label: String, modifier: Modifier = Modifier) {
+private fun StatTile(
+    number: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
     val spacing = LocalDuaGenAISpacing.current
     Surface(
-        modifier = modifier,
+        modifier = modifier.clickable(role = Role.Button, onClick = onClick),
         shape = DuaGenAITheme.shapes.statTile,
         color = MaterialTheme.colorScheme.surface,
     ) {
@@ -433,6 +456,8 @@ internal fun SettingsRow(
      * anywhere must not advertise that it can.
      */
     enabled: Boolean = true,
+    /** Overrides the title colour. [Color.Unspecified] keeps the enabled/disabled ink. */
+    titleColor: Color = Color.Unspecified,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     Row(
@@ -475,10 +500,10 @@ internal fun SettingsRow(
             Text(
                 text = title,
                 style = DuaGenAITextStyles.rowTitle,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                color = when {
+                    titleColor != Color.Unspecified -> titleColor
+                    enabled -> MaterialTheme.colorScheme.onSurface
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
                 },
             )
             Text(

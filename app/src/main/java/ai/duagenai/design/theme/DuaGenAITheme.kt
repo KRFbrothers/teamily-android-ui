@@ -1,6 +1,14 @@
 package ai.duagenai.design.theme
 
+import android.app.Activity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -8,12 +16,20 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import ai.duagenai.design.R
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -259,17 +275,44 @@ object DuaGenAITheme {
         content: @Composable () -> Unit,
     ) {
         val palette = if (darkTheme) TeamilyDarkPalette else TeamilyLightPalette
+        // Lato 400 / 700 from res/font. Roles stay the existing Teamily scale.
+        val lato = remember {
+            FontFamily(
+                Font(R.font.lato_regular, FontWeight.Normal),
+                Font(R.font.lato_bold, FontWeight.Bold),
+            )
+        }
         MaterialTheme(
             colorScheme = if (darkTheme) darkScheme(palette) else lightScheme(palette),
-            typography = TeamilyTypography,
+            typography = teamilyTypography(lato),
             shapes = MaterialTheme.shapes.copy(
                 small = TeamilyShapes.md,
                 medium = TeamilyShapes.lg,
                 large = TeamilyShapes.card,
             ),
         ) {
+            val view = LocalView.current
+            if (!view.isInEditMode) {
+                SideEffect {
+                    val window = (view.context as? Activity)?.window ?: return@SideEffect
+                    // Dark theme: light icons. Light theme: dark icons.
+                    WindowCompat.getInsetsController(window, view)
+                        .isAppearanceLightStatusBars = !darkTheme
+                }
+            }
             CompositionLocalProvider(LocalDuaGenAISpacing provides DuaGenAISpacing()) {
-                content()
+                // Edge-to-edge leaves the status-bar inset transparent, so the
+                // light window background shows as a white strip. Paint that
+                // band with the palette: dark #1D2220, light #FAFBFA.
+                Box(Modifier.fillMaxSize()) {
+                    content()
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .windowInsetsTopHeight(WindowInsets.statusBars)
+                            .background(palette.statusbarBg),
+                    )
+                }
             }
         }
     }

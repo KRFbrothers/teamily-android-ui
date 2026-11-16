@@ -23,22 +23,11 @@ import androidx.compose.ui.unit.sp
  *  so no role uses 500, 600 or 900. The zip's label (700 13/18) and
  *  body-strong (700 16/24) have no M3 slot here and are not mapped.
  *
- *  Official SIL OFL Lato Regular (400) and Bold (700) ship in
- *  `documents/M3-design_v01/res/font/` (`lato_regular.ttf`, `lato_bold.ttf`),
- *  with the license at `documents/M3-design_v01/licenses/lato-OFL.txt`.
- *  The HTML preview uses the same files as woff2 in
- *  `webpages/M3-design_v01/fonts/`. This package is not a Gradle app, so it
- *  has no generated `R.font`. The scale is built from a [FontFamily]
- *  argument: copy the TTFs into the app's `res/font/` and pass Lato, e.g.
- *
- *      val LatoFontFamily = FontFamily(
- *          Font(R.font.lato_regular, FontWeight.Normal),
- *          Font(R.font.lato_bold, FontWeight.Bold),
- *      )
- *      MaterialTheme(typography = teamilyTypography(LatoFontFamily)) { ... }
- *
- *  Until that is wired, [TeamilyTypography] uses [FontFamily.Default]
- *  with the exact sizes and weights below.
+ *  Official SIL OFL Lato Regular (400) and Bold (700) live in
+ *  `app/src/main/res/font/` (`lato_regular.ttf`, `lato_bold.ttf`).
+ *  [DuaGenAITheme] loads them and passes the family to [teamilyTypography].
+ *  [TeamilyTypography] itself keeps [FontFamily.Default] for callers that
+ *  do not pass a family. Sizes and weights below stay the scale.
  * ==========================================================================*/
 
 /** `--nv-tracking-tight` -0.01em. */

@@ -1,10 +1,13 @@
 package ai.duagenai.design.nav
 
 import android.net.Uri
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -12,7 +15,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -57,14 +63,41 @@ import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.TokenStore
 import ai.duagenai.design.screens.NotificationsScreen
 import ai.duagenai.design.screens.ProfileScreen
+import ai.duagenai.design.screens.AddConnectorScreen
+import ai.duagenai.design.screens.ChannelsScreen
+import ai.duagenai.design.screens.ConnectorsScreen
+import ai.duagenai.design.screens.CreateKindScreen
+import ai.duagenai.design.screens.DEFAULT_CHANNEL_STATE
+import ai.duagenai.design.screens.DEFAULT_CONNECTOR_STATE
+import ai.duagenai.design.screens.LanguageScreen
+import ai.duagenai.design.screens.ProfileListScreen
+import ai.duagenai.design.screens.RuntimesScreen
 import ai.duagenai.design.screens.SettingsScreen
 import ai.duagenai.design.screens.SettingsStore
 import ai.duagenai.design.screens.SidebarDrawer
+import ai.duagenai.design.screens.SignedOutReadOnlyScreen
+import ai.duagenai.design.screens.SignedOutUiState
+import ai.duagenai.design.screens.SkillConfigScreen
 import ai.duagenai.design.screens.StorageScreen
+import ai.duagenai.design.screens.decodeChannels
+import ai.duagenai.design.screens.decodeConnectors
+import ai.duagenai.design.screens.encodeChannels
+import ai.duagenai.design.screens.encodeConnectors
+import ai.duagenai.design.screens.linesOf
+import ai.duagenai.design.screens.plusLine
+import ai.duagenai.design.screens.profileAgentRows
+import ai.duagenai.design.screens.profileArtifactRows
+import ai.duagenai.design.screens.profileChatRows
+import ai.duagenai.design.screens.APP_LANGUAGES
+import ai.duagenai.design.screens.CatalogApp
+import ai.duagenai.design.screens.ConnectorRow
 import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.screens.defaultNotificationState
 import ai.duagenai.design.screens.notificationSummary
+import ai.duagenai.design.screens.demoArtifacts
 import ai.duagenai.design.screens.sampleChats
+import ai.duagenai.design.screens.sampleMemories
+import ai.duagenai.design.theme.DuaGenAITheme
 import kotlin.math.round
 import kotlinx.coroutines.launch
 
@@ -134,6 +167,18 @@ object DuaGenAIRoutes {
     const val APPEARANCE = "appearance"
     const val STORAGE = "storage"
     const val NOTIFICATIONS = "notifications"
+    const val PROFILE_CHATS = "profile/chats"
+    const val PROFILE_AGENTS = "profile/agents"
+    const val PROFILE_ARTIFACTS = "profile/artifacts"
+    const val SETTINGS_CONNECTORS = "settings/connectors"
+    const val SETTINGS_ADD_CONNECTOR = "settings/connectors/add"
+    const val SETTINGS_RUNTIMES = "settings/runtimes"
+    const val SETTINGS_LANGUAGE = "settings/language"
+    const val SETTINGS_CHANNELS = "settings/channels"
+    const val SETTINGS_SKILLS = "settings/skills"
+    const val CREATE = "create/{kind}"
+
+    fun create(kind: String): String = "create/${Uri.encode(kind)}"
 
     // Dua Agent profile & workspace (approved SVG set dua-agent-01..13).
     const val AGENT_PROFILE = "agent/profile"
@@ -268,6 +313,22 @@ fun DuaGenAINavHost(
     // move before.
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Chats) }
 
+    // v25: confirmed Sign out from Settings → Profile & Device. The session
+    // token stays, so "Sign back in" returns to the same signed-in home.
+    var readOnly by rememberSaveable { mutableStateOf(false) }
+    // Agent-home filter. True covers Home with the public profile.
+    var publicProfileOpen by rememberSaveable { mutableStateOf(false) }
+    // Header menu creates. Newline-separated so rememberSaveable can keep them.
+    var madeAgents by rememberSaveable { mutableStateOf("") }
+    var madeArtifacts by rememberSaveable { mutableStateOf("") }
+    var connectorState by rememberSaveable { mutableStateOf(DEFAULT_CONNECTOR_STATE) }
+    var recentConnectors by rememberSaveable { mutableStateOf("") }
+    var channelState by rememberSaveable { mutableStateOf(DEFAULT_CHANNEL_STATE) }
+    var languageId by rememberSaveable { mutableStateOf("en") }
+    val connectors = decodeConnectors(connectorState)
+    val channels = decodeChannels(channelState)
+    val languageLabel = APP_LANGUAGES.firstOrNull { it.id == languageId }?.label ?: "English"
+
     // Which drawer row is highlighted. Derived from the current route rather
     // than stored separately, so the drawer can never claim a destination the
     // NavHost is not actually showing.
@@ -278,6 +339,19 @@ fun DuaGenAINavHost(
         else -> null
     }
 
+    val layoutDirection = if (languageId == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+    SignedOutReadOnlyScreen(
+        modifier = modifier,
+        state = SignedOutUiState(readOnly = readOnly),
+        onSignBackIn = {
+            readOnly = false
+            navController.navigate(DuaGenAIRoutes.HOME) {
+                popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
+                launchSingleTop = true
+            }
+        },
+    ) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         // The scrim is M3's own; tapping it closes the drawer, which is the
@@ -353,9 +427,20 @@ fun DuaGenAINavHost(
         NavHost(
             navController = navController,
             startDestination = DuaGenAIRoutes.HOME,
-            modifier = modifier,
+            modifier = Modifier.fillMaxSize(),
         ) {
             composable(DuaGenAIRoutes.HOME) {
+                // The chat list's dock is Chats (bot glyph, dark pill #545B56).
+                // Coming back from the Agents screen must not leave Agents lit.
+                // Discover, Memory, and Artifacts stay hoisted.
+                val tabOnChatList = if (selectedTab == HomeTab.Managed) {
+                    HomeTab.Chats
+                } else {
+                    selectedTab
+                }
+                if (selectedTab == HomeTab.Managed) {
+                    SideEffect { selectedTab = HomeTab.Chats }
+                }
                 HomeScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     mode = mode,
@@ -380,10 +465,10 @@ fun DuaGenAINavHost(
                             HomeTab.Artifacts -> navController.navigate(DuaGenAIRoutes.ARTIFACTS)
                         }
                     },
-                    selectedTab = selectedTab,
+                    selectedTab = tabOnChatList,
                     // Personal Agent (the hero) is a normal thread: auto mode on
                     // the API. Dua Agent (the pinned row) is the engine thread.
-                    // The five chats below use the same chat route as the drawer.
+                    // The listed chats below use the same chat route as the drawer.
                     onOpenPersonalAgentChat = {
                         navController.navigate(
                             DuaGenAIRoutes.chat(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE),
@@ -397,6 +482,20 @@ fun DuaGenAINavHost(
                     onOpenListedChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
+                    onCreateAgent = {
+                        val name = "New Agent ${linesOf(madeAgents).size + 1}"
+                        madeAgents = plusLine(madeAgents, name)
+                        navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS)
+                    },
+                    onNewGroup = { navController.navigate(DuaGenAIRoutes.AGENT_NEW_GROUP) },
+                    onCreateArtifact = {
+                        val name = "New artifact ${linesOf(madeArtifacts).size + 1}"
+                        madeArtifacts = plusLine(madeArtifacts, name)
+                        navController.navigate(DuaGenAIRoutes.PROFILE_ARTIFACTS)
+                    },
+                    filterActive = publicProfileOpen,
+                    onFilterActiveChange = { publicProfileOpen = it },
+                    onPublicProfileSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                 )
             }
 
@@ -422,6 +521,47 @@ fun DuaGenAINavHost(
                     signedIn = sessionToken != null,
                     onSignIn = { token -> TokenStore.setToken(token) },
                     onSignOut = { TokenStore.clear() },
+                    chatCount = profileChatRows().size,
+                    agentCount = profileAgentRows(linesOf(madeAgents)).size,
+                    artifactCount = profileArtifactRows(linesOf(madeArtifacts)).size,
+                    onOpenChats = { navController.navigate(DuaGenAIRoutes.PROFILE_CHATS) },
+                    onOpenAgents = { navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS) },
+                    onOpenArtifacts = { navController.navigate(DuaGenAIRoutes.PROFILE_ARTIFACTS) },
+                    onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
+                )
+            }
+
+            composable(DuaGenAIRoutes.PROFILE_CHATS) {
+                val rows = profileChatRows()
+                ProfileListScreen(
+                    title = "Chats",
+                    kicker = "Conversations",
+                    rows = rows,
+                    onBack = { navController.popBackStack() },
+                    onOpenRow = { row ->
+                        navController.navigate(DuaGenAIRoutes.chat(row.id, row.title))
+                    },
+                )
+            }
+            composable(DuaGenAIRoutes.PROFILE_AGENTS) {
+                val rows = profileAgentRows(linesOf(madeAgents))
+                ProfileListScreen(
+                    title = "Agents",
+                    kicker = "Your agents",
+                    rows = rows,
+                    onBack = { navController.popBackStack() },
+                    onOpenRow = { row ->
+                        navController.navigate(DuaGenAIRoutes.chat(row.id, row.title))
+                    },
+                )
+            }
+            composable(DuaGenAIRoutes.PROFILE_ARTIFACTS) {
+                ProfileListScreen(
+                    title = "Artifacts",
+                    kicker = "Saved outputs",
+                    rows = profileArtifactRows(linesOf(madeArtifacts)),
+                    onBack = { navController.popBackStack() },
+                    onOpenRow = { _ -> },
                 )
             }
 
@@ -516,6 +656,9 @@ fun DuaGenAINavHost(
                     } else {
                         null
                     },
+                    onOpenCreate = { kind ->
+                        navController.navigate(DuaGenAIRoutes.create(kind))
+                    },
                 )
             }
 
@@ -579,8 +722,95 @@ fun DuaGenAINavHost(
                     onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
                 )
             }
-            composable(DuaGenAIRoutes.SETTINGS) { SettingsScreen() }
+            composable(DuaGenAIRoutes.SETTINGS) {
+                SettingsScreen(
+                    connectorSummary = "${connectors.count { it.connected }}/${connectors.size}",
+                    languageLabel = languageLabel,
+                    themeModeLabel = themeMode.label,
+                    storageLabel = storageLabel(storageUsedGb, storageTotalGb),
+                    notificationsLabel = notificationSummary(notifications),
+                    onOpenConnectors = { navController.navigate(DuaGenAIRoutes.SETTINGS_CONNECTORS) },
+                    onOpenRuntimes = { navController.navigate(DuaGenAIRoutes.SETTINGS_RUNTIMES) },
+                    onOpenSkills = { navController.navigate(DuaGenAIRoutes.SETTINGS_SKILLS) },
+                    onOpenLanguage = { navController.navigate(DuaGenAIRoutes.SETTINGS_LANGUAGE) },
+                    onOpenChannels = { navController.navigate(DuaGenAIRoutes.SETTINGS_CHANNELS) },
+                    onOpenAgentApi = { navController.navigate(DuaGenAIRoutes.AGENT_API) },
+                    onOpenAppearance = { navController.navigate(DuaGenAIRoutes.APPEARANCE) },
+                    onOpenStorage = { navController.navigate(DuaGenAIRoutes.STORAGE) },
+                    onOpenNotifications = { navController.navigate(DuaGenAIRoutes.NOTIFICATIONS) },
+                    onEnterReadOnly = {
+                        readOnly = true
+                        navController.navigate(DuaGenAIRoutes.HOME) {
+                            popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+            composable(DuaGenAIRoutes.SETTINGS_CONNECTORS) {
+                ConnectorsScreen(
+                    rows = connectors,
+                    onChange = { connectorState = encodeConnectors(it) },
+                    onAdd = { navController.navigate(DuaGenAIRoutes.SETTINGS_ADD_CONNECTOR) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.SETTINGS_ADD_CONNECTOR) {
+                AddConnectorScreen(
+                    already = connectors.map { it.key }.toSet(),
+                    recentKeys = linesOf(recentConnectors),
+                    onAdd = { app: CatalogApp ->
+                        if (connectors.none { it.key == app.key }) {
+                            connectorState = encodeConnectors(
+                                connectors + ConnectorRow(
+                                    app.key, app.label, app.subtitle, true,
+                                ),
+                            )
+                        }
+                        val next = listOf(app.key) + linesOf(recentConnectors).filter { it != app.key }
+                        recentConnectors = next.take(10).joinToString("\n")
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.SETTINGS_RUNTIMES) {
+                RuntimesScreen(onBack = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.SETTINGS_LANGUAGE) {
+                LanguageScreen(
+                    selectedId = languageId,
+                    onSelect = { languageId = it },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.SETTINGS_CHANNELS) {
+                ChannelsScreen(
+                    rows = channels,
+                    onChange = { channelState = encodeChannels(it) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.SETTINGS_SKILLS) {
+                SkillConfigScreen(
+                    enabledIds = enabledSkills.toSet(),
+                    onToggle = { id ->
+                        enabledSkills = if (id in enabledSkills) enabledSkills - id else enabledSkills + id
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(
+                route = DuaGenAIRoutes.CREATE,
+                arguments = listOf(navArgument("kind") { type = NavType.StringType }),
+            ) { entry ->
+                CreateKindScreen(
+                    kind = entry.arguments?.getString("kind").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
+    }
+    }
     }
 }
 
@@ -597,3 +827,29 @@ private fun storageLabel(usedGb: Double, totalGb: Double): String {
     }
     return "${fmt(usedGb)} of ${fmt(totalGb)}"
 }
+
+@Preview(name = "DuaGenAI nav host — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+@Suppress("ComposableCallWithoutComposePlugin")
+private fun DuaGenAINavHostLight() {
+    DuaGenAITheme(darkTheme = false) {
+        DuaGenAINavHost(
+            signedOutArtifacts = demoArtifacts,
+            signedOutMemories = sampleMemories,
+        )
+    }
+}
+
+@Preview(name = "DuaGenAI nav host — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+@Suppress("ComposableCallWithoutComposePlugin")
+private fun DuaGenAINavHostDark() {
+    DuaGenAITheme(darkTheme = true) {
+        DuaGenAINavHost(
+            signedOutArtifacts = demoArtifacts,
+            signedOutMemories = sampleMemories,
+        )
+    }
+}
+
+

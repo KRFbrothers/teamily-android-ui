@@ -9,10 +9,8 @@ package ai.duagenai.design.cube
  *  `CubeIds.DEFAULT` and `CubeIds.label(id)`, but no file defined them, so the
  *  package could not compile. This is the missing catalogue.
  *
- *  The ids are the SAME zero-padded names the shipped art uses
- *  (`webpages/M3-design_v01/icons/cube_01.svg` … `cube_42.svg`), so an id can
- *  be traced straight to its asset. [all] is in art order, which is the order
- *  the picker grid shows.
+ *  The ids are the zero-padded names `cube_01` … `cube_42`. [all] is in that
+ *  order, which is the order the picker grid shows.
  * ==========================================================================*/
 
 object CubeIds {

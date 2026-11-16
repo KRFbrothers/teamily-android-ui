@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 /**
  * Root screen canvas — `--nv-atmosphere` from the zip:
  *
- *   light  radial-gradient(ellipse at 8% 92%, #e8f3ec 0, transparent 52%), #fafbfa
- *   dark   radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
+ *   light  radial-gradient(ellipse at 8% 92%, #e8f3ec 0, transparent 52%), #eef2ef
+ *   dark   radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #141816
  *
  * CSS sizes the ellipse to the farthest corner (here the top-right one), so its
  * radii are 0.92 * width * sqrt(2) and 0.92 * height * sqrt(2). Compose only has
