@@ -532,20 +532,22 @@ fun DuaAgentProfileScreen(
             AgentTop(c) { AgentAppBar(agentName, c, onBack, titleColor = titleInk) }
             Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 // Hero — top-bar colour down to content y 369.
-                Box(Modifier.fillMaxWidth().height(284.dp).background(c.topbar)) {
-                    AgentCubeAvatar(100.dp, Modifier.align(Alignment.TopCenter).offset(y = 49.dp))
+                Box(Modifier.fillMaxWidth().height(240.dp).background(c.topbar)) {
+                    AgentCubeAvatar(80.dp, Modifier.align(Alignment.TopCenter).offset(y = 30.dp))
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 165.dp).height(28.dp),
+                        Modifier.align(Alignment.TopCenter).offset(y = 125.dp).height(24.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(agentName, style = t(20, 28, true), color = titleInk)
+                        Text(agentName, style = t(17, 24, true), color = titleInk)
                         Box(
-                            Modifier.size(32.dp, 18.dp).clip(RoundedCornerShape(9.dp)).background(c.aiFill),
+                            Modifier.size(30.dp, 16.dp).clip(RoundedCornerShape(8.dp)).background(c.aiFill),
                             contentAlignment = Alignment.Center,
                         ) { Text("AI", style = t(10, 12, true), color = c.aiInk) }
                     }
-                    Row(Modifier.offset(53.dp, 196.5.dp).size(283.dp, 60.dp).clip(RoundedCornerShape(30.dp)).background(c.chrome)) {
+                    Row(
+                        Modifier.align(Alignment.TopCenter).offset(y = 162.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.chrome),
+                    ) {
                         val actions = listOf<Triple<String, String, (() -> Unit)?>>(
                             Triple("workspace", "Open agent workspace", onOpenWorkspace),
                             Triple("robot", "View full profile", null),
@@ -561,13 +563,13 @@ fun DuaAgentProfileScreen(
                                         else Modifier,
                                     ),
                                 contentAlignment = Alignment.Center,
-                            ) { AgentIcon(icon, 22.dp, c.ink) }
+                            ) { AgentIcon(icon, 20.dp, c.ink) }
                         }
                     }
                 }
-                Box(Modifier.fillMaxWidth().height(73.dp)) {
-                    AgentIcon("search", 18.dp, c.ink2, Modifier.offset(36.dp, 15.dp))
-                    Text("Search chat history", style = t(16, 22), color = c.ink2, modifier = Modifier.offset(62.dp, 13.dp))
+                Box(Modifier.fillMaxWidth().height(56.dp)) {
+                    AgentIcon("search", 16.dp, c.ink2, Modifier.offset(28.dp, 14.dp))
+                    Text("Search chat history", style = t(14, 20), color = c.ink2, modifier = Modifier.offset(54.dp, 12.dp))
                 }
                 ProfileRow(c, 73.dp, "phone", "Voice call", trail = Trail.ChevRight)
                 ProfileRow(
@@ -804,26 +806,24 @@ private fun ConversationRow(
     plus: Boolean = false,
     avatar: @Composable () -> Unit = { GroupCluster() },
 ) {
-    Box(Modifier.fillMaxWidth().height(64.dp)) {
-        Box(Modifier.offset(16.dp, 8.dp)) { avatar() }
-        Row(Modifier.offset(68.dp, 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = t(16, 22, true), color = c.ink, maxLines = 1)
+    Box(Modifier.fillMaxWidth().height(54.dp)) {
+        Box(Modifier.offset(16.dp, 6.dp)) { avatar() }
+        Row(Modifier.offset(64.dp, 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = t(14, 18, true), color = c.ink, maxLines = 1)
             if (plus) {
-                Box(Modifier.padding(top = 3.dp).height(16.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
-                    // Review fix: 12sp label in TileInk #17201B on tileViolet #9A7BFF
-                    // (5.2:1; white was 3.16:1). The fill is unchanged.
-                    AgentIcon("star", 10.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
-                    Text("PLUS", style = t(12, 16, true), color = TileInk, modifier = Modifier.padding(start = 15.dp, end = 9.dp))
+                Box(Modifier.padding(top = 2.dp).height(15.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
+                    AgentIcon("star", 9.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
+                    Text("PLUS", style = t(11, 14, true), color = TileInk, modifier = Modifier.padding(start = 14.dp, end = 8.dp))
                 }
             }
         }
-        Text(time, style = t(12, 16), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 16.dp))
-        Text(subtitle, style = t(13, 18), color = c.ink2, maxLines = 1, modifier = Modifier.offset(68.dp, 30.dp))
+        Text(time, style = t(11, 14), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 16.dp))
+        Text(subtitle, style = t(12, 16), color = c.ink2, maxLines = 1, modifier = Modifier.offset(64.dp, 26.dp))
         if (unread != null) {
             Box(
-                Modifier.align(Alignment.TopEnd).padding(top = 26.dp, end = 16.dp).size(20.dp).clip(CircleShape).background(c.unread),
+                Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 16.dp).size(18.dp).clip(CircleShape).background(c.unread),
                 contentAlignment = Alignment.Center,
-            ) { Text(unread, style = t(11, 14, true), color = c.unreadInk) }
+            ) { Text(unread, style = t(10, 13, true), color = c.unreadInk) }
         }
     }
 }
@@ -831,11 +831,11 @@ private fun ConversationRow(
 @Composable
 private fun SearchField(c: AgentColors, label: String) {
     Box(
-        Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(40.dp).clip(RoundedCornerShape(20.dp))
-            .background(c.recessed).border(1.dp, c.border, RoundedCornerShape(20.dp)),
+        Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(36.dp).clip(RoundedCornerShape(18.dp))
+            .background(c.recessed).border(1.dp, c.border, RoundedCornerShape(18.dp)),
     ) {
-        AgentIcon("search", 20.dp, c.ink2, Modifier.offset(12.dp, 10.dp))
-        Text(label, style = t(15, 22), color = c.ink2, modifier = Modifier.offset(36.dp, 9.dp))
+        AgentIcon("search", 18.dp, c.ink2, Modifier.offset(12.dp, 9.dp))
+        Text(label, style = t(13, 18), color = c.ink2, modifier = Modifier.offset(36.dp, 8.dp))
     }
 }
 
@@ -862,22 +862,22 @@ fun DuaAgentWorkspaceScreen(
     Column(modifier.fillMaxSize().background(c.body)) {
         AgentTop(c) { AgentAppBar("Agent workspace", c, onBack, center = true) }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            Spacer(Modifier.height(15.dp))
-            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(64.dp).clip(RoundedCornerShape(16.dp)).background(c.chrome)) {
-                AgentCubeAvatar(40.dp, Modifier.offset(16.dp, 12.dp), badge = 14.dp, ring = c.chrome)
-                Text(agentName, style = t(16, 22, true), color = c.ink, modifier = Modifier.offset(64.dp, 10.dp))
+            Spacer(Modifier.height(10.dp))
+            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(c.chrome)) {
+                AgentCubeAvatar(36.dp, Modifier.offset(14.dp, 9.dp), badge = 12.dp, ring = c.chrome)
+                Text(agentName, style = t(15, 20, true), color = c.ink, modifier = Modifier.offset(58.dp, 8.dp))
                 Row(
-                    Modifier.offset(64.dp, 32.dp).clickable(onClick = onAgentHome),
+                    Modifier.offset(58.dp, 28.dp).clickable(onClick = onAgentHome),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Agent home", style = t(13, 18), color = c.primaryInk)
-                    AgentIcon("arrow_up_right", 14.dp, c.primaryInk, Modifier.offset(y = 2.dp))
+                    Text("Agent home", style = t(12, 16), color = c.primaryInk)
+                    AgentIcon("arrow_up_right", 12.dp, c.primaryInk, Modifier.offset(y = 1.dp))
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text("MANAGE", style = t(11, 16, true), color = c.ink2, modifier = Modifier.padding(start = 16.dp))
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(10.dp))
+            Text("MANAGE", style = t(10, 14, true), color = c.ink2, modifier = Modifier.padding(start = 16.dp))
+            Spacer(Modifier.height(5.dp))
             val tiles = listOf(
                 Triple("bars", "Overview", AgentWorkspaceDestination.Overview),
                 Triple("channels", "Channels", AgentWorkspaceDestination.Channels),
@@ -888,27 +888,27 @@ fun DuaAgentWorkspaceScreen(
             )
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (rowTiles in tiles.chunked(3)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for ((icon, label, dest) in rowTiles) {
-                            Box(Modifier.size(114.dp, 72.dp).clip(RoundedCornerShape(16.dp)).background(c.chrome).clickable { onOpen(dest) }) {
-                                AgentIcon(icon, 20.dp, c.wellInk, Modifier.align(Alignment.TopCenter).offset(y = 12.dp))
+                            Box(Modifier.weight(1f).height(62.dp).clip(RoundedCornerShape(12.dp)).background(c.chrome).clickable { onOpen(dest) }) {
+                                AgentIcon(icon, 18.dp, c.wellInk, Modifier.align(Alignment.TopCenter).offset(y = 9.dp))
                                 Text(
-                                    label, style = t(12, 16, true), color = c.ink, textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth().offset(y = 36.dp),
+                                    label, style = t(11, 15, true), color = c.ink, textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth().offset(y = 33.dp),
                                 )
                             }
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(14.dp))
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                Text("CHAT", style = t(11, 16, true), color = c.ink2)
-                Text("5", style = t(12, 16), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd))
+                Text("CHAT", style = t(10, 14, true), color = c.ink2)
+                Text("5", style = t(11, 14), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd))
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(5.dp))
             SearchField(c, "Search")
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             ConversationRow(
                 c, "fareed",
                 "Teamily Android ai app Open karo rea Open frontend developer than click upper baar it agent profile,",

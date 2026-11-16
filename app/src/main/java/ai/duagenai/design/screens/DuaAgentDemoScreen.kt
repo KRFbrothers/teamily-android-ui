@@ -182,14 +182,18 @@ fun DuaAgentDemoScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.sm, vertical = spacing.xs),
+                    .padding(horizontal = spacing.sm, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(36.dp),
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(spacing.xs))
@@ -198,24 +202,27 @@ fun DuaAgentDemoScreen(
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .clickable(role = Role.Button, onClickLabel = "Open Agent Profile", onClick = onOpenProfile)
-                        .padding(vertical = 4.dp, horizontal = 2.dp),
+                        .padding(vertical = 2.dp, horizontal = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SignalBotBadge(40.dp)
+                    SignalBotBadge(34.dp)
                     Spacer(Modifier.width(spacing.sm))
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Teamily Agent",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.5.sp,
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             VerifiedCheck()
                         }
                         Text(
                             text = "Official Permanent Agent · Engine",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = palette.signalGreen,
                         )
                     }
@@ -224,13 +231,14 @@ fun DuaAgentDemoScreen(
                 OutlinedButton(
                     onClick = onOpenWorkspace,
                     shape = TeamilyShapes.capsule,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 2.dp),
                     border = BorderStroke(1.dp, palette.border),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.signalGreen),
+                    modifier = Modifier.height(30.dp),
                 ) {
                     Text(
                         text = "Workspace",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.5.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
                     )
                 }
             }
@@ -241,82 +249,9 @@ fun DuaAgentDemoScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item {
-                    // Official Engine Banner
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = TeamilyShapes.card,
-                        color = palette.cardHeroColor,
-                        border = BorderStroke(1.dp, palette.heroCardBorder),
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                SignalBotBadge(24.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Dua Agent \u2014 The Official Core",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                VerifiedCheck()
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "The primary orchestrator of Dua Gen AI. Controls child agents, executes skills, manages MCP tool servers, and powers team collaboration.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                EnginePill(icon = Icons.Outlined.Hub, label = "Orchestration", palette = palette)
-                                EnginePill(icon = Icons.Outlined.Build, label = "5 Skills", palette = palette)
-                                EnginePill(icon = Icons.Outlined.Extension, label = "MCP Enabled", palette = palette)
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "MULTI-AGENT ORCHESTRATION MATRIX",
-                        style = DuaGenAITextStyles.eyebrow,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                    )
-                }
-
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(TeamilyShapes.card)
-                            .background(palette.cardHeroColor)
-                            .border(1.dp, palette.heroCardBorder, TeamilyShapes.card)
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        OrchestrationRow("Slides Assistant", "Decks & Presentations", "Ready", palette)
-                        OrchestrationRow("Market Research", "Competitive Intel & Citations", "Complete", palette)
-                        OrchestrationRow("Accounting Assistant", "Ledgers & Invoices", "Supervised", palette)
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "INTERACTIVE ORCHESTRATION DEMO",
-                        style = DuaGenAITextStyles.eyebrow,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                    )
-                }
-
                 // Chat Messages
                 items(messages) { msg ->
                     DuaAgentBubble(message = msg, palette = palette)
@@ -470,27 +405,30 @@ private fun DuaAgentBubble(
     ) {
         Surface(
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isUser) 16.dp else 4.dp,
-                bottomEnd = if (isUser) 4.dp else 16.dp,
+                topStart = 14.dp,
+                topEnd = 14.dp,
+                bottomStart = if (isUser) 14.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 14.dp,
             ),
             color = if (isUser) palette.signalGreen else palette.cardHeroColor,
             border = if (isUser) null else BorderStroke(1.dp, palette.heroCardBorder),
-            shadowElevation = 1.dp,
+            shadowElevation = 0.5.dp,
             modifier = Modifier.padding(
-                start = if (isUser) 48.dp else 0.dp,
-                end = if (isUser) 0.dp else 48.dp,
+                start = if (isUser) 40.dp else 0.dp,
+                end = if (isUser) 0.dp else 40.dp,
             ),
         ) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Column(Modifier.padding(horizontal = 11.dp, vertical = 7.dp)) {
                 Text(
                     text = message.text,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        lineHeight = 18.sp,
+                    ),
                     color = if (isUser) Color.Black else MaterialTheme.colorScheme.onSurface,
                 )
                 if (message.subAgentsActive.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -503,9 +441,9 @@ private fun DuaAgentBubble(
                             ) {
                                 Text(
                                     text = "🤖 $agent",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp),
                                     color = palette.signalGreen,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp),
                                 )
                             }
                         }
@@ -514,7 +452,7 @@ private fun DuaAgentBubble(
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = message.time,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp),
                     color = if (isUser) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.End),
                 )

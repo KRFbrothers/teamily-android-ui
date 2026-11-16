@@ -164,23 +164,30 @@ fun PersonalAgentDemoScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.sm, vertical = spacing.xs),
+                    .padding(horizontal = spacing.sm, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(36.dp),
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.width(spacing.xs))
-                BotBadge(40.dp)
+                BotBadge(34.dp)
                 Spacer(Modifier.width(spacing.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = "fareed's Personal Agent",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.5.sp,
+                        ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -188,14 +195,14 @@ fun PersonalAgentDemoScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .clip(CircleShape)
                                 .background(palette.signalGreen),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text(
                             text = "Permanent Agent \u00b7 Autonomous",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                             color = palette.signalGreen,
                         )
                     }
@@ -208,92 +215,9 @@ fun PersonalAgentDemoScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = spacing.gutter, vertical = spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item {
-                    // Hero Banner Card
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = TeamilyShapes.card,
-                        color = palette.cardHeroColor,
-                        border = BorderStroke(1.dp, palette.heroCardBorder),
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Outlined.CheckCircle,
-                                    contentDescription = null,
-                                    tint = palette.signalGreen,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Permanent Personal Agent",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "Your dedicated personal assistant for scheduling, daily memory, tone-aware drafts, and local task automation.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            // Status Chips Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                StatusPill(icon = Icons.Outlined.Lock, label = "Private", palette = palette)
-                                StatusPill(icon = Icons.Outlined.Notifications, label = "Autonomous", palette = palette)
-                                StatusPill(icon = Icons.Outlined.DateRange, label = "Memory Synced", palette = palette)
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "CAPABILITIES (DEMO)",
-                        style = DuaGenAITextStyles.eyebrow,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                    )
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        CapabilityCard(
-                            title = "Smart Schedule",
-                            description = "Previews meetings and prepares context before you join.",
-                            icon = Icons.Outlined.DateRange,
-                            modifier = Modifier.weight(1f),
-                            palette = palette,
-                        )
-                        CapabilityCard(
-                            title = "Tone Drafts",
-                            description = "Generates replies in your natural voice.",
-                            icon = Icons.Outlined.Edit,
-                            modifier = Modifier.weight(1f),
-                            palette = palette,
-                        )
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "INTERACTIVE DEMO CONVERSATION",
-                        style = DuaGenAITextStyles.eyebrow,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                    )
-                }
-
                 // Chat Messages
                 items(messages) { msg ->
                     ChatBubble(message = msg, palette = palette)
@@ -441,9 +365,9 @@ internal fun ActionChip(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         )
     }
 }
@@ -460,29 +384,32 @@ private fun ChatBubble(
     ) {
         Surface(
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isUser) 16.dp else 4.dp,
-                bottomEnd = if (isUser) 4.dp else 16.dp,
+                topStart = 14.dp,
+                topEnd = 14.dp,
+                bottomStart = if (isUser) 14.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 14.dp,
             ),
             color = if (isUser) palette.signalGreen else palette.cardHeroColor,
             border = if (isUser) null else BorderStroke(1.dp, palette.heroCardBorder),
-            shadowElevation = 1.dp,
+            shadowElevation = 0.5.dp,
             modifier = Modifier.padding(
-                start = if (isUser) 48.dp else 0.dp,
-                end = if (isUser) 0.dp else 48.dp,
+                start = if (isUser) 40.dp else 0.dp,
+                end = if (isUser) 0.dp else 40.dp,
             ),
         ) {
-            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+            Column(Modifier.padding(horizontal = 11.dp, vertical = 7.dp)) {
                 Text(
                     text = message.text,
-                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        lineHeight = 18.sp,
+                    ),
                     color = if (isUser) Color.Black else MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = message.time,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp),
                     color = if (isUser) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.End),
                 )

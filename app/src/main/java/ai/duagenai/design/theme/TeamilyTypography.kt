@@ -36,20 +36,20 @@ private val TrackingTight = (-0.01).em
 /** Code blocks use the system monospace family. */
 val TeamilyMonoFontFamily: FontFamily = FontFamily.Monospace
 
-/** The spec's M3 type scale for the given sans family (Lato in the app). */
+/** The spec's M3 type scale for the given sans family (compact mobile ergonomics). */
 fun teamilyTypography(sans: FontFamily = FontFamily.Default): Typography = Typography(
     // --nv-type-display + --nv-tracking-tight
-    headlineMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = TrackingTight),
+    headlineMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = TrackingTight),
     // --nv-type-title + --nv-tracking-tight
-    titleLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = TrackingTight),
+    titleLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 23.sp, letterSpacing = TrackingTight),
     // --nv-type-heading
-    titleMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 26.sp),
+    titleMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 21.sp),
     // --nv-type-body
-    bodyLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 26.sp),
+    bodyLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
     // --nv-type-body-sm
-    bodyMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.5.sp, lineHeight = 18.sp),
     // --nv-type-caption
-    labelMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+    labelMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 15.sp),
 )
 
 /** Kit typography with the platform default family; see the header for Lato. */

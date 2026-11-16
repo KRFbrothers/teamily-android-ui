@@ -102,21 +102,21 @@ fun TeamilyAgentChatBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .teamilyRestingShadow(palette, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
+            .teamilyRestingShadow(palette, RoundedCornerShape(18.dp)),
+        shape = RoundedCornerShape(18.dp),
         color = palette.composerBg,
         border = BorderStroke(1.dp, palette.borderGradient),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 7.dp),
         ) {
             // Row 1: Input text field
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 36.dp, max = 120.dp),
+                    .heightIn(min = 30.dp, max = 100.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(
@@ -126,8 +126,8 @@ fun TeamilyAgentChatBar(
                     enabled = enabled,
                     textStyle = DuaGenAITextStyles.bubble.copy(
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 15.sp,
-                        lineHeight = 21.sp,
+                        fontSize = 13.5.sp,
+                        lineHeight = 18.sp,
                     ),
                     cursorBrush = SolidColor(palette.signalGreen),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -136,7 +136,7 @@ fun TeamilyAgentChatBar(
                         if (value.isEmpty()) {
                             Text(
                                 text = placeholder,
-                                style = DuaGenAITextStyles.bubble.copy(fontSize = 15.sp),
+                                style = DuaGenAITextStyles.bubble.copy(fontSize = 13.5.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -145,7 +145,7 @@ fun TeamilyAgentChatBar(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
 
             // Row 2: Tool & Action Bar
             Row(
@@ -161,11 +161,11 @@ fun TeamilyAgentChatBar(
                         imageVector = Icons.Outlined.Add,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(17.dp),
                     )
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
 
                 // Mode Selector Pill: "Auto ▾"
                 Box {
@@ -179,18 +179,18 @@ fun TeamilyAgentChatBar(
                             .semantics { contentDescription = "Mode: $selectedMode" },
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = selectedMode,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.5.sp,
                                 ),
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
-                            Spacer(Modifier.width(4.dp))
+                            Spacer(Modifier.width(3.dp))
                             ChevronDownGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -217,9 +217,9 @@ fun TeamilyAgentChatBar(
                     }
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
                 VerticalDivider(color = palette.border)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
 
                 // Tool: Meeting Minutes
                 ToolbarIconButton(
@@ -229,7 +229,7 @@ fun TeamilyAgentChatBar(
                     MeetingMinutesGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(2.dp))
 
                 // Tool: Dictate
                 ToolbarIconButton(
@@ -239,9 +239,9 @@ fun TeamilyAgentChatBar(
                     DictateGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
                 VerticalDivider(color = palette.border)
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(4.dp))
 
                 // Tool: Emoji
                 ToolbarIconButton(
@@ -263,7 +263,7 @@ fun TeamilyAgentChatBar(
                         // Green Send Button
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(palette.signalGreen)
                                 .clickable(role = Role.Button, onClick = onSend)
@@ -274,14 +274,14 @@ fun TeamilyAgentChatBar(
                                 imageVector = Icons.AutoMirrored.Outlined.Send,
                                 contentDescription = null,
                                 tint = Color.Black,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                             )
                         }
                     } else {
                         // Voice message and Voice call buttons
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             ToolbarIconButton(
                                 contentDescription = "Voice message",
@@ -312,7 +312,7 @@ private fun ToolbarIconButton(
 ) {
     Box(
         modifier = modifier
-            .size(34.dp)
+            .size(30.dp)
             .clip(CircleShape)
             .clickable(
                 role = Role.Button,
@@ -335,7 +335,7 @@ private fun VerticalDivider(
     Box(
         modifier = modifier
             .width(1.dp)
-            .height(16.dp)
+            .height(14.dp)
             .background(color),
     )
 }
@@ -343,7 +343,7 @@ private fun VerticalDivider(
 /** Draws the chevron down glyph for the mode pill. */
 @Composable
 private fun ChevronDownGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(10.dp)) {
+    Canvas(modifier = modifier.size(9.dp)) {
         val w = size.width
         val h = size.height
         val path = Path().apply {
@@ -351,14 +351,14 @@ private fun ChevronDownGlyph(tint: Color, modifier: Modifier = Modifier) {
             lineTo(w * 0.5f, h * 0.65f)
             lineTo(w * 0.8f, h * 0.35f)
         }
-        drawPath(path, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, color = tint, style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
 
 /** Draws Meeting Minutes icon (document/note with bullet points). */
 @Composable
 private fun MeetingMinutesGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val w = size.width
         val h = size.height
         // Outer page border
@@ -369,25 +369,25 @@ private fun MeetingMinutesGlyph(tint: Color, modifier: Modifier = Modifier) {
             lineTo(w * 0.25f, h * 0.85f)
             close()
         }
-        drawPath(page, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(page, color = tint, style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         // Lines
-        drawLine(tint, Offset(w * 0.40f, h * 0.35f), Offset(w * 0.65f, h * 0.35f), strokeWidth = 1.2.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(tint, Offset(w * 0.40f, h * 0.50f), Offset(w * 0.65f, h * 0.50f), strokeWidth = 1.2.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(tint, Offset(w * 0.40f, h * 0.65f), Offset(w * 0.60f, h * 0.65f), strokeWidth = 1.2.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(tint, Offset(w * 0.40f, h * 0.35f), Offset(w * 0.65f, h * 0.35f), strokeWidth = 1.1.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(tint, Offset(w * 0.40f, h * 0.50f), Offset(w * 0.65f, h * 0.50f), strokeWidth = 1.1.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(tint, Offset(w * 0.40f, h * 0.65f), Offset(w * 0.60f, h * 0.65f), strokeWidth = 1.1.dp.toPx(), cap = StrokeCap.Round)
         // Bullet dots
-        drawCircle(tint, radius = 1.dp.toPx(), center = Offset(w * 0.32f, h * 0.35f))
-        drawCircle(tint, radius = 1.dp.toPx(), center = Offset(w * 0.32f, h * 0.50f))
-        drawCircle(tint, radius = 1.dp.toPx(), center = Offset(w * 0.32f, h * 0.65f))
+        drawCircle(tint, radius = 0.9.dp.toPx(), center = Offset(w * 0.32f, h * 0.35f))
+        drawCircle(tint, radius = 0.9.dp.toPx(), center = Offset(w * 0.32f, h * 0.50f))
+        drawCircle(tint, radius = 0.9.dp.toPx(), center = Offset(w * 0.32f, h * 0.65f))
     }
 }
 
 /** Draws Dictate waveform bars glyph. */
 @Composable
 private fun DictateGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val w = size.width
         val h = size.height
-        val barWidth = 1.5.dp.toPx()
+        val barWidth = 1.3.dp.toPx()
         drawLine(tint, Offset(w * 0.25f, h * 0.40f), Offset(w * 0.25f, h * 0.60f), strokeWidth = barWidth, cap = StrokeCap.Round)
         drawLine(tint, Offset(w * 0.42f, h * 0.25f), Offset(w * 0.42f, h * 0.75f), strokeWidth = barWidth, cap = StrokeCap.Round)
         drawLine(tint, Offset(w * 0.58f, h * 0.18f), Offset(w * 0.58f, h * 0.82f), strokeWidth = barWidth, cap = StrokeCap.Round)
@@ -398,27 +398,27 @@ private fun DictateGlyph(tint: Color, modifier: Modifier = Modifier) {
 /** Draws smiling face Emoji glyph. */
 @Composable
 private fun EmojiGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val w = size.width
         val h = size.height
         // Face outline
-        drawCircle(tint, radius = w * 0.40f, style = Stroke(width = 1.5.dp.toPx()))
+        drawCircle(tint, radius = w * 0.40f, style = Stroke(width = 1.3.dp.toPx()))
         // Eyes
-        drawCircle(tint, radius = 1.dp.toPx(), center = Offset(w * 0.37f, h * 0.40f))
-        drawCircle(tint, radius = 1.dp.toPx(), center = Offset(w * 0.63f, h * 0.40f))
+        drawCircle(tint, radius = 0.9.dp.toPx(), center = Offset(w * 0.37f, h * 0.40f))
+        drawCircle(tint, radius = 0.9.dp.toPx(), center = Offset(w * 0.63f, h * 0.40f))
         // Smile
         val smile = Path().apply {
             moveTo(w * 0.35f, h * 0.58f)
             quadraticTo(w * 0.50f, h * 0.72f, w * 0.65f, h * 0.58f)
         }
-        drawPath(smile, color = tint, style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(smile, color = tint, style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round))
     }
 }
 
 /** Draws Voice Message microphone glyph. */
 @Composable
 private fun VoiceMessageGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val w = size.width
         val h = size.height
         // Mic capsule
@@ -429,22 +429,22 @@ private fun VoiceMessageGlyph(tint: Color, modifier: Modifier = Modifier) {
             lineTo(w * 0.38f, h * 0.55f)
             close()
         }
-        drawPath(capsule, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(capsule, color = tint, style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         // Cradle arc
         val arc = Path().apply {
             moveTo(w * 0.28f, h * 0.45f)
             quadraticTo(w * 0.50f, h * 0.78f, w * 0.72f, h * 0.45f)
         }
-        drawPath(arc, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(arc, color = tint, style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round))
         // Stand line
-        drawLine(tint, Offset(w * 0.50f, h * 0.70f), Offset(w * 0.50f, h * 0.85f), strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(tint, Offset(w * 0.50f, h * 0.70f), Offset(w * 0.50f, h * 0.85f), strokeWidth = 1.3.dp.toPx(), cap = StrokeCap.Round)
     }
 }
 
 /** Draws Voice Call telephone handset glyph. */
 @Composable
 private fun VoiceCallGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
+    Canvas(modifier = modifier.size(17.dp)) {
         val w = size.width
         val h = size.height
         val phone = Path().apply {
@@ -459,7 +459,7 @@ private fun VoiceCallGlyph(tint: Color, modifier: Modifier = Modifier) {
             cubicTo(w * 0.60f, h * 0.86f, w * 0.28f, h * 0.56f, w * 0.30f, h * 0.28f)
             close()
         }
-        drawPath(phone, color = tint, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(phone, color = tint, style = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
 

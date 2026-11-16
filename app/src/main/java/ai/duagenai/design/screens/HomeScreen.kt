@@ -358,8 +358,8 @@ fun HomeScreen(
                     modifier = Modifier.padding(
                         start = LocalDuaGenAISpacing.current.gutter,
                         end = LocalDuaGenAISpacing.current.gutter,
-                        top = 8.dp,
-                        bottom = 12.dp,
+                        top = 4.dp,
+                        bottom = 8.dp,
                     ),
                 )
                 // Personal Agent is FIXED: remains pinned at top during scroll
@@ -368,7 +368,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(
                         start = LocalDuaGenAISpacing.current.gutter,
                         end = LocalDuaGenAISpacing.current.gutter,
-                        bottom = 8.dp,
+                        bottom = 6.dp,
                     ),
                 )
                 Box(
@@ -656,13 +656,11 @@ internal fun DuaComposer(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .sizeIn(minHeight = 52.dp)
+                    .sizeIn(minHeight = 42.dp)
                     .padding(horizontal = spacing.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // LEFT — Attach. A real 48dp button wherever there is a sheet
-                // to open (a thread); on Dua's home there is no destination, so
-                // it keeps the audit-fix #9 guard: no click, announced disabled.
+                // LEFT — Attach
                 ComposerIconButton(
                     icon = Icons.Outlined.Add,
                     contentDescription = "Attach",
@@ -671,19 +669,13 @@ internal fun DuaComposer(
                     onClick = { sheet = ComposerSheet.Plus },
                 )
                 if (editable) {
-                    // The real input. Same text style and colour as the static
-                    // hint it replaces, so the pill does not change shape when a
-                    // thread becomes editable.
                     BasicTextField(
                         value = value.orEmpty(),
                         onValueChange = onValueChange!!,
-                        // Review fix: the field's tappable box is >=48dp tall
-                        // (the pill is 52dp). The decoration box below centres
-                        // the text in it, so the text sits exactly where the
-                        // Row's CenterVertically put it before.
-                        modifier = Modifier.weight(1f).heightIn(min = MinTouchTarget),
+                        modifier = Modifier.weight(1f).heightIn(min = 38.dp),
                         textStyle = DuaGenAITextStyles.bubble.copy(
                             color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 13.5.sp,
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         maxLines = 4,
@@ -798,7 +790,7 @@ private fun ComposerIconButton(
     val palette = teamilyPalette()
     Box(
         modifier = Modifier
-            .size(MinTouchTarget)
+            .size(38.dp)
             .clip(CircleShape)
             .then(
                 if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick)
@@ -814,7 +806,7 @@ private fun ComposerIconButton(
             icon,
             contentDescription = null,
             tint = if (enabled) tint else tint.copy(alpha = 0.45f),
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(20.dp),
         )
         if (activeDot) {
             // 8dp logoMint dot at the glyph's top-end, ringed in the pill's own
@@ -1020,7 +1012,7 @@ private fun AgentHomeTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = spacing.gutter, end = spacing.gutter, top = 20.dp, bottom = 10.dp),
+            .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
     ) {
         // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
         // accessibility label stays "Open menu". The clip stays on the photo
@@ -1029,7 +1021,7 @@ private fun AgentHomeTopBar(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(48.dp),
+                .size(38.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -1046,12 +1038,11 @@ private fun AgentHomeTopBar(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // 10.dp #42D982 fill, 2.dp #1D2220 ring. Outer is 14.dp so the
-            // centre lands on the 48.dp circle's top-right rim.
+            // 8.dp #42D982 fill, 2.dp #1D2220 ring.
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(14.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
                     .background(palette.avatarOnlineRing)
                     .padding(2.dp)
@@ -1065,13 +1056,13 @@ private fun AgentHomeTopBar(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(size = 32.dp, shape = TeamilyShapes.xs)
+            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
             Spacer(Modifier.width(spacing.sm))
             Text(
                 text = APP_NAME,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 21.sp,
-                    lineHeight = 28.sp,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.01).em,
                 ),
@@ -1086,7 +1077,7 @@ private fun AgentHomeTopBar(
             var menuOpen by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
-                    .size(MinTouchTarget)
+                    .size(38.dp)
                     .clip(CircleShape)
                     .background(palette.plusFill)
                     .clickable(role = Role.Button) { menuOpen = true }
@@ -1097,7 +1088,7 @@ private fun AgentHomeTopBar(
                     Icons.Filled.Add,
                     contentDescription = null,
                     tint = palette.plusIcon,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -1205,7 +1196,7 @@ private fun SearchRow(
     ) {
         Box(
             modifier = Modifier
-                .size(MinTouchTarget)
+                .size(38.dp)
                 .clip(CircleShape)
                 .background(if (filterActive) colors.brandSoft else palette.chromeFill)
                 .border(1.dp, palette.border, CircleShape)
@@ -1219,10 +1210,10 @@ private fun SearchRow(
             // Three centred bars, longest on top — the reference's filter glyph.
             val ink = if (filterActive) colors.onBrandSoft else MaterialTheme.colorScheme.onSurface
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                listOf(18.dp, 12.dp, 6.dp).forEach { w ->
+                listOf(15.dp, 10.dp, 5.dp).forEach { w ->
                     Box(
                         modifier = Modifier
                             .width(w)
@@ -1248,7 +1239,7 @@ private fun SearchRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .sizeIn(minHeight = MinTouchTarget)
+                    .height(38.dp)
                     .padding(horizontal = spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1256,12 +1247,14 @@ private fun SearchRow(
                     Icons.Filled.Search,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(spacing.sm))
                 Text(
                     text = "Search",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -1305,15 +1298,15 @@ internal fun PersonalAgentHeroCard(
         border = BorderStroke(1.dp, palette.heroCardBorder),
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
                 ring = palette.cardHeroColor,
                 miniBadge = true,
-                mini = { BotBadge(16.dp) },
+                mini = { BotBadge(14.dp) },
             ) {
-                BotBadge(48.dp)
+                BotBadge(40.dp)
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1322,8 +1315,8 @@ internal fun PersonalAgentHeroCard(
                         text = PERSONAL_AGENT_TITLE,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 17.5.sp,
-                            lineHeight = 24.sp,
+                            fontSize = 15.sp,
+                            lineHeight = 20.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -1335,18 +1328,18 @@ internal fun PersonalAgentHeroCard(
                         text = PERSONAL_AGENT_DATE,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
+                            fontSize = 11.5.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = PERSONAL_AGENT_PREVIEW,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp,
-                        lineHeight = 19.sp,
+                        fontSize = 12.5.sp,
+                        lineHeight = 17.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -1358,26 +1351,26 @@ internal fun PersonalAgentHeroCard(
 }
 
 /**
- * A 48dp circular avatar with an optional green mini-badge at its bottom-end.
+ * A 40dp circular avatar with an optional green mini-badge at its bottom-end.
  * The badge is ringed in [ring] (the surface behind it) so it reads as a badge.
  */
 @Composable
 private fun ChatAvatar(
     ring: Color,
     miniBadge: Boolean,
-    mini: @Composable () -> Unit = { AppBadge(size = 16.dp, shape = CircleShape) },
+    mini: @Composable () -> Unit = { AppBadge(size = 14.dp, shape = CircleShape) },
     content: @Composable () -> Unit,
 ) {
-    Box(Modifier.size(52.dp)) {
-        Box(Modifier.align(Alignment.TopStart).size(48.dp).clip(CircleShape)) { content() }
+    Box(Modifier.size(44.dp)) {
+        Box(Modifier.align(Alignment.TopStart).size(40.dp).clip(CircleShape)) { content() }
         if (miniBadge) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(20.dp)
+                    .size(17.dp)
                     .clip(CircleShape)
                     .background(ring)
-                    .padding(2.dp),
+                    .padding(1.5.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 mini()
@@ -1471,11 +1464,11 @@ private fun CanvasChatRow(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // The whole row is the button, including the side inset. Padding stays
-    // inside the click so the 16dp inset and 14dp vertical inset do not move.
+    // inside the click so the 16dp inset and 9dp vertical inset do not move.
     val rowModifier = Modifier
         .fillMaxWidth()
         .clickable(role = Role.Button, onClick = onClick)
-        .padding(horizontal = spacing.gutter, vertical = 14.dp)
+        .padding(horizontal = spacing.gutter, vertical = 9.dp)
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1488,9 +1481,9 @@ private fun CanvasChatRow(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 17.sp,
-                            lineHeight = 22.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.5.sp,
+                            lineHeight = 20.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -1498,7 +1491,7 @@ private fun CanvasChatRow(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (verified) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(4.dp))
                         VerifiedCheck()
                     }
                 }
@@ -1507,18 +1500,18 @@ private fun CanvasChatRow(
                     text = time,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 12.5.sp,
+                        fontSize = 11.5.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Normal,
-                    fontSize = 14.5.sp,
-                    lineHeight = 20.sp,
+                    fontSize = 12.5.sp,
+                    lineHeight = 17.sp,
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1569,14 +1562,14 @@ private fun SectionHeader(
             .padding(horizontal = spacing.sm)
             .clip(TeamilyShapes.capsule)
             .clickable(role = Role.Button, onClick = onToggle)
-            .sizeIn(minHeight = MinTouchTarget)
+            .sizeIn(minHeight = 34.dp)
             .padding(horizontal = spacing.sm)
             .semantics(mergeDescendants = true) {
                 stateDescription = if (expanded) "Expanded" else "Collapsed"
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(Modifier.size(14.dp)) {
+        Canvas(Modifier.size(13.dp)) {
             val w = size.width
             val h = size.height
             val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -1609,13 +1602,13 @@ private fun SectionHeader(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
+                fontSize = 11.5.sp,
+                lineHeight = 15.sp,
             ),
             color = ink,
         )
         Spacer(Modifier.width(spacing.xs))
-        Canvas(Modifier.size(12.dp).rotate(if (expanded) 0f else -90f)) {
+        Canvas(Modifier.size(11.dp).rotate(if (expanded) 0f else -90f)) {
             val w = size.width
             val h = size.height
             val p = Path().apply {
@@ -1644,12 +1637,12 @@ private fun AgentHomeList(
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
     var chatsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    val dockReserve = 80.dp + spacing.gutter +
+    val dockReserve = 64.dp + spacing.gutter +
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(top = 4.dp, bottom = dockReserve),
+        contentPadding = PaddingValues(top = 2.dp, bottom = dockReserve),
     ) {
         item {
             Column {
@@ -1671,7 +1664,7 @@ private fun AgentHomeList(
                     onClick = onOpenDuaAgentChat,
                 ) {
                     ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                        SignalBotBadge(48.dp)
+                        SignalBotBadge(40.dp)
                     }
                 }
             }
@@ -1679,7 +1672,7 @@ private fun AgentHomeList(
         item {
             Column {
                 HorizontalDivider(
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
                     thickness = 0.5.dp,
                     color = palette.border,
                 )
@@ -1758,7 +1751,7 @@ private fun HomeBottomNav(
                     Box(
                         modifier = Modifier
                             .clickable(interactionSource = interaction, indication = null) { onSelect(tab) }
-                            .sizeIn(minWidth = 64.dp, minHeight = 60.dp)
+                            .sizeIn(minWidth = 54.dp, minHeight = 48.dp)
                             .semantics {
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
@@ -1777,35 +1770,32 @@ private fun HomeBottomNav(
                         )
                         Column(
                             modifier = Modifier
-                                .padding(horizontal = spacing.xs, vertical = spacing.xs),
+                                .padding(horizontal = spacing.xs, vertical = 2.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Box {
                                 TabGlyph(tab = tab, tint = tint, strong = active)
                                 if (tab == HomeTab.Memory) {
-                                    // The reference's unread dot: #A2E4B6 fill (measured;
-                                    // = dark --nv-green-700) in a --nv-notification-outline
-                                    // ring. Measured at 3.2px/dp: 8.75dp fill, 2.2dp ring,
-                                    // centred 1dp past the glyph's top-end corner.
+                                    // The reference's unread dot
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopStart)
-                                            .offset(x = 18.5.dp, y = (-7.5).dp)
-                                            .size(13.dp)
+                                            .offset(x = 16.dp, y = (-5).dp)
+                                            .size(11.dp)
                                             .clip(CircleShape)
                                             .background(palette.notificationOutline)
-                                            .padding(2.dp)
+                                            .padding(1.5.dp)
                                             .clip(CircleShape)
                                             .background(palette.notificationDot),
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(3.dp))
+                            Spacer(Modifier.height(2.dp))
                             Text(
                                 text = tab.label,
                                 style = DuaGenAITextStyles.navLabel.copy(
-                                    fontSize = 12.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                                 ),
                                 color = tint,
@@ -1832,11 +1822,11 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
             painter = painterResource(R.drawable.dua_bot_badge),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(24.dp).clip(CircleShape),
+            modifier = Modifier.size(20.dp).clip(CircleShape),
         )
         return
     }
-    Canvas(Modifier.size(24.dp)) {
+    Canvas(Modifier.size(20.dp)) {
         val w = size.width
         val h = size.height
         // `--nv-icon-stroke` 1.75; the active tab uses `--nv-icon-stroke-strong` 2.25.
