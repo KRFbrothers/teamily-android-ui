@@ -230,11 +230,11 @@ private const val AGENT_COMPOSER_HINT = "Message $DUA_AGENT_TITLE\u2026"
  * Used to FIND the card: it is the one filled card on Agent home and tapping
  * it opens the Personal Agent thread. The title is unique to the card.
  */
-private const val AGENT_ROLE_LINE = "Your Personal Agent"
+private const val AGENT_ROLE_LINE = "fareed's Personal Agent"
 
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
-private const val CHATS_HEADER = "Chats \u00b7 5"
+private const val CHATS_HEADER = "Chats \u00b7 6"
 private const val APP_NAME_TEXT = "Dua Gen AI"
 private const val DUA_AGENT_ROW = "Dua Agent"
 
@@ -486,8 +486,8 @@ private const val SESSION_TOKEN_LABEL = "Session token"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
 /**
- * Agent home's "Chats · 5" rows that are on screen above the floating dock.
- * The fifth ("Frontend Developer") sits under the dock, as in the reference.
+ * Agent home's chat rows that are on screen above the floating dock.
+ * Later rows sit under the dock, as in the reference.
  */
 private val MANAGED_AGENTS = listOf("Code Reviewer", "Backend Architect", "DevOps Automator", "API Tester")
 
@@ -976,7 +976,7 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
 
         // The reference's chat-list home: search row, hero card, Pinned · 1
-        // with Dua Agent, Chats · 5 with its rows, and the floating dock.
+        // with Dua Agent, the chat section with its rows, and the floating dock.
         assertVisible("Search")
         assertVisible(AGENT_ROLE_LINE)
         assertVisible(PINNED_HEADER)
@@ -2974,7 +2974,7 @@ class DuaGenAINavHostTest {
         assertEquals(DUA_AGENT_TITLE, args?.getString("title"))
     }
 
-    /** One of the five listed chats opens its own existing thread id. */
+    /** One of the listed chats opens its own existing thread id. */
     @Test
     fun tappingAListedChatOpensThatThread() {
         launch()

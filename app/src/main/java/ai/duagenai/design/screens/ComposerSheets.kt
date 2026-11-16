@@ -1,7 +1,9 @@
 package ai.duagenai.design.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -29,10 +32,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -99,11 +106,9 @@ val ADK_BUILT_IN_TOOLS: List<String> = listOf(
 internal enum class ComposerSheet { None, Plus, Skills, Mcp }
 
 /**
- * The `+` sheet. Its structure follows Dua-ai's `ComposerPlusSheet` ("Quick
- * Actions" › "Agent tools"), trimmed to the destinations this kit actually has:
- * Skills and MCP Tools. Dua-ai's other entries (Upload, Photos, Camera, Create
- * tiles, Automate…) are "Not connected yet" there and do not exist here, so
- * they are not drawn.
+ * The `+` sheet. Agent tools stay Skills and MCP Tools (the attach test clicks
+ * the Skills row). Under them, the eight Create tiles from the HTML each open
+ * their own screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,7 +116,9 @@ internal fun ComposerPlusSheet(
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onDismiss: () -> Unit,
+    onOpenCreate: (String) -> Unit = {},
 ) {
+    val spacing = LocalDuaGenAISpacing.current
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -121,7 +128,74 @@ internal fun ComposerPlusSheet(
             SheetSectionLabel("Agent tools")
             SheetActionRow(icon = Icons.Outlined.Build, label = "Skills", onClick = onOpenSkills)
             SheetActionRow(icon = Icons.Outlined.Extension, label = "MCP Tools", onClick = onOpenMcp)
+            SheetSectionLabel("Create")
+            for (row in CREATE_TILES.chunked(4)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gutter, vertical = spacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                ) {
+                    for (tile in row) {
+                        CreateTileButton(
+                            tile = tile,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                onDismiss()
+                                onOpenCreate(tile.key)
+                            },
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun CreateTileButton(
+    tile: CreateTile,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val ink = tile.color ?: MaterialTheme.colorScheme.onSurface
+    Column(
+        modifier = modifier
+            .sizeIn(minHeight = MinTouchTarget)
+            .clip(TeamilyShapes.md)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = tile.title }
+            .padding(vertical = spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(contentAlignment = Alignment.TopEnd) {
+            Text(
+                text = tile.title.take(1),
+                style = DuaGenAITextStyles.rowTitle,
+                color = ink,
+                modifier = Modifier.padding(top = if (tile.pro) 8.dp else 0.dp),
+            )
+            if (tile.pro) {
+                Text(
+                    text = "Pro",
+                    modifier = Modifier
+                        .clip(TeamilyShapes.capsule)
+                        .background(Color(0xFF2E7D32))
+                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                    style = DuaGenAITextStyles.meta.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                )
+            }
+        }
+        Spacer(Modifier.size(spacing.xs))
+        Text(
+            text = tile.title,
+            style = DuaGenAITextStyles.meta,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
     }
 }
 

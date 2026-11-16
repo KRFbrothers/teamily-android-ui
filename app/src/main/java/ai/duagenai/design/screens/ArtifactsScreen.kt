@@ -1279,14 +1279,26 @@ private fun ArtifactsDark() = DuaGenAITheme(darkTheme = true) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
 }
 
-@Preview(name = "Artifacts — empty", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Artifacts — empty — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ArtifactsEmpty() = DuaGenAITheme(darkTheme = false) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = emptyList(), loadDelayMs = 0))
 }
 
-@Preview(name = "Artifacts — error", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Artifacts — empty — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ArtifactsEmptyDark() = DuaGenAITheme(darkTheme = true) {
+    ArtifactsScreen(repository = ArtifactsRepository(seed = emptyList(), loadDelayMs = 0))
+}
+
+@Preview(name = "Artifacts — error — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ArtifactsErrorPreview() = DuaGenAITheme(darkTheme = false) {
+    ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, failOnLoad = true, loadDelayMs = 0))
+}
+
+@Preview(name = "Artifacts — error — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ArtifactsErrorDark() = DuaGenAITheme(darkTheme = true) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, failOnLoad = true, loadDelayMs = 0))
 }

@@ -770,7 +770,7 @@ fun DuaAgentConnectAppScreen(onClose: () -> Unit = {}, modifier: Modifier = Modi
 
 /** Three overlapping initials circles — the group avatar (no Teamily mark). */
 @Composable
-private fun GroupCluster() {
+internal fun GroupCluster() {
     Box(Modifier.size(40.dp)) {
         val s = 23.2.dp
         val dots = listOf(

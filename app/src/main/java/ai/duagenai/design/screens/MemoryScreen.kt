@@ -1181,14 +1181,26 @@ private fun MemoryDark() = DuaGenAITheme(darkTheme = true) {
     MemoryScreen(repository = MemoryRepository(seed = sampleMemories, loadDelayMs = 0))
 }
 
-@Preview(name = "Memory — empty", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Memory — empty — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoryEmpty() = DuaGenAITheme(darkTheme = false) {
     MemoryScreen(repository = MemoryRepository(seed = emptyList(), loadDelayMs = 0))
 }
 
-@Preview(name = "Memory — error", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Memory — empty — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun MemoryEmptyDark() = DuaGenAITheme(darkTheme = true) {
+    MemoryScreen(repository = MemoryRepository(seed = emptyList(), loadDelayMs = 0))
+}
+
+@Preview(name = "Memory — error — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun MemoryErrorPreview() = DuaGenAITheme(darkTheme = false) {
+    MemoryScreen(repository = MemoryRepository(seed = sampleMemories, failOnLoad = true, loadDelayMs = 0))
+}
+
+@Preview(name = "Memory — error — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun MemoryErrorDark() = DuaGenAITheme(darkTheme = true) {
     MemoryScreen(repository = MemoryRepository(seed = sampleMemories, failOnLoad = true, loadDelayMs = 0))
 }

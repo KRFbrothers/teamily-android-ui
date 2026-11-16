@@ -31,10 +31,7 @@ import kotlin.math.sin
  *
  *  WHAT IT DRAWS
  *  -------------
- *  The art set ships 42 SVG cubes (under `webpages/M3-design_v01/icons/`). The
- *  Android module cannot read the web page's icons, and rasterising 42 SVGs into
- *  drawables for a design kit's compile target is not worth the dependency, so
- *  the avatar is DRAWN: an isometric cube whose three faces are three shades of
+ *  The avatar is DRAWN: an isometric cube whose three faces are three shades of
  *  one colour chosen deterministically from the cube id.
  *
  *  The result is stable per id (the same cube always looks the same), distinct

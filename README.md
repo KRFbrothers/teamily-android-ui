@@ -1,16 +1,11 @@
 # Dua Gen AI — Android UI Design Package (v01)
 
+CRITICAL: This repository is 100% Kotlin Jetpack Compose (`app/src/main/java/ai/duagenai/design/`). Never create `.html` prototype files. Use `@Preview(widthDp = 390, heightDp = 844)` and `./gradlew :app:assembleDebug` for all previews.
+
 This repository is the **UI design package for the Dua Gen AI Android app**, version **v01**.
-It contains the Material 3 (M3) design implementation as Jetpack Compose Kotlin sources plus a
-self-contained interactive HTML preview of the same screens.
-
-Everything here is a design/implementation reference. The Kotlin files are the screen-level
-Compose sources; the HTML file is a pixel-accurate, clickable preview of the same UI.
-
-**The Kotlin sources are now a real, buildable Android project.** The `app/` module
-(`ai.duagenai.design`) compiles the same screens, with a Gradle wrapper, an
-`AndroidManifest.xml`, and the theme / cube / navigation types the screens reference.
-See [Building](#building) below.
+The Material 3 (M3) screens are Jetpack Compose Kotlin in the `app/` module
+(`ai.duagenai.design`), with a Gradle wrapper, an `AndroidManifest.xml`, and the theme /
+cube / navigation types the screens reference. See [Building](#building) below.
 
 ---
 
@@ -29,13 +24,10 @@ Dua Gen AI — ek complete package: Dua AI, Dua Agent aur Dua Workspace.
 ## What's in here
 
 ```
-documents/M3-design_v01/     ← ARCHIVED original design snapshot (do not edit)
-    res/font/                        ← official Lato Regular / Bold (ttf, SIL OFL)
-    licenses/lato-OFL.txt            ← Lato license
-webpages/M3-design_v01/      ← Interactive HTML preview + assets
-    index.html                       ← the whole preview in one file
-    fonts/                           ← Lato 400 / 700 (woff2, from the same official files)
-    icons/                           ← cube_01.svg … cube_42.svg
+app/src/main/java/ai/duagenai/design/   ← screens, nav, theme (source of truth)
+app/src/main/res/font/                  ← Lato Regular / Bold, wired by DuaGenAITheme
+app/src/main/res/drawable/              ← user avatar and 3D bot badge
+documents/M3-design_v01/                ← ARCHIVED snapshot (do not edit)
 ```
 
 > **`documents/M3-design_v01/` is archived.** It is the original design snapshot,
@@ -68,38 +60,21 @@ webpages/M3-design_v01/      ← Interactive HTML preview + assets
 | `UrlOpener.kt` | Shared URL-opening helper |
 | `TouchTargets.kt` | 48dp minimum touch-target helper |
 | `TeamilyTokens.kt` | Forest-slate glass palette (light/dark) and card / composer / dock shapes |
-| `TeamilyTypography.kt` | Teamily type scale; pass `teamilyTypography(LatoFontFamily)` once the app loads `res/font/` |
+| `TeamilyTypography.kt` | Teamily type scale. `DuaGenAITheme` passes Lato from `res/font/` |
 | `TeamilyEffects.kt` | Shadows, glass blur, press scale, and motion |
 | `SettingsStore.kt` | Settings persistence |
 | `DuaGenAINavHostTest.kt` | Compose UI test suite for the nav host and screens |
 
-### `webpages/M3-design_v01/` — HTML preview
-
-`index.html` is a single self-contained page that renders every screen as a phone mock, in
-**light and dark** mode side by side. It is interactive: buttons, dialogs, snackbars, swipe
-gestures, long-press menus and tooltips all work in the browser.
-
----
-
 ## How to view it
 
-**The HTML preview (easiest):**
+Preview a screen with `@Preview(widthDp = 390, heightDp = 844)`, or build the app:
 
-1. Open `webpages/M3-design_v01/index.html` in any modern browser — no server, no build
-   step, no network needed (fonts and icons are local).
-2. Or serve it locally:
-   ```bash
-   cd webpages/M3-design_v01
-   python3 -m http.server 8000
-   # then open http://localhost:8000/
-   ```
-3. Toggle light/dark with the theme switch in the preview header.
+```bash
+./gradlew :app:assembleDebug
+```
 
-**The Kotlin sources:**
-
-Read them directly — they are plain `.kt` files. They reference Material 3 theme tokens
-(`MaterialTheme.colorScheme.*`, `MaterialTheme.typography.*`) rather than hardcoded colors, so
-they are meant to be dropped into a Compose app that provides an M3 theme.
+The sources use Material 3 theme tokens (`MaterialTheme.colorScheme.*`,
+`MaterialTheme.typography.*`). `DuaGenAITheme` supplies the palette and Lato.
 
 ---
 
@@ -124,8 +99,7 @@ SDK with `ANDROID_HOME` or a `local.properties` file containing `sdk.dir=/path/t
 | `app/src/main/java/ai/duagenai/design/theme/` | Palette, type scale, shapes, effects, `DuaGenAITheme` |
 | `app/src/main/java/ai/duagenai/design/nav/` | `DuaGenAINavHost` + `MainActivity` |
 | `app/src/test/java/ai/duagenai/design/nav/` | Compose UI test suite |
-| `documents/M3-design_v01/` | 🔒 Archived original snapshot — do not edit or copy from; `app/src/main/` is the maintained copy |
-| `webpages/M3-design_v01/` | Interactive HTML preview |
+| `documents/M3-design_v01/` | Archived original snapshot — do not edit; `app/src/main/` is the source of truth |
 
 ---
 

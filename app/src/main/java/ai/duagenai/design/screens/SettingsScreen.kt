@@ -82,6 +82,27 @@ private const val SETTINGS_SIGN_OUT_UNAVAILABLE = "Signing out is not available 
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     accountDataSource: RemoteAccountDataSource = RemoteAccountDataSource(),
+    connectorSummary: String = "2/5",
+    languageLabel: String = "English",
+    themeModeLabel: String = "System default",
+    storageLabel: String = "3.2 GB of 15 GB",
+    notificationsLabel: String = "5 of 7 on",
+    onOpenConnectors: () -> Unit = {},
+    onOpenRuntimes: () -> Unit = {},
+    onOpenSkills: () -> Unit = {},
+    onOpenLanguage: () -> Unit = {},
+    onOpenChannels: () -> Unit = {},
+    onOpenAgentApi: () -> Unit = {},
+    onOpenAppearance: () -> Unit = {},
+    onOpenStorage: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    /**
+     * Profile & Device → Sign out, after the confirm dialog.
+     *
+     * This is the read-only veil. It does not replace the account "Sign out"
+     * row above, which still ends the real session.
+     */
+    onEnterReadOnly: () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
@@ -187,6 +208,24 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            SettingsDirectory(
+                connectorSummary = connectorSummary,
+                languageLabel = languageLabel,
+                themeLabel = themeModeLabel,
+                storageLabel = storageLabel,
+                notificationsLabel = notificationsLabel,
+                onOpenConnectors = onOpenConnectors,
+                onOpenRuntimes = onOpenRuntimes,
+                onOpenSkills = onOpenSkills,
+                onOpenLanguage = onOpenLanguage,
+                onOpenChannels = onOpenChannels,
+                onOpenAgentApi = onOpenAgentApi,
+                onOpenAppearance = onOpenAppearance,
+                onOpenStorage = onOpenStorage,
+                onOpenNotifications = onOpenNotifications,
+                onEnterReadOnly = onEnterReadOnly,
+            )
         }
     }
 

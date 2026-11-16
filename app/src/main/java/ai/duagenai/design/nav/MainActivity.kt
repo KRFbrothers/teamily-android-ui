@@ -14,9 +14,9 @@ import ai.duagenai.design.theme.DuaGenAITheme
  * buried at the bottom of a 550-line nav file is not findable by anyone
  * searching for it.
  *
- * `enableEdgeToEdge()` is called before `setContent` so the theme's
- * `WindowCompat` status-bar work in [DuaGenAITheme] has an edge-to-edge window
- * to act on.
+ * `enableEdgeToEdge()` is called before `setContent` so [DuaGenAITheme] can
+ * paint the status-bar band (`#1D2220` dark, `#FAFBFA` light) and set
+ * `isAppearanceLightStatusBars = !darkTheme`.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

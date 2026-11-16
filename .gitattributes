@@ -1,0 +1,8 @@
+# Language stats: this repo is the Kotlin app. Android XML, docs, and
+# config stay in the tree but are not the language GitHub reports.
+*.xml linguist-vendored
+*.md linguist-documentation
+*.properties linguist-vendored
+*.pro linguist-vendored
+gradlew linguist-generated
+*.jar linguist-vendored

@@ -51,6 +51,8 @@ data class TeamilyPalette(
     val cardGradient: Brush,
     val borderGradient: Brush,
     val cardHeroColor: Color,
+    /** Soft rim on the personal-agent hero. #AEBBB1 at 13% (0x22). */
+    val heroCardBorder: Color,
     val surfaceRecessed: Color,
     val statusbarBg: Color,
     val topbarBg: Color,
@@ -108,6 +110,8 @@ data class TeamilyPalette(
     val notificationDot: Color,
     /** `--nv-notification-outline`: the ring around [notificationDot]. */
     val notificationOutline: Color,
+    /** Ring around the agent-home avatar online dot. Reference header #1D2220. */
+    val avatarOnlineRing: Color,
     /** `--nv-shadow-resting` for glass cards. */
     val restingShadowElevation: Dp,
     val restingShadowAmbient: Color,
@@ -118,8 +122,8 @@ data class TeamilyPalette(
 )
 
 val TeamilyDarkPalette = TeamilyPalette(
-    // Live measured on realme device: #1D2220 (R=29, G=34, B=32) rich slate-green charcoal
-    bgCanvas = Color(0xFF1D2220),
+    // HTML phone `--canvas` (#141816). Surfaces stay the measured slate.
+    bgCanvas = Color(0xFF141816),
     bgCanvasTop = Color(0xFF1E2522),
     bgCanvasBottom = Color(0xFF171C19),
     // Device-measured vertical canvas. Not in the zip and no longer drawn by
@@ -153,10 +157,12 @@ val TeamilyDarkPalette = TeamilyPalette(
     ),
     // Hero pinned card fill (dark).
     cardHeroColor = Color(0xFF253D31),
+    heroCardBorder = Color(0x22AEBBB1),
     // Live measured recessed search field: #181D1B (R=24, G=29, B=27)
     surfaceRecessed = Color(0xFF181D1B),
+    // Reference dark header. The status-bar band uses this so it matches the header.
     statusbarBg = Color(0xFF1D2220),
-    topbarBg = Color(0xFF1D2220),
+    topbarBg = Color(0xFF141816),
     // Top of `--nv-glass-surface` dark (spec allows solid #323B36 only as an elevated fallback).
     composerBg = Color(0xFF29322C),
     bottomnavBg = Color(0xFF1F2521),
@@ -216,12 +222,13 @@ val TeamilyDarkPalette = TeamilyPalette(
     tileInk = Color(0xFF17201B),
     // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
     atmosphereDeep = Color(0xFF242B27),
-    atmosphereBase = Color(0xFF171C19),
+    atmosphereBase = Color(0xFF141816),
     atmosphereStop = 0.48f,
     toolActive = Color(0xFF42D982),
     notificationDot = Color(0xFFA2E4B6),
     // Dark --nv-notification-outline = --nv-canvas.
     notificationOutline = Color(0xFF141816),
+    avatarOnlineRing = Color(0xFF1D2220),
     restingShadowElevation = 6.dp,
     restingShadowAmbient = Color(0x55000000),
     restingShadowSpot = Color(0x88000000),
@@ -230,11 +237,12 @@ val TeamilyDarkPalette = TeamilyPalette(
 )
 
 val TeamilyLightPalette = TeamilyPalette(
-    bgCanvas = Color(0xFFFFFFFF),
-    bgCanvasTop = Color(0xFFFFFFFF),
-    bgCanvasBottom = Color(0xFFFFFFFF),
+    // HTML phone `--canvas` (#EEF2EF). Cards stay white (`bgSurface`).
+    bgCanvas = Color(0xFFEEF2EF),
+    bgCanvasTop = Color(0xFFEEF2EF),
+    bgCanvasBottom = Color(0xFFEEF2EF),
     bgCanvasGradient = Brush.verticalGradient(
-        listOf(Color(0xFFFFFFFF), Color(0xFFFFFFFF)),
+        listOf(Color(0xFFEEF2EF), Color(0xFFEEF2EF)),
     ),
     bgSurface = Color(0xFFFFFFFF),
     surfaceGradient = Brush.verticalGradient(
@@ -256,9 +264,10 @@ val TeamilyLightPalette = TeamilyPalette(
         1f to Color(0xFFCFD9D2),
     ),
     cardHeroColor = Color(0xFFDDF3E5),
+    heroCardBorder = Color(0x22AEBBB1),
     surfaceRecessed = Color(0xFFF2F4F3),
-    statusbarBg = Color(0xFFFFFFFF),
-    topbarBg = Color(0xFFFFFFFF),
+    statusbarBg = Color(0xFFFAFBFA),
+    topbarBg = Color(0xFFEEF2EF),
     // Same fill as the round icon buttons (chromeFill).
     composerBg = Color(0xFFEEF2EF),
     bottomnavBg = Color(0xFFF8FAF8),
@@ -310,7 +319,7 @@ val TeamilyLightPalette = TeamilyPalette(
     tileInk = Color(0xFF17201B),
     // --nv-atmosphere: radial-gradient(ellipse at 8% 92%, #e8f3ec 0, transparent 52%), #fafbfa
     atmosphereDeep = Color(0xFFE8F3EC),
-    atmosphereBase = Color(0xFFFAFBFA),
+    atmosphereBase = Color(0xFFEEF2EF),
     atmosphereStop = 0.52f,
     // --nv-green-700 (light --text-brand / active ink); #42D982 on #EEF2EF is 1.62:1.
     toolActive = Color(0xFF087C45),
@@ -318,6 +327,7 @@ val TeamilyLightPalette = TeamilyPalette(
     notificationDot = Color(0xFF087C45),
     // --nv-notification-outline = --nv-neutral-0.
     notificationOutline = Color(0xFFFFFFFF),
+    avatarOnlineRing = Color(0xFF1D2220),
     restingShadowElevation = 4.dp,
     restingShadowAmbient = Color(0x0A284735),
     restingShadowSpot = Color(0x1F284735),

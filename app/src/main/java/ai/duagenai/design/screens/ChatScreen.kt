@@ -280,6 +280,8 @@ fun ChatScreen(
     // Agent chat only: tapping the header title or avatar opens the Dua Agent
     // profile. Null (the default) leaves the header exactly as before.
     onOpenAgentProfile: (() -> Unit)? = null,
+    /** Create tiles in the composer + sheet. */
+    onOpenCreate: ((String) -> Unit)? = null,
     // Where the transcript LIVES. A ViewModel, not `rememberSaveable`: see
     // ChatTranscriptStore for why a whole conversation must never go into the
     // saved-instance Bundle. Hoisted by the nav host so every thread shares one
@@ -474,6 +476,7 @@ fun ChatScreen(
                     onToggleSkill = toggleSkill,
                     mcpEnabled = mcp,
                     onToggleMcp = toggleMcp,
+                    onOpenCreate = onOpenCreate,
                 )
             }
         },
