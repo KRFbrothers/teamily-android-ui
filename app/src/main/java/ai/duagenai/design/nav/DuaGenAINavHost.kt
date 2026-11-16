@@ -1,6 +1,7 @@
 package ai.duagenai.design.nav
 
 import android.net.Uri
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
@@ -339,6 +340,13 @@ fun DuaGenAINavHost(
         else -> null
     }
 
+    val isDark = when (themeMode) {
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+        ThemeMode.System -> isSystemInDarkTheme()
+    }
+
+    DuaGenAITheme(darkTheme = isDark) {
     val layoutDirection = if (languageId == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
     SignedOutReadOnlyScreen(
@@ -809,6 +817,7 @@ fun DuaGenAINavHost(
                 )
             }
         }
+    }
     }
     }
     }
