@@ -91,6 +91,8 @@ import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
+import androidx.compose.foundation.layout.widthIn
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Memory — M3 components used:
@@ -293,12 +295,13 @@ fun MemoryScreen(
     // The clipboard, for the detail dialog's "Copy text" action. The platform
     // service, not a new dependency.
     val clipboard = LocalClipboardManager.current
-    // Which memory is awaiting delete confirmation, or null. Local UI state —
-    // it is not persisted and dies with the screen. BOTH the swipe and the
-    // long-press menu's Delete set this, so there is ONE confirmation path.
-    var pendingDelete by remember { mutableStateOf<MemoryItem?>(null) }
+    // Which memory is awaiting delete confirmation, or null. The id is
+    // rememberSaveable (MemoryItem is not a saveable type); the item is looked
+    // up from the loaded list. BOTH the swipe and the menu's Delete set this,
+    // so there is ONE confirmation path.
+    var pendingDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
     // The long-press context menu's subject, or null when the menu is closed.
-    // Local UI state, like `pendingDelete`: the menu is a transient surface.
+    // Local UI state: the menu is a transient surface.
     var menuFor by remember { mutableStateOf<MemoryItem?>(null) }
     // The memory whose DETAIL dialog is open, or null. This is the fallback the
     // menu's "Open" uses when the memory has no URL to hand to the platform.
@@ -340,10 +343,16 @@ fun MemoryScreen(
             )
         },
     ) { inner ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize(),
         ) {
             // The search field and chips. Only drawn when there is something to
             // search — a search field over a fresh account's empty state would
@@ -480,7 +489,7 @@ fun MemoryScreen(
                                 items(visible, key = { it.id }) { memory ->
                                     SwipeToDeleteMemoryRow(
                                         memory = memory,
-                                        onSwipeDelete = { pendingDelete = memory },
+                                        onSwipeDelete = { pendingDeleteId = memory.id },
                                         menuOpen = menuFor?.id == memory.id,
                                         onLongPress = { menuFor = memory },
                                         onMenuDismiss = { menuFor = null },
@@ -497,7 +506,7 @@ fun MemoryScreen(
                                         // one confirmation and one repository call.
                                         onDelete = {
                                             menuFor = null
-                                            pendingDelete = memory
+                                            pendingDeleteId = memory.id
                                         },
                                         // A plain tap opens the detail dialog,
                                         // which is where the "Open source" button
@@ -511,20 +520,22 @@ fun MemoryScreen(
                 }
             }
         }
+        }
     }
 
     // The delete confirmation. Confirming calls the repository; the screen never
     // touches the list itself. This is the ONE delete path — the swipe is the
     // only way in, and it lands here.
+    val pendingDelete = all.firstOrNull { it.id == pendingDeleteId }
     pendingDelete?.let { memory ->
         AlertDialog(
-            onDismissRequest = { pendingDelete = null },
+            onDismissRequest = { pendingDeleteId = null },
             title = { Text("Delete memory?") },
             text = { Text("\"${memory.title}\" hamesha ke liye hat jayegi.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        pendingDelete = null
+                        pendingDeleteId = null
                         scope.launch {
                             // The ONE delete + undo + failure flow, shared with
                             // Artifacts (see WriteFeedback.kt). The success
@@ -544,7 +555,7 @@ fun MemoryScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) {
+                TextButton(onClick = { pendingDeleteId = null }) {
                     Text("Cancel")
                 }
             },

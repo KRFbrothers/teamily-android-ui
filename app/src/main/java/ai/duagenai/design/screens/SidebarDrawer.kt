@@ -61,6 +61,7 @@ import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.foundation.layout.widthIn
 
 /* ============================================================================
  *  Dua Gen AI — Sidebar drawer
@@ -144,7 +145,11 @@ fun SidebarDrawer(
     val colors = DuaGenAITheme.colors
 
     ModalDrawerSheet(
-        modifier = modifier.width(320.dp),
+        // fillMaxWidth so a narrow multi-window pane still uses the window;
+        // widthIn caps the drawer at the phone width of 320dp.
+        modifier = modifier
+            .fillMaxWidth()
+            .widthIn(max = 320.dp),
         drawerContainerColor = MaterialTheme.colorScheme.surface,
         drawerShape = DuaGenAITheme.shapes.sheet,
     ) {

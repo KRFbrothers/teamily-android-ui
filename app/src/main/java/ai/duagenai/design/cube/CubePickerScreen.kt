@@ -336,7 +336,8 @@ fun CubePickerScreen(
                 )
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
+                    // 80dp keeps 4 columns at 390dp (gutter 14 + spacedBy 6).
+                    columns = GridCells.Adaptive(80.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = spacing.gutter,

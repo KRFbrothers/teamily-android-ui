@@ -125,6 +125,9 @@ import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyPressScale
 import ai.duagenai.design.theme.teamilyPrimaryGlow
 import ai.duagenai.design.theme.teamilyRestingShadow
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Home — the two modes, per the confirmed product model
@@ -318,7 +321,13 @@ fun HomeScreen(
             // over #FAFBFA, dark #242B27 glow over #171C19, both at 8%/92%).
             .teamilyCanvas(palette),
     ) {
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .align(Alignment.TopCenter)
+                .widthIn(max = MaxContentWidth)
+                .fillMaxHeight()
+                .fillMaxWidth(),
+        ) {
 
             if (mode == HomeMode.Dua) {
                 /* ================= DUA MODE =================
@@ -1936,20 +1945,28 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
 }
 
 @Preview(name = "Home Dua — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Dua — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Home Dua — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun HomeDuaLight() = DuaGenAITheme(darkTheme = false) { HomeScreen() }
 
 @Preview(name = "Home Dua — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Dua — dark — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Home Dua — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun HomeDuaDark() = DuaGenAITheme(darkTheme = true) { HomeScreen() }
 
 @Preview(name = "Home Agent — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Agent — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Home Agent — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun HomeAgentLight() = DuaGenAITheme(darkTheme = false) {
     HomeScreen(mode = HomeMode.Agent)
 }
 
 @Preview(name = "Home Agent — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Preview(name = "Home Agent — dark — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
+@Preview(name = "Home Agent — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun HomeAgentDark() = DuaGenAITheme(darkTheme = true) {
     HomeScreen(mode = HomeMode.Agent)

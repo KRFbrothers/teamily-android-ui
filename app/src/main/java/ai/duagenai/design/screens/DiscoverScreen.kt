@@ -16,6 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
  *  Discover — the "Discover" dock tab's destination.
@@ -63,10 +67,16 @@ fun DiscoverScreen(modifier: Modifier = Modifier) {
             )
         },
     ) { inner ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
+                .padding(inner),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxSize()
                 .padding(horizontal = spacing.gutter, vertical = spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
@@ -89,6 +99,7 @@ fun DiscoverScreen(modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
         }
     }
 }
