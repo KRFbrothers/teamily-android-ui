@@ -342,52 +342,31 @@ fun DuaAgentDemoScreen(
             }
 
             // Bottom Input Bar
-            Surface(
+            var selectedMode by remember { mutableStateOf("Auto") }
+            TeamilyAgentChatBar(
+                value = inputText,
+                onValueChange = { inputText = it },
+                onSend = { sendCommand(inputText) },
+                placeholder = "Type a message...",
+                selectedMode = selectedMode,
+                onModeChange = { selectedMode = it },
+                onMeetingMinutesClick = {
+                    sendCommand("Generate meeting minutes from recent discussions")
+                },
+                onDictateClick = {
+                    sendCommand("Start dictation session")
+                },
+                onVoiceMessageClick = {
+                    sendCommand("Voice message recording started")
+                },
+                onVoiceCallClick = {
+                    sendCommand("Initiate voice call session")
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
                     .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-                shape = TeamilyShapes.composer,
-                color = palette.composerBg,
-                border = BorderStroke(1.dp, palette.borderGradient),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BasicTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        modifier = Modifier.weight(1f),
-                        textStyle = DuaGenAITextStyles.bubble.copy(color = MaterialTheme.colorScheme.onSurface),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = { sendCommand(inputText) }),
-                        decorationBox = { inner ->
-                            if (inputText.isEmpty()) {
-                                Text(
-                                    text = "Instruct Dua Agent or orchestrate...",
-                                    style = DuaGenAITextStyles.bubble,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            inner()
-                        },
-                    )
-                    IconButton(
-                        onClick = { sendCommand(inputText) },
-                        enabled = inputText.isNotBlank(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.Send,
-                            contentDescription = "Send",
-                            tint = if (inputText.isNotBlank()) palette.signalGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }

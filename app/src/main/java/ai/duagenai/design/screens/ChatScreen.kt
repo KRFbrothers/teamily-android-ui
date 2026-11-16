@@ -347,6 +347,8 @@ fun ChatScreen(
     }
     val mcp = if (onToggleMcp != null) mcpEnabled else localMcp
     val toggleMcp: (Boolean) -> Unit = onToggleMcp ?: { localMcp = it }
+    var agentSheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
+    var selectedMode by rememberSaveable(chatId) { mutableStateOf("Auto") }
     val listState = rememberLazyListState()
 
     // The list is the conversation plus, while Agent is "typing", one extra row.
@@ -465,19 +467,46 @@ fun ChatScreen(
                     WindowInsets.navigationBars.union(WindowInsets.ime),
                 ),
             ) {
-                DuaComposer(
-                    placeholder = "Message $chatTitle…",
-                    value = draft,
-                    onValueChange = { draft = it },
-                    onSend = { send() },
-                    sending = agentTyping,
-                    onStop = { stop() },
-                    enabledSkillIds = skills,
-                    onToggleSkill = toggleSkill,
-                    mcpEnabled = mcp,
-                    onToggleMcp = toggleMcp,
-                    onOpenCreate = onOpenCreate,
-                )
+                if (chatId == AGENT_CHAT_ID || chatId == PERSONAL_AGENT_CHAT_ID) {
+                    TeamilyAgentChatBar(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        onSend = { send() },
+                        placeholder = "Type a message...",
+                        selectedMode = selectedMode,
+                        onModeChange = { selectedMode = it },
+                        onAttachClick = { agentSheet = ComposerSheet.Plus },
+                        onMeetingMinutesClick = {
+                            draft = "Generate meeting minutes for the latest session"
+                        },
+                        onDictateClick = {},
+                        onEmojiClick = {},
+                        onVoiceMessageClick = {},
+                        onVoiceCallClick = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                start = spacing.gutter,
+                                end = spacing.gutter,
+                                top = 2.dp,
+                                bottom = spacing.xs,
+                            ),
+                    )
+                } else {
+                    DuaComposer(
+                        placeholder = "Message $chatTitle…",
+                        value = draft,
+                        onValueChange = { draft = it },
+                        onSend = { send() },
+                        sending = agentTyping,
+                        onStop = { stop() },
+                        enabledSkillIds = skills,
+                        onToggleSkill = toggleSkill,
+                        mcpEnabled = mcp,
+                        onToggleMcp = toggleMcp,
+                        onOpenCreate = onOpenCreate,
+                    )
+                }
             }
         },
     ) { inner ->
@@ -501,6 +530,31 @@ fun ChatScreen(
             if (agentTyping) {
                 item { TypingBubble(cubeId, chatTitle) }
             }
+        }
+    }
+
+    if (chatId == AGENT_CHAT_ID || chatId == PERSONAL_AGENT_CHAT_ID) {
+        when (agentSheet) {
+            ComposerSheet.Plus -> ComposerPlusSheet(
+                onOpenSkills = { agentSheet = ComposerSheet.Skills },
+                onOpenMcp = { agentSheet = ComposerSheet.Mcp },
+                onDismiss = { agentSheet = ComposerSheet.None },
+                onOpenCreate = { createKey ->
+                    agentSheet = ComposerSheet.None
+                    onOpenCreate?.invoke(createKey)
+                },
+            )
+            ComposerSheet.Skills -> ComposerSkillsSheet(
+                enabledSkillIds = skills,
+                onToggleSkill = toggleSkill,
+                onDismiss = { agentSheet = ComposerSheet.None },
+            )
+            ComposerSheet.Mcp -> ComposerMcpSheet(
+                mcpEnabled = mcp,
+                onToggleMcp = toggleMcp,
+                onDismiss = { agentSheet = ComposerSheet.None },
+            )
+            ComposerSheet.None -> Unit
         }
     }
 }

@@ -330,52 +330,31 @@ fun PersonalAgentDemoScreen(
             }
 
             // Bottom Input Bar
-            Surface(
+            var selectedMode by remember { mutableStateOf("Auto") }
+            TeamilyAgentChatBar(
+                value = inputText,
+                onValueChange = { inputText = it },
+                onSend = { sendPrompt(inputText) },
+                placeholder = "Type a message...",
+                selectedMode = selectedMode,
+                onModeChange = { selectedMode = it },
+                onMeetingMinutesClick = {
+                    sendPrompt("Draft summary of today's meetings and tasks")
+                },
+                onDictateClick = {
+                    sendPrompt("Take a quick voice note")
+                },
+                onVoiceMessageClick = {
+                    sendPrompt("Voice message memo")
+                },
+                onVoiceCallClick = {
+                    sendPrompt("Call Personal Agent")
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
                     .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-                shape = TeamilyShapes.composer,
-                color = palette.composerBg,
-                border = BorderStroke(1.dp, palette.borderGradient),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BasicTextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        modifier = Modifier.weight(1f),
-                        textStyle = DuaGenAITextStyles.bubble.copy(color = MaterialTheme.colorScheme.onSurface),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = { sendPrompt(inputText) }),
-                        decorationBox = { inner ->
-                            if (inputText.isEmpty()) {
-                                Text(
-                                    text = "Ask your Personal Agent...",
-                                    style = DuaGenAITextStyles.bubble,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            inner()
-                        },
-                    )
-                    IconButton(
-                        onClick = { sendPrompt(inputText) },
-                        enabled = inputText.isNotBlank(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.Send,
-                            contentDescription = "Send",
-                            tint = if (inputText.isNotBlank()) palette.signalGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }
