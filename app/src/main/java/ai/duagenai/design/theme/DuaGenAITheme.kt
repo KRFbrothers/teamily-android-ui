@@ -24,12 +24,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.compose.runtime.remember
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import ai.duagenai.design.R
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -288,16 +284,9 @@ object DuaGenAITheme {
         content: @Composable () -> Unit,
     ) {
         val palette = if (darkTheme) TeamilyDarkPalette else TeamilyLightPalette
-        // Lato 400 / 700 from res/font. Roles stay the existing Teamily scale.
-        val lato = remember {
-            FontFamily(
-                Font(R.font.lato_regular, FontWeight.Normal),
-                Font(R.font.lato_bold, FontWeight.Bold),
-            )
-        }
         MaterialTheme(
             colorScheme = if (darkTheme) darkScheme(palette) else lightScheme(palette),
-            typography = teamilyTypography(lato),
+            typography = TeamilyTypography,
             shapes = MaterialTheme.shapes.copy(
                 small = TeamilyShapes.md,
                 medium = TeamilyShapes.lg,
@@ -361,8 +350,10 @@ object DuaGenAITheme {
 
     /** The dark [TeamilyPalette] mapped onto M3's roles. */
     private fun darkScheme(p: TeamilyPalette) = darkColorScheme(
-        primary = p.accentHover,
-        onPrimary = p.accentContrast,
+        // Freeze primary #087C45. onPrimary is textPrimary (#F7F9F7), not
+        // accentContrast (#17201B), which fails contrast on this fill.
+        primary = p.accent,
+        onPrimary = p.textPrimary,
         primaryContainer = p.accentSoft,
         onPrimaryContainer = p.primaryInk,
         secondary = p.logoMint,
