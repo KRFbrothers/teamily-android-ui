@@ -30,6 +30,8 @@ import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.cube.CubePickerScreen
 import ai.duagenai.design.cube.CubeStore
+import ai.duagenai.design.screens.PersonalAgentDemoScreen
+import ai.duagenai.design.screens.DuaAgentDemoScreen
 import ai.duagenai.design.screens.AgentsScreen
 import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
@@ -191,6 +193,8 @@ object DuaGenAIRoutes {
     const val AGENT_LIVE_SITES = "agent/live_sites"
     const val AGENT_MAIL = "agent/mail"
     const val AGENT_NEW_GROUP = "agent/new_group"
+    const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
+    const val DUA_AGENT_DEMO = "agent/dua_demo"
 
     /** `chat/{chatId}?title={title}` — the title is optional and display-only. */
     const val CHAT = "chat/{chatId}?title={title}"
@@ -478,14 +482,10 @@ fun DuaGenAINavHost(
                     // the API. Dua Agent (the pinned row) is the engine thread.
                     // The listed chats below use the same chat route as the drawer.
                     onOpenPersonalAgentChat = {
-                        navController.navigate(
-                            DuaGenAIRoutes.chat(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE),
-                        )
+                        navController.navigate(DuaGenAIRoutes.PERSONAL_AGENT_DEMO)
                     },
                     onOpenDuaAgentChat = {
-                        navController.navigate(
-                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, DUA_AGENT_TITLE),
-                        )
+                        navController.navigate(DuaGenAIRoutes.DUA_AGENT_DEMO)
                     },
                     onOpenListedChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
@@ -643,30 +643,54 @@ fun DuaGenAINavHost(
             ) { entry ->
                 val chatId = entry.arguments?.getString("chatId").orEmpty()
                 val title = entry.arguments?.getString("title").orEmpty()
-                ChatScreen(
-                    chatId = chatId,
-                    chatTitle = title.ifBlank { "Chat" },
-                    // Back returns to whatever opened the thread — Home, in the
-                    // normal flow. popBackStack() is a no-op if the stack is
-                    // empty, so a deep link into a chat cannot crash on back.
+                if (chatId == PERSONAL_AGENT_CHAT_ID) {
+                    PersonalAgentDemoScreen(onBack = { navController.popBackStack() })
+                } else if (chatId == AGENT_CHAT_ID) {
+                    DuaAgentDemoScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
+                        onOpenProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
+                    )
+                } else {
+                    ChatScreen(
+                        chatId = chatId,
+                        chatTitle = title.ifBlank { "Chat" },
+                        // Back returns to whatever opened the thread — Home, in the
+                        // normal flow. popBackStack() is a no-op if the stack is
+                        // empty, so a deep link into a chat cannot crash on back.
+                        onBack = { navController.popBackStack() },
+                        enabledSkillIds = enabledSkills.toSet(),
+                        onToggleSkill = { id ->
+                            enabledSkills =
+                                if (id in enabledSkills) enabledSkills - id else enabledSkills + id
+                        },
+                        mcpEnabled = mcpEnabled,
+                        onToggleMcp = { mcpEnabled = it },
+                        // Only the Agent chat has a profile: its header avatar and
+                        // title open the Dua Agent profile (SVG 01).
+                        onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
+                            { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
+                        } else {
+                            null
+                        },
+                        onOpenCreate = { kind ->
+                            navController.navigate(DuaGenAIRoutes.create(kind))
+                        },
+                    )
+                }
+            }
+
+            composable(DuaGenAIRoutes.PERSONAL_AGENT_DEMO) {
+                PersonalAgentDemoScreen(
                     onBack = { navController.popBackStack() },
-                    enabledSkillIds = enabledSkills.toSet(),
-                    onToggleSkill = { id ->
-                        enabledSkills =
-                            if (id in enabledSkills) enabledSkills - id else enabledSkills + id
-                    },
-                    mcpEnabled = mcpEnabled,
-                    onToggleMcp = { mcpEnabled = it },
-                    // Only the Agent chat has a profile: its header avatar and
-                    // title open the Dua Agent profile (SVG 01).
-                    onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
-                        { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
-                    } else {
-                        null
-                    },
-                    onOpenCreate = { kind ->
-                        navController.navigate(DuaGenAIRoutes.create(kind))
-                    },
+                )
+            }
+
+            composable(DuaGenAIRoutes.DUA_AGENT_DEMO) {
+                DuaAgentDemoScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
+                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
                 )
             }
 

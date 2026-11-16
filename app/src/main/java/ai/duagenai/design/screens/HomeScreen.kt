@@ -359,7 +359,16 @@ fun HomeScreen(
                         start = LocalDuaGenAISpacing.current.gutter,
                         end = LocalDuaGenAISpacing.current.gutter,
                         top = 8.dp,
-                        bottom = 16.dp,
+                        bottom = 12.dp,
+                    ),
+                )
+                // Personal Agent is FIXED: remains pinned at top during scroll
+                PersonalAgentHeroCard(
+                    onClick = onOpenPersonalAgentChat,
+                    modifier = Modifier.padding(
+                        start = LocalDuaGenAISpacing.current.gutter,
+                        end = LocalDuaGenAISpacing.current.gutter,
+                        bottom = 8.dp,
                     ),
                 )
                 Box(
@@ -368,9 +377,7 @@ fun HomeScreen(
                         .fillMaxWidth(),
                 ) {
                     AgentHomeList(
-                        onOpenPersonalAgentChat = onOpenPersonalAgentChat,
                         onOpenDuaAgentChat = onOpenDuaAgentChat,
-                        onOpenListedChat = onOpenListedChat,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -1265,7 +1272,7 @@ private fun SearchRow(
  * ([onClick] = `onOpenPersonalAgentChat`).
  */
 @Composable
-private fun PersonalAgentHeroCard(
+internal fun PersonalAgentHeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1372,7 +1379,7 @@ private fun ChatAvatar(
 
 /** 3D bot image (`dua_bot_badge`) cropped to a circle. Hero avatar and its mini-badge. */
 @Composable
-private fun BotBadge(size: Dp) {
+internal fun BotBadge(size: Dp) {
     Image(
         painter = painterResource(R.drawable.dua_bot_badge),
         contentDescription = null,
@@ -1387,7 +1394,7 @@ private fun BotBadge(size: Dp) {
  * stays the untouched mint image for the hero.
  */
 @Composable
-private fun SignalBotBadge(size: Dp) {
+internal fun SignalBotBadge(size: Dp) {
     val context = LocalContext.current
     val green = teamilyPalette().signalGreen
     val bot = remember { botBadgeWithoutMint(context) }
@@ -1514,7 +1521,7 @@ private fun CanvasChatRow(
 
 /** The green verified check next to "Dua Agent". */
 @Composable
-private fun VerifiedCheck() {
+internal fun VerifiedCheck() {
     val palette = teamilyPalette()
     Canvas(
         Modifier
@@ -1613,28 +1620,19 @@ private fun SectionHeader(
 }
 
 /**
- * Agent home's scrolling body: hero card, Pinned section, divider, Chats
- * section. Bottom padding leaves room for the floating dock drawn over it.
+ * Agent home's scrolling body: Pinned Dua Agent (permanent agent) and its
+ * capabilities. The Personal Agent hero card remains fixed at the top during scroll.
+ * Other chat agents are removed for clarity.
  */
 @Composable
 private fun AgentHomeList(
-    onOpenPersonalAgentChat: () -> Unit,
     onOpenDuaAgentChat: () -> Unit,
-    onOpenListedChat: (chatId: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
-    var chatsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    // The dock is drawn OVER this list, so the list has to reserve room for it
-    // or the last row ends up underneath. The reservation is the dock's own
-    // height (60dp tab + 2 x 4dp vertical padding + 12dp bottom margin = 80dp)
-    // plus a gutter of breathing space, PLUS the system navigation-bar inset:
-    // the window is edge-to-edge (`enableEdgeToEdge()` in MainActivity), so the
-    // gesture bar sits inside our layout and would otherwise eat the dock's
-    // bottom margin and the last row with it.
     val dockReserve = 80.dp + spacing.gutter +
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
@@ -1643,17 +1641,10 @@ private fun AgentHomeList(
         contentPadding = PaddingValues(top = 4.dp, bottom = dockReserve),
     ) {
         item {
-            PersonalAgentHeroCard(
-                onClick = onOpenPersonalAgentChat,
-                modifier = Modifier.padding(horizontal = spacing.sm),
-            )
-        }
-        item {
             Column {
-                Spacer(Modifier.height(2.dp))
                 SectionHeader(
                     icon = SectionIcon.Pin,
-                    label = "Pinned \u00b7 1",
+                    label = "Permanent Agent \u00b7 Dua Agent",
                     expanded = pinnedExpanded,
                     onToggle = { pinnedExpanded = !pinnedExpanded },
                 )
@@ -1673,35 +1664,70 @@ private fun AgentHomeList(
                     }
                 }
             }
-        }
-        item {
-            Column {
-                HorizontalDivider(
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                    thickness = 0.5.dp,
-                    color = palette.border,
-                )
-                SectionHeader(
-                    icon = SectionIcon.Chat,
-                    label = "Chats \u00b7 ${agentHomeChats.size}",
-                    expanded = chatsExpanded,
-                    onToggle = { chatsExpanded = !chatsExpanded },
-                )
-            }
-        }
-        if (chatsExpanded) {
-            items(agentHomeChats, key = { it.chatId }) { chat ->
-                CanvasChatRow(
-                    title = chat.title,
-                    subtitle = chat.subtitle,
-                    time = chat.time,
-                    onClick = { onOpenListedChat(chat.chatId, chat.title) },
+            item {
+                // Feature summary for Dua Agent inside the scrollable body
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gutter, vertical = 6.dp)
+                        .clip(TeamilyShapes.card)
+                        .clickable(onClick = onOpenDuaAgentChat),
+                    shape = TeamilyShapes.card,
+                    color = palette.cardHeroColor,
+                    border = BorderStroke(1.dp, palette.heroCardBorder),
                 ) {
-                    if (chat.chatId == FULL_STACK_GUILD_CHAT_ID) {
-                        GroupCluster()
-                    } else {
-                        ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                            CharacterAvatar(chat.chatId)
+                    Column(Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(palette.signalGreen),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Dua Agent Engine Status",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            VerifiedCheck()
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Supervises multi-agent workflows, runs 5 built-in skills, and interfaces with external MCP tool servers.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Surface(
+                                shape = TeamilyShapes.capsule,
+                                color = palette.surfaceRecessed,
+                                border = BorderStroke(0.5.dp, palette.border),
+                            ) {
+                                Text(
+                                    text = "🤖 Multi-Agent Ready",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = palette.signalGreen,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                )
+                            }
+                            Surface(
+                                shape = TeamilyShapes.capsule,
+                                color = palette.surfaceRecessed,
+                                border = BorderStroke(0.5.dp, palette.border),
+                            ) {
+                                Text(
+                                    text = "🛠️ 5 Skills Active",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = palette.signalGreen,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                )
+                            }
                         }
                     }
                 }
