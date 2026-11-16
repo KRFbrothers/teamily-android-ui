@@ -230,32 +230,32 @@ private fun nowLabel(): String =
  */
 private val agentThread = listOf(
     Message.User(
-        "I need the Q3 launch handled — deck, competitor research and the invoice reconciliation.",
+        "I need the Q3 launch handled across our workspace agents.",
         "9:31 AM",
     ),
     Message.Agent(
-        "On it. I've split that across three agents: Slides Assistant is building the deck, Market Research is pulling cited competitor data, and Accounting Assistant is reconciling the invoices.",
+        "I've split that across three agents. Welcome to your workspace! Task tracking, research, and documentation pipelines are active.",
         "9:31 AM",
     ),
-    Message.User("Can you also spin up an agent for the launch email sequence?", "9:33 AM"),
+    Message.User("Can you monitor the project goals and keep the team updated?", "9:33 AM"),
     Message.Agent(
-        "Done — I created a new agent for it and handed it the brief. All four are running now; I'll report back as each one finishes.",
+        "Workspace monitoring is active. I will track progress and deliver updates directly to this channel.",
         "9:34 AM",
     ),
 )
 
 private val sampleThread = listOf(
     Message.User(
-        "Draft a landing page for our AI meetup in Palo Alto — dark hero, teal accent, one CTA.",
+        "Hello! What tools and capabilities are available in this workspace?",
         "9:38 AM",
     ),
     Message.Agent(
-        "On it. I'll use the Dua Gen AI green (#087C45) so it stays on-brand, keep one primary CTA, and make it mobile-first.",
+        "Welcome to your workspace agent! You can create documents, websites, code, and automate workflows via the + menu.",
         "9:38 AM",
     ),
-    Message.User("Looks right. Make the hero headline bigger and add the speaker line-up.", "9:40 AM"),
+    Message.User("Can we integrate our team skills and MCP tools here?", "9:40 AM"),
     Message.Agent(
-        "Done — headline is now 56/60 with the mint accent, and the line-up is a 3-up card row that stacks on small screens. Draft is ready to publish.",
+        "Yes, Skills and MCP Tools are fully integrated and accessible directly from the composer below.",
         "9:41 AM",
     ),
 )
@@ -528,7 +528,6 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
             modifier = Modifier
                 .clip(DuaGenAITheme.shapes.agentBubble)
                 .background(palette.bubbleAgent)
-                .border(1.dp, palette.border, DuaGenAITheme.shapes.agentBubble)
                 .padding(horizontal = 14.dp, vertical = 11.dp)
                 .semantics { contentDescription = "Agent is typing" },
         ) {
@@ -568,9 +567,7 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
                 modifier = Modifier
                     .widthIn(max = 280.dp)
                     .clip(DuaGenAITheme.shapes.agentBubble)
-                    // Agent bubble: `bubbleAgent` fill with a 1dp `border` edge.
                     .background(palette.bubbleAgent)
-                    .border(1.dp, palette.border, DuaGenAITheme.shapes.agentBubble)
                     .padding(horizontal = 14.dp, vertical = 11.dp),
             ) {
                 Text(

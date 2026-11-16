@@ -120,19 +120,19 @@ data class DuaGenAIShapes(
  */
 data class DuaGenAISpacing(
     /** Screen edge inset. */
-    val gutter: Dp = 16.dp,
+    val gutter: Dp = 14.dp,
     /** 2dp — inside a chip. */
     val xxs: Dp = 2.dp,
     /** 4dp. */
     val xs: Dp = 4.dp,
-    /** 8dp. */
-    val sm: Dp = 8.dp,
-    /** 12dp. */
-    val md: Dp = 12.dp,
-    /** 20dp — between sections. */
-    val lg: Dp = 20.dp,
-    /** 32dp — above the last element on a sheet. */
-    val xxl: Dp = 32.dp,
+    /** 6dp. */
+    val sm: Dp = 6.dp,
+    /** 10dp. */
+    val md: Dp = 10.dp,
+    /** 16dp — between sections. */
+    val lg: Dp = 16.dp,
+    /** 24dp — above the last element on a sheet. */
+    val xxl: Dp = 24.dp,
 )
 
 /** The spacing scale for the current composition. */
@@ -155,6 +155,7 @@ object DuaGenAITextStyles {
     val eyebrow: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
             letterSpacing = 0.8.sp,
         )
 
@@ -162,6 +163,7 @@ object DuaGenAITextStyles {
     val kicker: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
             letterSpacing = 0.4.sp,
         )
 
@@ -169,37 +171,48 @@ object DuaGenAITextStyles {
     val rowTitle: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.bodyLarge.copy(
             fontWeight = FontWeight.Bold,
+            fontSize = 14.5.sp,
         )
 
     /** A row's second line / a card's supporting copy. */
     val snippet: TextStyle
-        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.bodyMedium
+        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 12.5.sp,
+            lineHeight = 17.sp,
+        )
 
     /** A timestamp, a count, a helper line. */
     val meta: TextStyle
-        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium
+        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium.copy(
+            fontSize = 11.sp,
+        )
 
     /** Chat bubble body. */
     val bubble: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.bodyLarge.copy(
-            lineHeight = 22.sp,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
         )
 
     /** Button / chip label. */
     val button: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.bodyMedium.copy(
             fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
         )
 
     /** The dock's tab label. */
     val navLabel: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
         )
 
     /** A big number on a stat tile. */
     val statNumber: TextStyle
-        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.headlineMedium
+        @Composable @ReadOnlyComposable get() = MaterialTheme.typography.headlineMedium.copy(
+            fontSize = 20.sp,
+        )
 }
 
 /**

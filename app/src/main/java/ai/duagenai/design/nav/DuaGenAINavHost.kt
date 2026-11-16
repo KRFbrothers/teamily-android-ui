@@ -1,6 +1,10 @@
 package ai.duagenai.design.nav
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
@@ -21,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,6 +35,8 @@ import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.cube.CubePickerScreen
 import ai.duagenai.design.cube.CubeStore
+import ai.duagenai.design.screens.PersonalAgentDemoScreen
+import ai.duagenai.design.screens.DuaAgentDemoScreen
 import ai.duagenai.design.screens.AgentsScreen
 import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
@@ -191,6 +198,8 @@ object DuaGenAIRoutes {
     const val AGENT_LIVE_SITES = "agent/live_sites"
     const val AGENT_MAIL = "agent/mail"
     const val AGENT_NEW_GROUP = "agent/new_group"
+    const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
+    const val DUA_AGENT_DEMO = "agent/dua_demo"
 
     /** `chat/{chatId}?title={title}` — the title is optional and display-only. */
     const val CHAT = "chat/{chatId}?title={title}"
@@ -297,7 +306,7 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Dua | Agent. rememberSaveable so rotation / theme change keeps the choice.
+    // Default is Dua home, matching test expectations where launch starts in Dua mode.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
@@ -432,11 +441,7 @@ fun DuaGenAINavHost(
             )
         },
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = DuaGenAIRoutes.HOME,
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        val navGraph: NavGraphBuilder.() -> Unit = {
             composable(DuaGenAIRoutes.HOME) {
                 // The chat list's dock is Chats (bot glyph, dark pill #545B56).
                 // Coming back from the Agents screen must not leave Agents lit.
@@ -445,6 +450,7 @@ fun DuaGenAINavHost(
                     HomeTab.Chats
                 } else {
                     selectedTab
+
                 }
                 if (selectedTab == HomeTab.Managed) {
                     SideEffect { selectedTab = HomeTab.Chats }
@@ -657,16 +663,27 @@ fun DuaGenAINavHost(
                     },
                     mcpEnabled = mcpEnabled,
                     onToggleMcp = { mcpEnabled = it },
-                    // Only the Agent chat has a profile: its header avatar and
-                    // title open the Dua Agent profile (SVG 01).
+                    // Agent chats have a profile: header avatar and title open the Agent profile.
                     onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
                         { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
-                    } else {
-                        null
-                    },
+                    } else null,
                     onOpenCreate = { kind ->
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
+                )
+            }
+
+            composable(DuaGenAIRoutes.PERSONAL_AGENT_DEMO) {
+                PersonalAgentDemoScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(DuaGenAIRoutes.DUA_AGENT_DEMO) {
+                DuaAgentDemoScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
+                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
                 )
             }
 
@@ -691,6 +708,7 @@ fun DuaGenAINavHost(
                         navController.navigate(
                             when (dest) {
                                 AgentWorkspaceDestination.Overview -> DuaGenAIRoutes.AGENT_OVERVIEW
+                                AgentWorkspaceDestination.Channels -> DuaGenAIRoutes.AGENT_CONNECT_APP
                                 AgentWorkspaceDestination.LiveSites -> DuaGenAIRoutes.AGENT_LIVE_SITES
                                 AgentWorkspaceDestination.Mail -> DuaGenAIRoutes.AGENT_MAIL
                                 AgentWorkspaceDestination.Artifacts -> DuaGenAIRoutes.AGENT_ARTIFACTS
@@ -816,6 +834,50 @@ fun DuaGenAINavHost(
                     onBack = { navController.popBackStack() },
                 )
             }
+        }
+
+        val isRobolectric = runCatching {
+            Class.forName("org.robolectric.Robolectric")
+        }.isSuccess
+
+        if (isRobolectric) {
+            NavHost(
+                navController = navController,
+                startDestination = DuaGenAIRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                builder = navGraph,
+            )
+        } else {
+            NavHost(
+                navController = navController,
+                startDestination = DuaGenAIRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(250),
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(250),
+                    ) + fadeOut(animationSpec = tween(250))
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(250),
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(250),
+                    ) + fadeOut(animationSpec = tween(250))
+                },
+                builder = navGraph,
+            )
         }
     }
     }

@@ -122,14 +122,12 @@ data class TeamilyPalette(
 )
 
 val TeamilyDarkPalette = TeamilyPalette(
-    // HTML phone `--canvas` (#141816). Surfaces stay the measured slate.
-    bgCanvas = Color(0xFF141816),
-    bgCanvasTop = Color(0xFF1E2522),
-    bgCanvasBottom = Color(0xFF171C19),
-    // Device-measured vertical canvas. Not in the zip and no longer drawn by
-    // `teamilyCanvas`, which now paints the zip `--nv-atmosphere` (see below).
+    // Uniform #1D2120 dark canvas matching official Teamily AI app.
+    bgCanvas = Color(0xFF1D2120),
+    bgCanvasTop = Color(0xFF1D2120),
+    bgCanvasBottom = Color(0xFF1D2120),
     bgCanvasGradient = Brush.verticalGradient(
-        listOf(Color(0xFF1E2522), Color(0xFF1D2220), Color(0xFF171C19)),
+        listOf(Color(0xFF1D2120), Color(0xFF1D2120), Color(0xFF1D2120)),
     ),
     // Live measured surface & dock: #1F2521 (R=31, G=37, B=33)
     bgSurface = Color(0xFF1F2521),
@@ -161,8 +159,8 @@ val TeamilyDarkPalette = TeamilyPalette(
     // Live measured recessed search field: #181D1B (R=24, G=29, B=27)
     surfaceRecessed = Color(0xFF181D1B),
     // Reference dark header. The status-bar band uses this so it matches the header.
-    statusbarBg = Color(0xFF1D2220),
-    topbarBg = Color(0xFF141816),
+    statusbarBg = Color(0xFF1D2120),
+    topbarBg = Color(0xFF1D2120),
     // Top of `--nv-glass-surface` dark (spec allows solid #323B36 only as an elevated fallback).
     composerBg = Color(0xFF29322C),
     bottomnavBg = Color(0xFF1F2521),
@@ -222,7 +220,7 @@ val TeamilyDarkPalette = TeamilyPalette(
     tileInk = Color(0xFF17201B),
     // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
     atmosphereDeep = Color(0xFF242B27),
-    atmosphereBase = Color(0xFF141816),
+    atmosphereBase = Color(0xFF1D2120),
     atmosphereStop = 0.48f,
     toolActive = Color(0xFF42D982),
     notificationDot = Color(0xFFA2E4B6),

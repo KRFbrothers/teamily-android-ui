@@ -98,9 +98,10 @@ fun Modifier.teamilyPrimaryGlow(palette: TeamilyPalette): Modifier {
 fun Modifier.teamilyPressScale(
     interactionSource: InteractionSource,
     reduceMotion: Boolean = false,
+    targetScale: Float = 0.97f,
 ): Modifier {
     val pressed by interactionSource.collectIsPressedAsState()
-    val target = if (pressed && !reduceMotion) 0.98f else 1f
+    val target = if (pressed && !reduceMotion) targetScale else 1f
     // `--nv-spring-standard-ui`: stiffness 300, damping 32 (ratio 0.9238).
     val scale by animateFloatAsState(
         targetValue = target,
