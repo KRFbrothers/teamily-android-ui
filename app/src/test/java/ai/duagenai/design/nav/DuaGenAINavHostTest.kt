@@ -2,6 +2,8 @@ package ai.duagenai.design.nav
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -61,6 +63,15 @@ import ai.duagenai.design.screens.TokenProvider
 import ai.duagenai.design.screens.TokenStore
 import ai.duagenai.design.screens.sampleMemories
 import ai.duagenai.design.screens.UrlLauncher
+import ai.duagenai.design.screens.linesOf
+import ai.duagenai.design.screens.madeAgentColorKey
+import ai.duagenai.design.screens.madeAgentLine
+import ai.duagenai.design.screens.madeAgentName
+import ai.duagenai.design.screens.madeAgentShapeKey
+import ai.duagenai.design.screens.plusLine
+import ai.duagenai.design.screens.profileAgentRows
+import ai.duagenai.design.cube.AgentSilhouette
+import ai.duagenai.design.cube.AgentSwatch
 import ai.duagenai.design.screens.UrlOpener
 import ai.duagenai.design.screens.WriteResult
 import ai.duagenai.design.screens.DuaAgentSkills
@@ -1020,6 +1031,106 @@ class DuaGenAINavHostTest {
         // The avatar opens the existing drawer.
         openDrawer()
         assertVisibleDescCount("Close menu", 1)
+    }
+
+    // ------------------------------------------------- Create Agent
+
+    /** The Create button: the bottom bar's one clickable "Create" node. */
+    private fun createButton() = compose.onNode(hasText(CREATE_AGENT_ACTION) and hasClickAction())
+
+    /** Agent home -> plus -> "Create Agent", the way a user does. */
+    private fun openCreateAgent() {
+        launch()
+        switchTo(HomeMode.Agent)
+        compose.onNodeWithContentDescription("New chat").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(CREATE_AGENT_TITLE).performClick()
+        compose.waitForIdle()
+    }
+
+    /** The plus menu's Create Agent opens the form; it no longer auto-creates "New Agent N". */
+    @Test
+    fun thePlusMenuCreateAgentOpensTheCreateAgentScreen() {
+        openCreateAgent()
+
+        assertEquals(DuaGenAIRoutes.CREATE_AGENT, currentRoute())
+        assertVisible(CREATE_AGENT_TITLE)
+        assertVisible(CREATE_AGENT_NAME_HINT)
+        assertNotVisible("New Agent 1")
+        // 15 shapes and 9 swatches, with the defaults preselected.
+        assertEquals(15, AgentSilhouette.values().size)
+        AgentSilhouette.values().forEach { assertVisibleDescCount("Shape: ${it.label}", 1) }
+        AgentSwatch.values().forEach { assertVisibleDescCount("Color: ${it.label}", 1) }
+        compose.onNodeWithContentDescription("Shape: ${AgentSilhouette.DEFAULT.label}").assertIsSelected()
+        compose.onNodeWithContentDescription("Color: ${AgentSwatch.DEFAULT.label}").assertIsSelected()
+    }
+
+    /** Create stays disabled for an empty and for a whitespace-only name. */
+    @Test
+    fun createIsDisabledForAnEmptyOrBlankName() {
+        openCreateAgent()
+
+        createButton().assertIsNotEnabled()
+        compose.onNode(hasSetTextAction()).performTextInput("   ")
+        compose.waitForIdle()
+        createButton().assertIsNotEnabled()
+
+        compose.onNode(hasSetTextAction()).performTextInput("Ava")
+        compose.waitForIdle()
+        createButton().assertIsEnabled()
+    }
+
+    /** Create saves name, shape and colour, then lands on Profile → Agents. */
+    @Test
+    fun createSavesTheAgentAndLandsOnProfileAgents() {
+        openCreateAgent()
+
+        compose.onNode(hasSetTextAction()).performTextInput("  Research Buddy ")
+        compose.onNodeWithContentDescription("Shape: ${AgentSilhouette.Star.label}").performClick()
+        compose.onNodeWithContentDescription("Color: ${AgentSwatch.Pink.label}").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Shape: ${AgentSilhouette.Star.label}").assertIsSelected()
+        compose.onNodeWithContentDescription("Color: ${AgentSwatch.Pink.label}").assertIsSelected()
+        assertVisibleDescCount("Agent preview: Star, Pink", 1)
+
+        createButton().performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.PROFILE_AGENTS, currentRoute())
+        assertVisible("Research Buddy")
+        // The form is popped, so Back from the list does not reopen it.
+        assertTrue(
+            navController.currentBackStack.value.none {
+                it.destination.route == DuaGenAIRoutes.CREATE_AGENT
+            },
+        )
+    }
+
+    /** Close leaves Create Agent without saving anything. */
+    @Test
+    fun closeFromCreateAgentSavesNothing() {
+        openCreateAgent()
+        compose.onNode(hasSetTextAction()).performTextInput("Draft")
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.waitForIdle()
+
+        assertTrue(currentRoute() != DuaGenAIRoutes.CREATE_AGENT)
+        assertNotVisible("Draft")
+    }
+
+    /** A madeAgents line keeps name, shape and colour; a bare legacy name still reads. */
+    @Test
+    fun madeAgentLinesRoundTripNameShapeAndColor() {
+        val line = madeAgentLine(" Research\tBuddy ", AgentSilhouette.Star.name, AgentSwatch.Pink.name)
+        assertEquals("Research Buddy", madeAgentName(line))
+        assertEquals(AgentSilhouette.Star, AgentSilhouette.fromKey(madeAgentShapeKey(line)))
+        assertEquals(AgentSwatch.Pink, AgentSwatch.fromKey(madeAgentColorKey(line)))
+
+        val stored = plusLine(plusLine("", "Old Agent"), line)
+        val titles = profileAgentRows(linesOf(stored)).map { it.title }
+        assertTrue(titles.containsAll(listOf("Old Agent", "Research Buddy")))
+        assertEquals(null, madeAgentShapeKey("Old Agent"))
+        assertEquals(AgentSilhouette.DEFAULT, AgentSilhouette.fromKey(null))
     }
 
     /** Dua home is unchanged: hamburger, the toggle, the gear and the composer. */
@@ -4113,3 +4224,8 @@ class DuaGenAINavHostTest {
      */
     private fun threadComposerHint(title: String) = "Message $title\u2026"
 }
+
+/** Create Agent strings, as in res/values/strings.xml. */
+private const val CREATE_AGENT_TITLE = "Create Agent"
+private const val CREATE_AGENT_NAME_HINT = "Name your Agent"
+private const val CREATE_AGENT_ACTION = "Create"

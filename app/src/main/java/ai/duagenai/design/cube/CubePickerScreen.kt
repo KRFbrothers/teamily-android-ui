@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -52,17 +57,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ai.duagenai.design.R
 import ai.duagenai.design.screens.MinTouchTarget
 import ai.duagenai.design.screens.minTouchTarget
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Cube picker — M3 components used:
@@ -471,6 +483,239 @@ private fun CubeCell(
         )
     }
 }
+
+/* ============================================================================
+ *  Create Agent — opened ONLY from Agent home's plus menu ("Create Agent").
+ *
+ *  Big preview (silhouette + blinking eyes, morphs on every shape tap), a name
+ *  field, the 15-shape grid and the colour swatches, then Create. Create is
+ *  enabled once the trimmed name is non-empty; a shape and a colour are always
+ *  preselected. The name and both selections are rememberSaveable.
+ *
+ *  The Profile "Change cube" picker above is untouched.
+ * ==========================================================================*/
+
+/** Shapes per row in the Create Agent grid (15 shapes = 3 rows). */
+private const val CreateAgentShapeColumns = 5
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun CreateAgentScreen(
+    onCreate: (name: String, silhouette: AgentSilhouette, swatch: AgentSwatch) -> Unit =
+        { _, _, _ -> },
+    onCancel: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val palette = teamilyPalette()
+
+    var name by rememberSaveable { mutableStateOf("") }
+    var silhouette by rememberSaveable { mutableStateOf(AgentSilhouette.DEFAULT) }
+    var swatch by rememberSaveable { mutableStateOf(AgentSwatch.DEFAULT) }
+    val canCreate = name.trim().isNotEmpty()
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = onCancel) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.create_agent_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                ),
+            )
+        },
+        bottomBar = {
+            Button(
+                onClick = { onCreate(name.trim(), silhouette, swatch) },
+                enabled = canCreate,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = spacing.gutter, vertical = spacing.md)
+                    .sizeIn(minHeight = MinTouchTarget),
+                shape = DuaGenAITheme.shapes.pill,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) {
+                Text(stringResource(R.string.create_agent_action), style = DuaGenAITextStyles.button)
+            }
+        },
+    ) { inner ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = spacing.gutter, vertical = spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // The big preview: the only place with eyes, and it morphs.
+            CubeAvatar(
+                cubeId = CubeIds.DEFAULT,
+                size = 132.dp,
+                shape = RectangleShape,
+                contentDescription = "Agent preview: ${silhouette.label}, ${swatch.label}",
+                silhouette = silhouette,
+                fill = swatch.color(palette),
+                showEyes = true,
+                animateMorph = true,
+            )
+
+            Spacer(Modifier.height(spacing.lg))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it.replace('\n', ' ') },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = DuaGenAITheme.shapes.pill,
+                placeholder = { Text(stringResource(R.string.create_agent_name_hint)) },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+
+            Spacer(Modifier.height(spacing.lg))
+
+            // The 15 shapes, 5 per row. Thumbnails have no eyes.
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                AgentSilhouette.values().toList().chunked(CreateAgentShapeColumns).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        row.forEach { s ->
+                            AgentShapeCell(
+                                silhouette = s,
+                                selected = s == silhouette,
+                                onClick = { silhouette = s },
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(spacing.lg))
+
+            // The colour swatches, centred and wrapping on a narrow phone.
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(spacing.xs),
+            ) {
+                AgentSwatch.values().forEach { entry ->
+                    AgentSwatchDot(
+                        swatch = entry,
+                        color = entry.color(palette),
+                        selected = entry == swatch,
+                        onClick = { swatch = entry },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One shape in the Create Agent grid: a 56dp cell, ringed in primary when selected. */
+@Composable
+private fun AgentShapeCell(
+    silhouette: AgentSilhouette,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(DuaGenAITheme.shapes.avatarList)
+            .background(
+                if (selected) DuaGenAITheme.colors.brandSoft
+                else MaterialTheme.colorScheme.surface,
+            )
+            .then(
+                if (selected) Modifier.border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = DuaGenAITheme.shapes.avatarList,
+                ) else Modifier,
+            )
+            .clickable(role = Role.RadioButton, onClick = onClick)
+            .semantics {
+                contentDescription = "Shape: ${silhouette.label}"
+                this.selected = selected
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        CubeAvatar(
+            cubeId = CubeIds.DEFAULT,
+            size = 40.dp,
+            shape = RectangleShape,
+            silhouette = silhouette,
+            fill = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
+
+/** One colour swatch: a 32dp dot inside a 48dp touch target. */
+@Composable
+private fun AgentSwatchDot(
+    swatch: AgentSwatch,
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(MinTouchTarget)
+            .clip(CircleShape)
+            .clickable(role = Role.RadioButton, onClick = onClick)
+            .semantics {
+                contentDescription = "Color: ${swatch.label}"
+                this.selected = selected
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .then(
+                    if (selected) Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                    ) else Modifier,
+                )
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(color)
+                // A hairline so the Ink dot still reads on the dark canvas.
+                .border(1.dp, DuaGenAITheme.colors.hairline, CircleShape),
+        )
+    }
+}
+
+@Preview(name = "Create Agent — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CreateAgentLight() = DuaGenAITheme(darkTheme = false) { CreateAgentScreen() }
+
+@Preview(name = "Create Agent — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun CreateAgentDark() = DuaGenAITheme(darkTheme = true) { CreateAgentScreen() }
 
 @Preview(name = "Cube picker — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
