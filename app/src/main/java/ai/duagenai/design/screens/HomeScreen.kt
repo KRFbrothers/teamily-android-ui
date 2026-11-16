@@ -87,6 +87,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -1223,6 +1225,7 @@ private fun SearchRow(
         Surface(
             modifier = Modifier
                 .weight(1f)
+                .height(48.dp)
                 .semantics {
                     contentDescription = "Search"
                     disabled()
@@ -1234,7 +1237,7 @@ private fun SearchRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp)
+                    .height(48.dp)
                     .padding(horizontal = spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1273,17 +1276,21 @@ internal fun PersonalAgentHeroCard(
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
     val interactionSource = remember { MutableInteractionSource() }
+    val haptic = LocalHapticFeedback.current
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .teamilyPressScale(interactionSource)
+            .teamilyPressScale(interactionSource, targetScale = 0.97f)
             .teamilyRestingShadow(palette, TeamilyShapes.card)
             .clip(TeamilyShapes.card)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
                 role = Role.Button,
-                onClick = onClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                },
             )
             .semantics {
                 contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW, $PERSONAL_AGENT_DATE"
@@ -1337,7 +1344,7 @@ internal fun PersonalAgentHeroCard(
                         lineHeight = 20.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -1458,11 +1465,20 @@ private fun CanvasChatRow(
     avatar: @Composable () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    // The whole row is the button, including the side inset. Padding stays
-    // inside the click so the 16dp inset and 9dp vertical inset do not move.
+    val interactionSource = remember { MutableInteractionSource() }
+    val haptic = LocalHapticFeedback.current
     val rowModifier = Modifier
         .fillMaxWidth()
-        .clickable(role = Role.Button, onClick = onClick)
+        .teamilyPressScale(interactionSource, targetScale = 0.97f)
+        .clickable(
+            interactionSource = interactionSource,
+            indication = LocalIndication.current,
+            role = Role.Button,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            },
+        )
         .padding(horizontal = spacing.gutter, vertical = 9.dp)
     Row(
         modifier = rowModifier,
@@ -1632,12 +1648,9 @@ private fun AgentHomeList(
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
     var chatsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    val dockReserve = 64.dp + spacing.gutter +
-        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(top = 2.dp, bottom = dockReserve),
+        contentPadding = PaddingValues(top = 2.dp, bottom = 112.dp),
     ) {
         item {
             Column {
@@ -1747,9 +1760,14 @@ private fun HomeBottomNav(
                     // by the selected pill's rounded corner. The ripple is drawn
                     // in that clipped layer, so it keeps the capsule shape.
                     val interaction = remember { MutableInteractionSource() }
+                    val haptic = LocalHapticFeedback.current
                     Box(
                         modifier = Modifier
-                            .clickable(interactionSource = interaction, indication = null) { onSelect(tab) }
+                            .teamilyPressScale(interaction, targetScale = 0.97f)
+                            .clickable(interactionSource = interaction, indication = null) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onSelect(tab)
+                            }
                             .sizeIn(minWidth = 54.dp, minHeight = 48.dp)
                             .semantics {
                                 role = Role.Tab

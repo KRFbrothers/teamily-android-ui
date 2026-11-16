@@ -28,9 +28,14 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import ai.duagenai.design.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -351,7 +356,7 @@ private fun Hairline(c: AgentColors) {
     Box(Modifier.fillMaxWidth().height(1.dp).background(c.hairline))
 }
 
-/** 84dp app bar. [center] centres icon + title; [close] swaps back for ×. */
+/** 56dp app bar. [center] centres icon + title; [close] swaps back for ×. */
 @Composable
 private fun AgentAppBar(
     title: String,
@@ -363,12 +368,23 @@ private fun AgentAppBar(
     titleColor: Color = c.ink,
     trailing: (@Composable BoxScope.() -> Unit)? = null,
 ) {
-    Box(Modifier.fillMaxWidth().height(84.dp)) {
+    Box(Modifier.fillMaxWidth().height(56.dp)) {
         Box(
-            Modifier.offset(4.dp, 18.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
+            Modifier.align(Alignment.CenterStart).padding(start = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
                 .semantics { contentDescription = if (close) "Close" else "Back"; role = Role.Button },
             contentAlignment = Alignment.Center,
-        ) { AgentIcon(if (close) "close" else "back", 24.dp, titleColor) }
+        ) {
+            if (close) {
+                AgentIcon("close", 24.dp, titleColor)
+            } else {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = titleColor,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
         if (center) {
             Row(
                 Modifier.align(Alignment.Center),
@@ -380,10 +396,10 @@ private fun AgentAppBar(
                         AgentIcon(icon, 18.dp, c.wellInk)
                     }
                 }
-                Text(title, style = t(20, 28, true), color = titleColor)
+                Text(title, style = t(18, 24, true), color = titleColor)
             }
         } else {
-            Text(title, style = t(20, 28, true), color = titleColor, modifier = Modifier.offset(52.dp, 28.dp))
+            Text(title, style = t(18, 24, true), color = titleColor, modifier = Modifier.align(Alignment.CenterStart).padding(start = 56.dp))
         }
         trailing?.invoke(this)
     }
@@ -391,7 +407,7 @@ private fun AgentAppBar(
 
 /**
  * Top region on the top-bar colour: status-bar inset, app bar, optional
- * subtitle (13/18 at content y 68, 10dp above the hairline) and hairline.
+ * subtitle and hairline.
  */
 @Composable
 private fun AgentTop(
@@ -401,11 +417,11 @@ private fun AgentTop(
     below: (@Composable () -> Unit)? = null,
     bar: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().background(c.topbar).statusBarsPadding()) {
+    Column(Modifier.fillMaxWidth().background(Color(0xFF1D2120)).statusBarsPadding()) {
         if (subtitle != null) {
             Box {
                 bar()
-                Text(subtitle, style = t(13, 18), color = c.ink2, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 68.dp))
+                Text(subtitle, style = t(13, 18), color = c.ink2, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 56.dp))
             }
             Spacer(Modifier.height(10.dp))
         } else {
@@ -417,8 +433,8 @@ private fun AgentTop(
 }
 
 @Composable
-private fun Well(icon: String, fill: Color, ink: Color, modifier: Modifier = Modifier, size: Dp = 32.dp, iconSize: Dp = 18.dp) {
-    Box(modifier.size(size).clip(CircleShape).background(fill), contentAlignment = Alignment.Center) {
+private fun Well(icon: String, fill: Color, ink: Color, modifier: Modifier = Modifier, size: Dp = 36.dp, iconSize: Dp = 20.dp) {
+    Box(modifier.size(size).clip(RoundedCornerShape(10.dp)).background(fill), contentAlignment = Alignment.Center) {
         AgentIcon(icon, iconSize, ink)
     }
 }
@@ -511,7 +527,7 @@ fun DuaAgentProfileScreen(
     onOpenNewGroup: () -> Unit = {},
     onOpenConnectApp: () -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = "Teamily Agent",
+    agentName: String = "Dua Agent",
     initialSkillsExpanded: Boolean = false,
     initialConnectorsExpanded: Boolean = false,
     initialSheetOpen: Boolean = false,
@@ -527,15 +543,24 @@ fun DuaAgentProfileScreen(
     if (initialScrollToEnd) LaunchedEffect(Unit) { scrollState.scrollTo(scrollState.maxValue) }
     val titleInk = if (sheet) c.dim else c.ink
 
-    Box(modifier.fillMaxSize().agentAtmosphere(c.body, c)) {
+    Box(modifier.fillMaxSize().background(Color(0xFF1D2120))) {
         Column(Modifier.fillMaxSize()) {
             AgentTop(c) { AgentAppBar(agentName, c, onBack, titleColor = titleInk) }
             Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
-                // Hero — top-bar colour down to content y 369.
-                Box(Modifier.fillMaxWidth().height(240.dp).background(c.topbar)) {
-                    AgentCubeAvatar(80.dp, Modifier.align(Alignment.TopCenter).offset(y = 30.dp))
+                // Hero — top-bar colour down to content.
+                Box(Modifier.fillMaxWidth().height(230.dp).background(Color(0xFF1D2120))) {
+                    Image(
+                        painter = painterResource(R.drawable.dua_bot_badge),
+                        contentDescription = "Dua Agent avatar",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = 20.dp)
+                            .size(80.dp)
+                            .clip(CircleShape),
+                    )
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 125.dp).height(24.dp),
+                        Modifier.align(Alignment.TopCenter).offset(y = 112.dp).height(24.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -546,7 +571,7 @@ fun DuaAgentProfileScreen(
                         ) { Text("AI", style = t(10, 12, true), color = c.aiInk) }
                     }
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 162.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.chrome),
+                        Modifier.align(Alignment.TopCenter).offset(y = 150.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(Color(0xFF282E2C)),
                     ) {
                         val actions = listOf<Triple<String, String, (() -> Unit)?>>(
                             Triple("workspace", "Open agent workspace", onOpenWorkspace),
@@ -567,59 +592,66 @@ fun DuaAgentProfileScreen(
                         }
                     }
                 }
-                Box(Modifier.fillMaxWidth().height(56.dp)) {
-                    AgentIcon("search", 16.dp, c.ink2, Modifier.offset(28.dp, 14.dp))
-                    Text("Search chat history", style = t(14, 20), color = c.ink2, modifier = Modifier.offset(54.dp, 12.dp))
-                }
-                ProfileRow(c, 73.dp, "phone", "Voice call", trail = Trail.ChevRight)
-                ProfileRow(
-                    c, 126.dp, "translate", "Auto-translation",
-                    subtitle = "Messages will be translated into English.", link = "Change language",
-                    trail = Trail.Toggle, checked = on("translate"), onToggle = { toggles["translate"] = it },
-                )
-                ProfileRow(c, 87.dp, "channels", "Channels", subtitle = "0 connected", trail = Trail.ChevDown)
-                ProfileRow(
-                    c, if (skills) 47.dp else 95.dp, "puzzle", "Skills", subtitle = "1 active skill",
-                    trail = if (skills) Trail.ChevUp else Trail.ChevDown, onClick = { skills = !skills },
-                )
-                if (skills) {
-                    Box(Modifier.fillMaxWidth().height(100.dp)) {
-                        Well("bolt", c.well, c.wellInk, Modifier.offset(37.dp, 0.dp), size = 28.dp, iconSize = 16.dp)
-                        Text("[agent-skill-id]", style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(81.dp, (-1).dp))
-                        Text(
-                            "[agent-skill-description]", style = t(12, 16), color = c.ink2, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(81.dp, 19.dp).padding(end = 101.dp),
-                        )
-                        Box(Modifier.offset(y = 56.dp)) { PillButton("+  Add Skill", c) }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF282E2C))
+                        .padding(top = 10.dp, bottom = 40.dp),
+                ) {
+                    Box(Modifier.fillMaxWidth().height(56.dp)) {
+                        AgentIcon("search", 16.dp, c.ink2, Modifier.offset(28.dp, 14.dp))
+                        Text("Search chat history", style = t(14, 20), color = c.ink2, modifier = Modifier.offset(54.dp, 12.dp))
                     }
-                    Spacer(Modifier.height(58.dp))
-                }
-                ProfileRow(
-                    c, if (connectors) 48.dp else 77.dp, "link", "Connectors", c.wellConnectors, c.wellConnectorsInk,
-                    subtitle = "2 apps connected", trail = if (connectors) Trail.ChevUp else Trail.ChevDown,
-                    onClick = { connectors = !connectors },
-                )
-                if (connectors) {
-                    for (name in listOf("GitHub", "Agent")) {
-                        Box(Modifier.fillMaxWidth().height(48.dp)) {
-                            Text(name, style = t(16, 24), color = c.ink, modifier = Modifier.offset(36.dp, 12.dp))
-                            AgentToggle(on(name), { toggles[name] = it }, c, name, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 12.dp))
+                    ProfileRow(c, 73.dp, "phone", "Voice call", trail = Trail.ChevRight)
+                    ProfileRow(
+                        c, 126.dp, "translate", "Auto-translation",
+                        subtitle = "Messages will be translated into English.", link = "Change language",
+                        trail = Trail.Toggle, checked = on("translate"), onToggle = { toggles["translate"] = it },
+                    )
+                    ProfileRow(c, 87.dp, "channels", "Channels", subtitle = "0 connected", trail = Trail.ChevDown)
+                    ProfileRow(
+                        c, if (skills) 47.dp else 95.dp, "puzzle", "Skills", subtitle = "1 active skill",
+                        trail = if (skills) Trail.ChevUp else Trail.ChevDown, onClick = { skills = !skills },
+                    )
+                    if (skills) {
+                        Box(Modifier.fillMaxWidth().height(100.dp)) {
+                            Well("bolt", c.well, c.wellInk, Modifier.offset(37.dp, 0.dp), size = 28.dp, iconSize = 16.dp)
+                            Text("[agent-skill-id]", style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(81.dp, (-1).dp))
+                            Text(
+                                "[agent-skill-description]", style = t(12, 16), color = c.ink2, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(81.dp, 19.dp).padding(end = 101.dp),
+                            )
+                            Box(Modifier.offset(y = 56.dp)) { PillButton("+  Add Skill", c) }
                         }
+                        Spacer(Modifier.height(58.dp))
                     }
-                    Spacer(Modifier.height(8.dp))
-                    PillButton("+  Connect App", c, onOpenConnectApp)
-                    Spacer(Modifier.height(10.dp))
-                    PillButton("+  Add MCP server", c)
-                    Spacer(Modifier.height(40.dp))
+                    ProfileRow(
+                        c, if (connectors) 48.dp else 77.dp, "link", "Connectors", c.wellConnectors, c.wellConnectorsInk,
+                        subtitle = "2 apps connected", trail = if (connectors) Trail.ChevUp else Trail.ChevDown,
+                        onClick = { connectors = !connectors },
+                    )
+                    if (connectors) {
+                        for (name in listOf("GitHub", "Agent")) {
+                            Box(Modifier.fillMaxWidth().height(48.dp)) {
+                                Text(name, style = t(16, 24), color = c.ink, modifier = Modifier.offset(36.dp, 12.dp))
+                                AgentToggle(on(name), { toggles[name] = it }, c, name, Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 12.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PillButton("+  Connect App", c, onOpenConnectApp)
+                        Spacer(Modifier.height(10.dp))
+                        PillButton("+  Add MCP server", c)
+                        Spacer(Modifier.height(40.dp))
+                    }
+                    ProfileRow(
+                        c, 70.dp, "bell", "Mute Notifications", c.wellMute, c.wellMuteInk,
+                        trail = Trail.Toggle, checked = on("mute"), onToggle = { toggles["mute"] = it }, hairlineAt = 52.dp,
+                    )
+                    ProfileRow(
+                        c, 103.dp, "pin", "Pin to Top", c.wellPin, c.wellPinInk,
+                        trail = Trail.Toggle, checked = on("pin"), onToggle = { toggles["pin"] = it },
+                    )
                 }
-                ProfileRow(
-                    c, 70.dp, "bell", "Mute Notifications", c.wellMute, c.wellMuteInk,
-                    trail = Trail.Toggle, checked = on("mute"), onToggle = { toggles["mute"] = it }, hairlineAt = 52.dp,
-                )
-                ProfileRow(
-                    c, 103.dp, "pin", "Pin to Top", c.wellPin, c.wellPinInk,
-                    trail = Trail.Toggle, checked = on("pin"), onToggle = { toggles["pin"] = it },
-                )
             }
         }
         if (sheet) {
@@ -777,21 +809,27 @@ fun DuaAgentConnectAppScreen(onClose: () -> Unit = {}, modifier: Modifier = Modi
 // Shared list row (07, 08)
 // ---------------------------------------------------------------------------
 
-/** Three overlapping initials circles — the group avatar (no Teamily mark). */
+/** Three overlapping avatar circles — the 3-avatar group cluster. */
 @Composable
 internal fun GroupCluster() {
     Box(Modifier.size(40.dp)) {
         val s = 23.2.dp
-        val dots = listOf(
-            Triple(Offset(0f, 16.8f), Color(0xFF3EC0EA), "S"),
-            Triple(Offset(16.8f, 20.28f), Color(0xFF9A7BFF), "A"),
-            Triple(Offset(8.12f, 0f), Color(0xFFF6C945), "F"),
+        val avatars = listOf(
+            Triple(Offset(0f, 16.8f), R.drawable.avatar_code_reviewer, "Code Reviewer"),
+            Triple(Offset(16.8f, 20.28f), R.drawable.avatar_backend_architect, "Backend Architect"),
+            Triple(Offset(8.12f, 0f), R.drawable.avatar_frontend_developer, "Frontend Developer"),
         )
-        for ((pos, fill, initial) in dots) {
-            Box(
-                Modifier.offset(pos.x.dp, pos.y.dp).size(s).clip(CircleShape).background(fill),
-                contentAlignment = Alignment.Center,
-            ) { Text(initial, style = t(12, 16, true), color = TileInk) }
+        for ((pos, res, desc) in avatars) {
+            Image(
+                painter = painterResource(res),
+                contentDescription = desc,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .offset(pos.x.dp, pos.y.dp)
+                    .size(s)
+                    .clip(CircleShape)
+                    .border(1.5.dp, Color(0xFF1D2220), CircleShape),
+            )
         }
     }
 }
@@ -808,22 +846,56 @@ private fun ConversationRow(
 ) {
     Box(Modifier.fillMaxWidth().height(54.dp)) {
         Box(Modifier.offset(16.dp, 6.dp)) { avatar() }
-        Row(Modifier.offset(64.dp, 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = t(14, 18, true), color = c.ink, maxLines = 1)
-            if (plus) {
-                Box(Modifier.padding(top = 2.dp).height(15.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
-                    AgentIcon("star", 9.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
-                    Text("PLUS", style = t(11, 14, true), color = TileInk, modifier = Modifier.padding(start = 14.dp, end = 8.dp))
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 64.dp, end = 16.dp, top = 6.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(title, style = t(14, 18, true), color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (plus) {
+                    Box(Modifier.padding(top = 1.dp).height(15.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
+                        AgentIcon("star", 9.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
+                        Text("PLUS", style = t(11, 14, true), color = TileInk, modifier = Modifier.padding(start = 14.dp, end = 8.dp))
+                    }
                 }
             }
+            Spacer(Modifier.width(8.dp))
+            Text(time, style = t(11, 14), color = c.ink2)
         }
-        Text(time, style = t(11, 14), color = c.ink2, modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 16.dp))
-        Text(subtitle, style = t(12, 16), color = c.ink2, maxLines = 1, modifier = Modifier.offset(64.dp, 26.dp))
-        if (unread != null) {
-            Box(
-                Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 16.dp).size(18.dp).clip(CircleShape).background(c.unread),
-                contentAlignment = Alignment.Center,
-            ) { Text(unread, style = t(10, 13, true), color = c.unreadInk) }
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 64.dp, end = 16.dp, bottom = 6.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = subtitle,
+                style = t(12, 16),
+                color = c.ink2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (unread != null) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(c.unread),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(unread, style = t(10, 13, true), color = c.unreadInk)
+                }
+            }
         }
     }
 }
@@ -854,7 +926,7 @@ fun DuaAgentWorkspaceScreen(
     onBack: () -> Unit = {},
     onOpen: (AgentWorkspaceDestination) -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = "Teamily Agent",
+    agentName: String = "Dua Agent",
     onAgentHome: () -> Unit = onBack,
     userAvatar: (@Composable () -> Unit)? = null,
 ) {
@@ -863,8 +935,16 @@ fun DuaAgentWorkspaceScreen(
         AgentTop(c) { AgentAppBar("Agent workspace", c, onBack, center = true) }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(10.dp))
-            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(c.chrome)) {
-                AgentCubeAvatar(36.dp, Modifier.offset(14.dp, 9.dp), badge = 12.dp, ring = c.chrome)
+            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF282E2C))) {
+                Image(
+                    painter = painterResource(R.drawable.dua_bot_badge),
+                    contentDescription = "Dua Agent avatar",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .offset(14.dp, 9.dp)
+                        .size(36.dp)
+                        .clip(CircleShape),
+                )
                 Text(agentName, style = t(15, 20, true), color = c.ink, modifier = Modifier.offset(58.dp, 8.dp))
                 Row(
                     Modifier.offset(58.dp, 28.dp).clickable(onClick = onAgentHome),
@@ -890,11 +970,18 @@ fun DuaAgentWorkspaceScreen(
                 for (rowTiles in tiles.chunked(3)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for ((icon, label, dest) in rowTiles) {
-                            Box(Modifier.weight(1f).height(62.dp).clip(RoundedCornerShape(12.dp)).background(c.chrome).clickable { onOpen(dest) }) {
-                                AgentIcon(icon, 18.dp, c.wellInk, Modifier.align(Alignment.TopCenter).offset(y = 9.dp))
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(64.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF282E2C))
+                                    .clickable { onOpen(dest) }
+                            ) {
+                                AgentIcon(icon, 18.dp, c.wellInk, Modifier.align(Alignment.TopCenter).offset(y = 10.dp))
                                 Text(
                                     label, style = t(11, 15, true), color = c.ink, textAlign = TextAlign.Center,
-                                    modifier = Modifier.fillMaxWidth().offset(y = 33.dp),
+                                    modifier = Modifier.fillMaxWidth().offset(y = 35.dp),
                                 )
                             }
                         }
@@ -913,12 +1000,21 @@ fun DuaAgentWorkspaceScreen(
                 c, "fareed",
                 "Teamily Android ai app Open karo rea Open frontend developer than click upper baar it agent profile,",
                 "19:50", plus = true, unread = "2", avatar = {
-                    Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF3A4540))) { userAvatar?.invoke() }
+                    if (userAvatar != null) {
+                        Box(Modifier.size(40.dp).clip(CircleShape)) { userAvatar() }
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.dua_user_avatar),
+                            contentDescription = "fareed avatar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(40.dp).clip(CircleShape),
+                        )
+                    }
                 },
             )
             ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Code Reviewer: [Custom Message]", "Sun", unread = "4")
             ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Frontend Developer: PR ready hai: https://github.com/KRFbrothers/teamily-android-ui/pull/9", "Sun")
-            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Teamily Agent: [Custom Message]", "11/03/26", unread = "4")
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Dua Agent: [Custom Message]", "11/03/26", unread = "4")
             ConversationRow(c, "AI Feature Build Room", "Prompt Engineer, Data Engineer, Frontend Developer were invited to", "10/17/26", unread = "1")
         }
     }

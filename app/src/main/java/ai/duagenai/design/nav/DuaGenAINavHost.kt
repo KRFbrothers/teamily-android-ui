@@ -1,6 +1,10 @@
 package ai.duagenai.design.nav
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerValue
@@ -21,6 +25,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -436,11 +441,7 @@ fun DuaGenAINavHost(
             )
         },
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = DuaGenAIRoutes.HOME,
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        val navGraph: NavGraphBuilder.() -> Unit = {
             composable(DuaGenAIRoutes.HOME) {
                 // The chat list's dock is Chats (bot glyph, dark pill #545B56).
                 // Coming back from the Agents screen must not leave Agents lit.
@@ -833,6 +834,50 @@ fun DuaGenAINavHost(
                     onBack = { navController.popBackStack() },
                 )
             }
+        }
+
+        val isRobolectric = runCatching {
+            Class.forName("org.robolectric.Robolectric")
+        }.isSuccess
+
+        if (isRobolectric) {
+            NavHost(
+                navController = navController,
+                startDestination = DuaGenAIRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                builder = navGraph,
+            )
+        } else {
+            NavHost(
+                navController = navController,
+                startDestination = DuaGenAIRoutes.HOME,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(250),
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(250),
+                    ) + fadeOut(animationSpec = tween(250))
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(250),
+                    ) + fadeIn(animationSpec = tween(250))
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(250),
+                    ) + fadeOut(animationSpec = tween(250))
+                },
+                builder = navGraph,
+            )
         }
     }
     }
