@@ -71,7 +71,6 @@ fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Ty
     labelMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
     labelSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
 )
-)
 
 /** Kit typography with Lato 400 / 700. */
 val TeamilyTypography: Typography = teamilyTypography()
