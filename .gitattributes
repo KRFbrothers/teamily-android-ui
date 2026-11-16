@@ -5,4 +5,7 @@
 *.properties linguist-vendored
 *.pro linguist-vendored
 gradlew linguist-generated
+gradlew.bat linguist-generated
 *.jar linguist-vendored
+*.html linguist-documentation
+*.htm linguist-documentation
