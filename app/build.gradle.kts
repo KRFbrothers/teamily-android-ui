@@ -152,6 +152,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Create Agent's shape morph (Morph + RoundedPolygon). 1.0.1 is the
+    // newest stable that still runs on Kotlin 1.9.24; 1.1.0 needs Kotlin 2.0.
+    implementation("androidx.graphics:graphics-shapes:1.0.1")
+
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

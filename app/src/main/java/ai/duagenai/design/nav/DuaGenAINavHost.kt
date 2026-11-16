@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.cube.CreateAgentScreen
 import ai.duagenai.design.cube.CubePickerScreen
 import ai.duagenai.design.cube.CubeStore
 import ai.duagenai.design.screens.PersonalAgentDemoScreen
@@ -92,6 +93,7 @@ import ai.duagenai.design.screens.decodeConnectors
 import ai.duagenai.design.screens.encodeChannels
 import ai.duagenai.design.screens.encodeConnectors
 import ai.duagenai.design.screens.linesOf
+import ai.duagenai.design.screens.madeAgentLine
 import ai.duagenai.design.screens.plusLine
 import ai.duagenai.design.screens.profileAgentRows
 import ai.duagenai.design.screens.profileArtifactRows
@@ -198,6 +200,8 @@ object DuaGenAIRoutes {
     const val AGENT_LIVE_SITES = "agent/live_sites"
     const val AGENT_MAIL = "agent/mail"
     const val AGENT_NEW_GROUP = "agent/new_group"
+    /** Create Agent: opened only from Agent home's plus menu. */
+    const val CREATE_AGENT = "agent/create"
     const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
     const val DUA_AGENT_DEMO = "agent/dua_demo"
 
@@ -496,11 +500,7 @@ fun DuaGenAINavHost(
                     onOpenListedChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
-                    onCreateAgent = {
-                        val name = "New Agent ${linesOf(madeAgents).size + 1}"
-                        madeAgents = plusLine(madeAgents, name)
-                        navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS)
-                    },
+                    onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
                     onNewGroup = { navController.navigate(DuaGenAIRoutes.AGENT_NEW_GROUP) },
                     onCreateArtifact = {
                         val name = "New artifact ${linesOf(madeArtifacts).size + 1}"
@@ -611,6 +611,23 @@ fun DuaGenAINavHost(
                         scope.launch { settings.setNotification(setting, enabled) }
                     },
                     onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(DuaGenAIRoutes.CREATE_AGENT) {
+                CreateAgentScreen(
+                    onCreate = { name, silhouette, swatch ->
+                        madeAgents = plusLine(
+                            madeAgents,
+                            madeAgentLine(name, silhouette.name, swatch.name),
+                        )
+                        // Land on the Agents list; Back from there returns to
+                        // Agent home, not to a filled-in form.
+                        navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS) {
+                            popUpTo(DuaGenAIRoutes.CREATE_AGENT) { inclusive = true }
+                        }
+                    },
+                    onCancel = { navController.popBackStack() },
                 )
             }
 

@@ -98,6 +98,14 @@ data class TeamilyPalette(
     val tileViolet: Color,
     val tileMint: Color,
     val tileInk: Color,
+    /** Create Agent swatch: brown. Same value in light and dark, like the other tiles. */
+    val tileBrown: Color,
+    /** Create Agent swatch: red. */
+    val tileRed: Color,
+    /** Create Agent swatch: blue. */
+    val tileBlue: Color,
+    /** Create Agent swatch: pink. */
+    val tilePink: Color,
     /** `--nv-atmosphere-deep`: the radial glow colour at 8% / 92%. */
     val atmosphereDeep: Color,
     /** The solid colour under the glow in `--nv-atmosphere`. */
@@ -218,6 +226,10 @@ val TeamilyDarkPalette = TeamilyPalette(
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
+    tileBrown = Color(0xFF8B5E3C),
+    tileRed = Color(0xFFE5484D),
+    tileBlue = Color(0xFF2F7FED),
+    tilePink = Color(0xFFE84A9B),
     // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
     atmosphereDeep = Color(0xFF242B27),
     atmosphereBase = Color(0xFF1D2120),
@@ -315,6 +327,10 @@ val TeamilyLightPalette = TeamilyPalette(
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
+    tileBrown = Color(0xFF8B5E3C),
+    tileRed = Color(0xFFE5484D),
+    tileBlue = Color(0xFF2F7FED),
+    tilePink = Color(0xFFE84A9B),
     // --nv-atmosphere: radial-gradient(ellipse at 8% 92%, #e8f3ec 0, transparent 52%), #fafbfa
     atmosphereDeep = Color(0xFFE8F3EC),
     atmosphereBase = Color(0xFFEEF2EF),

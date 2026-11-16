@@ -94,10 +94,31 @@ internal fun profileAgentRows(created: List<String>): List<ProfileListRow> = bui
     agentHomeChats.forEach { chat ->
         add(ProfileListRow(chat.chatId, chat.title, chat.subtitle, chat.time))
     }
-    created.forEachIndexed { index, name ->
-        add(ProfileListRow("made_agent_$index", name, "Header menu se bana"))
+    created.forEachIndexed { index, line ->
+        add(ProfileListRow("made_agent_$index", madeAgentName(line), "Header menu se bana"))
     }
 }
+
+/**
+ * One `madeAgents` line: `name<TAB>shape<TAB>color`. The list stays a
+ * newline-separated String so rememberSaveable keeps it as before; a line from
+ * before Create Agent (a bare name) still reads back as that name.
+ */
+internal fun madeAgentLine(name: String, shapeKey: String, colorKey: String): String {
+    val clean = name.replace('\t', ' ').replace('\n', ' ').trim()
+    return "$clean\t$shapeKey\t$colorKey"
+}
+
+/** The display name of a `madeAgents` line. */
+internal fun madeAgentName(line: String): String = line.substringBefore('\t').trim()
+
+/** The stored shape key of a `madeAgents` line, or null for a bare name. */
+internal fun madeAgentShapeKey(line: String): String? =
+    line.split('\t').getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+
+/** The stored colour key of a `madeAgents` line, or null for a bare name. */
+internal fun madeAgentColorKey(line: String): String? =
+    line.split('\t').getOrNull(2)?.trim()?.takeIf { it.isNotEmpty() }
 
 internal fun profileArtifactRows(created: List<String>): List<ProfileListRow> =
     created.mapIndexed { index, name ->
