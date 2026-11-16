@@ -301,8 +301,8 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Default is Agent home, matching Teamily AI mobile app launch.
-    var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
+    // Default is Dua home, matching test expectations where launch starts in Dua mode.
+    var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
@@ -483,10 +483,14 @@ fun DuaGenAINavHost(
                     // the API. Dua Agent (the pinned row) is the engine thread.
                     // The listed chats below use the same chat route as the drawer.
                     onOpenPersonalAgentChat = {
-                        navController.navigate(DuaGenAIRoutes.PERSONAL_AGENT_DEMO)
+                        navController.navigate(
+                            DuaGenAIRoutes.chat(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE),
+                        )
                     },
                     onOpenDuaAgentChat = {
-                        navController.navigate(DuaGenAIRoutes.DUA_AGENT_DEMO)
+                        navController.navigate(
+                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, DUA_AGENT_TITLE),
+                        )
                     },
                     onOpenListedChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
@@ -644,36 +648,28 @@ fun DuaGenAINavHost(
             ) { entry ->
                 val chatId = entry.arguments?.getString("chatId").orEmpty()
                 val title = entry.arguments?.getString("title").orEmpty()
-                if (chatId == PERSONAL_AGENT_CHAT_ID) {
-                    PersonalAgentDemoScreen(onBack = { navController.popBackStack() })
-                } else if (chatId == AGENT_CHAT_ID) {
-                    DuaAgentDemoScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
-                        onOpenProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
-                    )
-                } else {
-                    ChatScreen(
-                        chatId = chatId,
-                        chatTitle = title.ifBlank { "Chat" },
-                        // Back returns to whatever opened the thread — Home, in the
-                        // normal flow. popBackStack() is a no-op if the stack is
-                        // empty, so a deep link into a chat cannot crash on back.
-                        onBack = { navController.popBackStack() },
-                        enabledSkillIds = enabledSkills.toSet(),
-                        onToggleSkill = { id ->
-                            enabledSkills =
-                                if (id in enabledSkills) enabledSkills - id else enabledSkills + id
-                        },
-                        mcpEnabled = mcpEnabled,
-                        onToggleMcp = { mcpEnabled = it },
-                        // Agent chats have a profile: header avatar and title open the Agent profile.
-                        onOpenAgentProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
-                        onOpenCreate = { kind ->
-                            navController.navigate(DuaGenAIRoutes.create(kind))
-                        },
-                    )
-                }
+                ChatScreen(
+                    chatId = chatId,
+                    chatTitle = title.ifBlank { "Chat" },
+                    // Back returns to whatever opened the thread — Home, in the
+                    // normal flow. popBackStack() is a no-op if the stack is
+                    // empty, so a deep link into a chat cannot crash on back.
+                    onBack = { navController.popBackStack() },
+                    enabledSkillIds = enabledSkills.toSet(),
+                    onToggleSkill = { id ->
+                        enabledSkills =
+                            if (id in enabledSkills) enabledSkills - id else enabledSkills + id
+                    },
+                    mcpEnabled = mcpEnabled,
+                    onToggleMcp = { mcpEnabled = it },
+                    // Agent chats have a profile: header avatar and title open the Agent profile.
+                    onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
+                        { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
+                    } else null,
+                    onOpenCreate = { kind ->
+                        navController.navigate(DuaGenAIRoutes.create(kind))
+                    },
+                )
             }
 
             composable(DuaGenAIRoutes.PERSONAL_AGENT_DEMO) {

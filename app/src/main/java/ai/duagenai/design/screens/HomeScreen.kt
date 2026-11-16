@@ -790,7 +790,7 @@ private fun ComposerIconButton(
     val palette = teamilyPalette()
     Box(
         modifier = Modifier
-            .size(38.dp)
+            .size(MinTouchTarget)
             .clip(CircleShape)
             .then(
                 if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick)
@@ -966,18 +966,13 @@ private val agentHomeAvatarRes = mapOf(
     "chat_frontend_developer" to R.drawable.avatar_frontend_developer,
 )
 
-/** The pinned official agent row. Matches Teamily AI mobile app. */
-internal const val DUA_AGENT_TITLE = "Teamily Agent"
-internal const val DUA_AGENT_SUBTITLE = "P1+P2+P3 ek hi PR me fix karo (v27)"
-internal const val DUA_AGENT_TIME = "17:40"
+/** The pinned official agent row. Matches Teamily AI mobile app parity. */
+internal const val DUA_AGENT_TITLE = "Dua Agent"
+internal const val DUA_AGENT_SUBTITLE = "I'm Dua Agent \u2014 the official agent of Dua Gen AI"
+internal const val DUA_AGENT_TIME = "15:19"
 
-/** Header brand text. Matches Teamily AI mobile app. */
-internal const val APP_NAME = "Teamily AI"
-
-/** Teamily AI mobile app active recent conversation row. */
-internal val teamilyHomeChats = listOf(
-    AgentHomeChat("chat_frontend_developer", "Frontend Developer", "Hi", "18:06"),
-)
+/** Header brand text. Matches Teamily AI mobile app parity. */
+internal const val APP_NAME = "Dua Gen AI"
 
 /**
  * Agent home's header: 48dp circular user avatar (opens the drawer) · 32dp
@@ -1021,7 +1016,7 @@ private fun AgentHomeTopBar(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(38.dp),
+                .size(40.dp),
         ) {
             Box(
                 modifier = Modifier
@@ -1029,7 +1024,7 @@ private fun AgentHomeTopBar(
                     .clip(CircleShape)
                     .background(palette.chromeFill)
                     .clickable(role = Role.Button, onClick = onOpenDrawer)
-                    .semantics { contentDescription = "Me" },
+                    .semantics { contentDescription = "Open menu" },
             ) {
                 Image(
                     painter = photo,
@@ -1061,8 +1056,8 @@ private fun AgentHomeTopBar(
             Text(
                 text = APP_NAME,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 18.sp,
-                    lineHeight = 24.sp,
+                    fontSize = 21.sp,
+                    lineHeight = 26.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.01).em,
                 ),
@@ -1081,7 +1076,7 @@ private fun AgentHomeTopBar(
                     .clip(CircleShape)
                     .background(palette.plusFill)
                     .clickable(role = Role.Button) { menuOpen = true }
-                    .semantics { contentDescription = "New" },
+                    .semantics { contentDescription = "New chat" },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1196,13 +1191,13 @@ private fun SearchRow(
     ) {
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(MinTouchTarget)
                 .clip(CircleShape)
                 .background(if (filterActive) colors.brandSoft else palette.chromeFill)
                 .border(1.dp, palette.border, CircleShape)
                 .clickable(role = Role.Button, onClick = onToggleFilter)
                 .semantics {
-                    contentDescription = "Filter conversations: All"
+                    contentDescription = "Filter"
                     if (filterActive) selected = true
                 },
             contentAlignment = Alignment.Center,
@@ -1315,8 +1310,8 @@ internal fun PersonalAgentHeroCard(
                         text = PERSONAL_AGENT_TITLE,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            lineHeight = 20.sp,
+                            fontSize = 17.5.sp,
+                            lineHeight = 22.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -1328,18 +1323,18 @@ internal fun PersonalAgentHeroCard(
                         text = PERSONAL_AGENT_DATE,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Normal,
-                            fontSize = 11.5.sp,
+                            fontSize = 12.5.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = PERSONAL_AGENT_PREVIEW,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 12.5.sp,
-                        lineHeight = 17.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -1500,7 +1495,7 @@ private fun CanvasChatRow(
                     text = time,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
-                        fontSize = 11.5.sp,
+                        fontSize = 12.5.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1602,8 +1597,8 @@ private fun SectionHeader(
             text = label,
             style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.5.sp,
-                lineHeight = 15.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
             ),
             color = ink,
         )
@@ -1678,14 +1673,14 @@ private fun AgentHomeList(
                 )
                 SectionHeader(
                     icon = SectionIcon.Chat,
-                    label = "Chats \u00b7 ${teamilyHomeChats.size}",
+                    label = "Chats \u00b7 ${agentHomeChats.size}",
                     expanded = chatsExpanded,
                     onToggle = { chatsExpanded = !chatsExpanded },
                 )
             }
         }
         if (chatsExpanded) {
-            items(teamilyHomeChats, key = { it.chatId }) { chat ->
+            items(agentHomeChats, key = { it.chatId }) { chat ->
                 CanvasChatRow(
                     title = chat.title,
                     subtitle = chat.subtitle,
@@ -1693,7 +1688,11 @@ private fun AgentHomeList(
                     onClick = { onOpenListedChat(chat.chatId, chat.title) },
                 ) {
                     ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                        CharacterAvatar(chat.chatId)
+                        if (chat.chatId == FULL_STACK_GUILD_CHAT_ID) {
+                            GroupCluster()
+                        } else {
+                            CharacterAvatar(chat.chatId)
+                        }
                     }
                 }
             }
@@ -1795,7 +1794,7 @@ private fun HomeBottomNav(
                             Text(
                                 text = tab.label,
                                 style = DuaGenAITextStyles.navLabel.copy(
-                                    fontSize = 10.5.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                                 ),
                                 color = tint,

@@ -209,7 +209,7 @@ object DuaGenAITextStyles {
     val navLabel: TextStyle
         @Composable @ReadOnlyComposable get() = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.Bold,
-            fontSize = 10.5.sp,
+            fontSize = 12.sp,
         )
 
     /** A big number on a stat tile. */
