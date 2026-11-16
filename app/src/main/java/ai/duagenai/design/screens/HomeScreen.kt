@@ -487,6 +487,7 @@ private fun CircleIconButton(
     content: @Composable () -> Unit,
 ) {
     val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
     Surface(
         onClick = onClick,
         // 44dp is the VISUAL size; `minimumInteractiveComponentSize` raises the
@@ -500,7 +501,7 @@ private fun CircleIconButton(
             },
         shape = CircleShape,
         color = fill ?: if (active) colors.brandSoft else MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
+        shadowElevation = palette.restingShadowElevation,
         content = {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 content()
@@ -643,7 +644,7 @@ internal fun DuaComposer(
             shape = TeamilyShapes.composer,
             color = palette.composerBg,
             border = BorderStroke(1.dp, palette.borderGradient),
-            shadowElevation = 2.dp,
+            shadowElevation = palette.restingShadowElevation,
         ) {
             Row(
                 modifier = Modifier
@@ -1736,7 +1737,7 @@ private fun HomeBottomNav(
         shape = TeamilyShapes.capsule,
         color = palette.bottomnavBg,
         border = BorderStroke(1.dp, palette.borderGradient),
-        shadowElevation = 6.dp,
+        shadowElevation = palette.restingShadowElevation,
     ) {
         Row(
             // `selectableGroup()` makes the five tabs one tab list for TalkBack
@@ -1747,7 +1748,7 @@ private fun HomeBottomNav(
             HomeTab.entries.forEach { tab ->
                 val active = tab == selected
                 val tint = if (active) palette.navSelectedContent
-                else MaterialTheme.colorScheme.onSurface
+                else palette.iconIdle
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center,

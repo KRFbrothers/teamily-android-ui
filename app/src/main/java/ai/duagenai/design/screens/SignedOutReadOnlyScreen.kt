@@ -40,6 +40,7 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
 
 /* ============================================================================
  *  Signed-out read-only — the v25 state from m3-prototype_v25.
@@ -142,13 +143,14 @@ private fun SignedOutBar(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
+    val palette = teamilyPalette()
     // Light: ink bar (#182B23) on canvas text. Dark: the inverse pair.
     // Those are inverseSurface / inverseOnSurface in DuaGenAITheme.
     Surface(
         modifier = modifier,
         shape = TeamilyShapes.lg,
         color = MaterialTheme.colorScheme.inverseSurface,
-        shadowElevation = 6.dp,
+        shadowElevation = palette.restingShadowElevation,
         tonalElevation = 0.dp,
     ) {
         Row(

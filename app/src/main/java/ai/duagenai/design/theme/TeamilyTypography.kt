@@ -1,7 +1,9 @@
 package ai.duagenai.design.theme
 
+import ai.duagenai.design.R
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
@@ -25,32 +27,50 @@ import androidx.compose.ui.unit.sp
  *
  *  Official SIL OFL Lato Regular (400) and Bold (700) live in
  *  `app/src/main/res/font/` (`lato_regular.ttf`, `lato_bold.ttf`).
- *  [DuaGenAITheme] loads them and passes the family to [teamilyTypography].
- *  [TeamilyTypography] itself keeps [FontFamily.Default] for callers that
- *  do not pass a family. Sizes and weights below stay the scale.
+ *  [TeamilySansFontFamily] loads them. [teamilyTypography] and
+ *  [TeamilyTypography] use that family; every M3 role is defined so
+ *  unset slots cannot fall back to the platform default (or to weight 500).
+ *  Sizes and weights of the six mapped roles stay the scale above.
  * ==========================================================================*/
 
 /** `--nv-tracking-tight` -0.01em. */
 private val TrackingTight = (-0.01).em
 
+/** Official Lato Regular (400) and Bold (700) from `res/font`. */
+val TeamilySansFontFamily: FontFamily = FontFamily(
+    Font(R.font.lato_regular, FontWeight.Normal),
+    Font(R.font.lato_bold, FontWeight.Bold),
+)
+
 /** Code blocks use the system monospace family. */
 val TeamilyMonoFontFamily: FontFamily = FontFamily.Monospace
 
 /** The spec's M3 type scale for the given sans family (Lato in the app). */
-fun teamilyTypography(sans: FontFamily = FontFamily.Default): Typography = Typography(
+fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Typography(
+    // Remaining M3 roles: Lato + 400/700 only. Sizes follow the M3 defaults
+    // so layout stays stable; Medium (500) is not used.
+    displayLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
+    displayMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp),
+    displaySmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp),
+    headlineLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 40.sp),
     // --nv-type-display + --nv-tracking-tight
     headlineMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = TrackingTight),
+    headlineSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp),
     // --nv-type-title + --nv-tracking-tight
     titleLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = TrackingTight),
     // --nv-type-heading
     titleMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 26.sp),
+    titleSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
     // --nv-type-body
     bodyLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 26.sp),
     // --nv-type-body-sm
     bodyMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 22.sp),
+    bodySmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp),
+    labelLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
     // --nv-type-caption
     labelMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+    labelSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
 )
 
-/** Kit typography with the platform default family; see the header for Lato. */
+/** Kit typography with Lato 400 / 700. */
 val TeamilyTypography: Typography = teamilyTypography()
