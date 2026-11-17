@@ -49,12 +49,17 @@ private val managedAgents = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgentsScreen(modifier: Modifier = Modifier) {
+fun AgentsScreen(
+    modifier: Modifier = Modifier,
+    /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
+    bottomBar: @Composable () -> Unit = {},
+) {
     val spacing = LocalDuaGenAISpacing.current
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = bottomBar,
         topBar = {
             TopAppBar(
                 title = {

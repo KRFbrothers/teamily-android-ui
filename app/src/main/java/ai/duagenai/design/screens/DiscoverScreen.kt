@@ -46,12 +46,17 @@ private val discoverCards = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiscoverScreen(modifier: Modifier = Modifier) {
+fun DiscoverScreen(
+    modifier: Modifier = Modifier,
+    /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
+    bottomBar: @Composable () -> Unit = {},
+) {
     val spacing = LocalDuaGenAISpacing.current
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = bottomBar,
         topBar = {
             TopAppBar(
                 title = {

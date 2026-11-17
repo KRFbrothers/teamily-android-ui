@@ -276,6 +276,8 @@ fun MemoryScreen(
      * "Sign in" instead of "Retry" when the failure is an auth failure.
      */
     onSignIn: () -> Unit = {},
+    /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
+    bottomBar: @Composable () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // The shared opener. The null/blank guard and the "did it open?" answer live
@@ -328,6 +330,7 @@ fun MemoryScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = bottomBar,
         topBar = {
             TopAppBar(
                 title = {

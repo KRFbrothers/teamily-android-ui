@@ -1248,16 +1248,72 @@ class DuaGenAINavHostTest {
         compose.onNodeWithText(HomeTab.Discover.label).performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.DISCOVER, currentRoute())
+        // The Discover screen carries the same dock, with Discover lit.
+        assertTabSelected(HomeTab.Discover.label)
 
+        // Back returns Home and the highlight follows the route (it used to
+        // stay stuck on Discover).
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
-        assertTabSelected(HomeTab.Discover.label)
-
-        // And back to Chats, so the move is not one-way.
-        compose.onNodeWithText(HomeTab.Chats.label).performClick()
-        compose.waitForIdle()
         assertTabSelected(HomeTab.Chats.label)
+    }
+
+    /**
+     * The four tab screens show the same five-tab dock; switching tabs never
+     * stacks screens (Home + one tab at most), Chats pops back to Home, and
+     * Back from any tab returns Home.
+     */
+    @Test
+    fun tabScreensShareTheDockAndNeverStack() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        for ((tab, route) in listOf(
+            HomeTab.Managed to DuaGenAIRoutes.AGENTS,
+            HomeTab.Discover to DuaGenAIRoutes.DISCOVER,
+            HomeTab.Memory to DuaGenAIRoutes.MEMORY,
+            HomeTab.Artifacts to DuaGenAIRoutes.ARTIFACTS,
+        )) {
+            compose.onAllNodes(hasText(tab.label) and hasClickAction()).onLast().performClick()
+            compose.waitForIdle()
+            assertEquals(route, currentRoute())
+            assertTabSelected(tab.label)
+            // Exactly five tabs in the dock on every tab screen.
+            assertEquals(
+                5,
+                compose.onAllNodes(
+                    androidx.compose.ui.test.SemanticsMatcher.expectValue(
+                        androidx.compose.ui.semantics.SemanticsProperties.Role,
+                        androidx.compose.ui.semantics.Role.Tab,
+                    ),
+                ).fetchSemanticsNodes().size,
+            )
+        }
+
+        // Four tab hops later, Back still lands on Home: nothing stacked.
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+
+        // Chats from a tab screen pops back to Home too.
+        compose.onAllNodes(hasText(HomeTab.Discover.label) and hasClickAction()).onLast().performClick()
+        compose.waitForIdle()
+        compose.onAllNodes(hasText(HomeTab.Chats.label) and hasClickAction()).onLast().performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertTabSelected(HomeTab.Chats.label)
+    }
+
+    @Test
+    fun homeTabForMapsTheFiveTabRoutesOnly() {
+        assertEquals(HomeTab.Chats, homeTabFor(DuaGenAIRoutes.HOME))
+        assertEquals(HomeTab.Managed, homeTabFor(DuaGenAIRoutes.AGENTS))
+        assertEquals(HomeTab.Discover, homeTabFor(DuaGenAIRoutes.DISCOVER))
+        assertEquals(HomeTab.Memory, homeTabFor(DuaGenAIRoutes.MEMORY))
+        assertEquals(HomeTab.Artifacts, homeTabFor(DuaGenAIRoutes.ARTIFACTS))
+        assertEquals(null, homeTabFor(DuaGenAIRoutes.SETTINGS))
+        assertEquals(5, HomeTab.entries.size)
     }
 
     @Test

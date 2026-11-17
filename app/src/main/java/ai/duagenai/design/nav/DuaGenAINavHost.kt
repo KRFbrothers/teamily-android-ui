@@ -12,7 +12,6 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -25,11 +24,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CubeIds
@@ -65,6 +66,7 @@ import ai.duagenai.design.screens.DuaAgentSkills
 import ai.duagenai.design.screens.HomeMode
 import ai.duagenai.design.screens.HomeScreen
 import ai.duagenai.design.screens.HomeTab
+import ai.duagenai.design.screens.HomeBottomNav
 import ai.duagenai.design.screens.MemoryRepository
 import ai.duagenai.design.screens.MemoryScreen
 import ai.duagenai.design.screens.RemoteArtifactsDataSource
@@ -219,6 +221,43 @@ object DuaGenAIRoutes {
 }
 
 /**
+ * The dock tab a route belongs to, or null when the route is not one of the
+ * five tab destinations. Home is the Chats tab.
+ */
+internal fun homeTabFor(route: String?): HomeTab? = when (route) {
+    DuaGenAIRoutes.HOME -> HomeTab.Chats
+    DuaGenAIRoutes.AGENTS -> HomeTab.Managed
+    DuaGenAIRoutes.DISCOVER -> HomeTab.Discover
+    DuaGenAIRoutes.MEMORY -> HomeTab.Memory
+    DuaGenAIRoutes.ARTIFACTS -> HomeTab.Artifacts
+    else -> null
+}
+
+/**
+ * Bottom-dock navigation, the M3 pattern: Chats pops back to Home; any other
+ * tab replaces whatever tab sits above Home (popUpTo Home, saving its state),
+ * is single-top, and restores its saved state. The stack is therefore never
+ * deeper than Home + one tab, and Back from a tab returns Home.
+ */
+internal fun NavController.navigateToTab(tab: HomeTab) {
+    val route = when (tab) {
+        HomeTab.Chats -> {
+            popBackStack(DuaGenAIRoutes.HOME, inclusive = false)
+            return
+        }
+        HomeTab.Managed -> DuaGenAIRoutes.AGENTS
+        HomeTab.Discover -> DuaGenAIRoutes.DISCOVER
+        HomeTab.Memory -> DuaGenAIRoutes.MEMORY
+        HomeTab.Artifacts -> DuaGenAIRoutes.ARTIFACTS
+    }
+    navigate(route) {
+        popUpTo(DuaGenAIRoutes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/**
  * The app's single navigation graph, wrapped in the sidebar drawer.
  *
  * @param navController hoisted so a caller (a test, a deep link) can drive it.
@@ -317,13 +356,19 @@ fun DuaGenAINavHost(
     var enabledSkills by rememberSaveable { mutableStateOf(DuaAgentSkills.ids) }
     var mcpEnabled by rememberSaveable { mutableStateOf(true) }
 
-    // Which bottom-nav item is highlighted. HOISTED out of HomeScreen and
-    // rememberSaveable, so a tab tap survives a Home recomposition, a rotation
-    // and a process death — the same treatment `mode` already gets. HomeScreen
-    // takes it as a value and reports taps back through `onSelectTab`; it no
-    // longer hardcodes `HomeTab.Chats`, which is why the indicator could never
-    // move before.
-    var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Chats) }
+    // Which bottom-nav item is highlighted. DERIVED from the current back
+    // stack entry, not stored: the dock can never claim a tab the NavHost is
+    // not showing (the old stored value stayed on Discover/Memory/Artifacts
+    // after Back to Home). Off the five tab routes it falls back to Chats.
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val selectedTab = homeTabFor(backStackEntry?.destination?.route) ?: HomeTab.Chats
+    // The one dock, shared by Home (Agent mode) and the four tab screens.
+    val tabDock: @Composable () -> Unit = {
+        HomeBottomNav(
+            selected = selectedTab,
+            onSelect = { tab -> navController.navigateToTab(tab) },
+        )
+    }
 
     // Agent-home filter. True covers Home with the public profile.
     var publicProfileOpen by rememberSaveable { mutableStateOf(false) }
@@ -432,18 +477,6 @@ fun DuaGenAINavHost(
     ) {
         val navGraph: NavGraphBuilder.() -> Unit = {
             composable(DuaGenAIRoutes.HOME) {
-                // The chat list's dock is Chats (bot glyph, dark pill #545B56).
-                // Coming back from the Agents screen must not leave Agents lit.
-                // Discover, Memory, and Artifacts stay hoisted.
-                val tabOnChatList = if (selectedTab == HomeTab.Managed) {
-                    HomeTab.Chats
-                } else {
-                    selectedTab
-
-                }
-                if (selectedTab == HomeTab.Managed) {
-                    SideEffect { selectedTab = HomeTab.Chats }
-                }
                 HomeScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     mode = mode,
@@ -452,23 +485,11 @@ fun DuaGenAINavHost(
                     // in Agent mode, so the two callbacks are separate.
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
-                    // Every tab has a destination. `HomeTab.Managed` is shown
-                    // as "Agents" (the reference dock's label) and still opens
-                    // the agents route. Memory and Artifacts open their own
-                    // placeholder screens.
-                    onSelectTab = { tab ->
-                        // Record the selection FIRST, so the indicator moves
-                        // immediately, then navigate.
-                        selectedTab = tab
-                        when (tab) {
-                            HomeTab.Chats -> Unit
-                            HomeTab.Managed -> navController.navigate(DuaGenAIRoutes.AGENTS)
-                            HomeTab.Discover -> navController.navigate(DuaGenAIRoutes.DISCOVER)
-                            HomeTab.Memory -> navController.navigate(DuaGenAIRoutes.MEMORY)
-                            HomeTab.Artifacts -> navController.navigate(DuaGenAIRoutes.ARTIFACTS)
-                        }
-                    },
-                    selectedTab = tabOnChatList,
+                    // Every tab has a destination (see [navigateToTab]).
+                    // `HomeTab.Managed` is shown as "Agents" and opens the
+                    // agents route. Home is the Chats tab.
+                    onSelectTab = { tab -> navController.navigateToTab(tab) },
+                    selectedTab = selectedTab,
                     // Personal Agent (the hero) is a normal thread: auto mode on
                     // the API. Dua Agent (the pinned row) is the engine thread.
                     // The listed chats below use the same chat route as the drawer.
@@ -727,8 +748,10 @@ fun DuaGenAINavHost(
                 )
             }
 
-            composable(DuaGenAIRoutes.AGENTS) { AgentsScreen() }
-            composable(DuaGenAIRoutes.DISCOVER) { DiscoverScreen() }
+            // The four tab screens carry the same dock as Home, so the user
+            // can always switch tabs; Back from any of them returns Home.
+            composable(DuaGenAIRoutes.AGENTS) { AgentsScreen(bottomBar = tabDock) }
+            composable(DuaGenAIRoutes.DISCOVER) { DiscoverScreen(bottomBar = tabDock) }
             composable(DuaGenAIRoutes.MEMORY) {
                 // The screen reads from the repository, not a hardcoded list.
                 MemoryScreen(
@@ -736,6 +759,7 @@ fun DuaGenAINavHost(
                     // A 401 is not retryable: the honest action is to sign in,
                     // not to tap Retry forever. Profile is where the token is set.
                     onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                    bottomBar = tabDock,
                 )
             }
             composable(DuaGenAIRoutes.ARTIFACTS) {
@@ -743,6 +767,7 @@ fun DuaGenAINavHost(
                 ArtifactsScreen(
                     repository = artifactsRepository,
                     onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                    bottomBar = tabDock,
                 )
             }
             composable(DuaGenAIRoutes.SETTINGS) {
