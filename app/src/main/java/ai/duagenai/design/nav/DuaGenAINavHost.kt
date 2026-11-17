@@ -84,8 +84,6 @@ import ai.duagenai.design.screens.RuntimesScreen
 import ai.duagenai.design.screens.SettingsScreen
 import ai.duagenai.design.screens.SettingsStore
 import ai.duagenai.design.screens.SidebarDrawer
-import ai.duagenai.design.screens.SignedOutReadOnlyScreen
-import ai.duagenai.design.screens.SignedOutUiState
 import ai.duagenai.design.screens.SkillConfigScreen
 import ai.duagenai.design.screens.StorageScreen
 import ai.duagenai.design.screens.decodeChannels
@@ -327,9 +325,6 @@ fun DuaGenAINavHost(
     // move before.
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Chats) }
 
-    // v25: confirmed Sign out from Settings → Profile & Device. The session
-    // token stays, so "Sign back in" returns to the same signed-in home.
-    var readOnly by rememberSaveable { mutableStateOf(false) }
     // Agent-home filter. True covers Home with the public profile.
     var publicProfileOpen by rememberSaveable { mutableStateOf(false) }
     // Header menu creates. Newline-separated so rememberSaveable can keep them.
@@ -362,18 +357,8 @@ fun DuaGenAINavHost(
     DuaGenAITheme(darkTheme = isDark) {
     val layoutDirection = if (languageId == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-    SignedOutReadOnlyScreen(
-        modifier = modifier,
-        state = SignedOutUiState(readOnly = readOnly),
-        onSignBackIn = {
-            readOnly = false
-            navController.navigate(DuaGenAIRoutes.HOME) {
-                popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
-                launchSingleTop = true
-            }
-        },
-    ) {
     ModalNavigationDrawer(
+        modifier = modifier,
         drawerState = drawerState,
         // The scrim is M3's own; tapping it closes the drawer, which is the
         // "scrim tap par band hota hai" behaviour, for free.
@@ -527,14 +512,9 @@ fun DuaGenAINavHost(
                     themeModeLabel = themeMode.label,
                     storageLabel = storageLabel(storageUsedGb, storageTotalGb),
                     notificationsLabel = notificationSummary(notifications),
-                    // THE SIGN-IN SEAM. This is the only place in the app that
-                    // writes a token, and it is what makes the remote sources
-                    // reachable at all: before this, nothing in `app/src/main`
-                    // ever set `TokenStore.token`, so `sessionToken` was always
-                    // null and the app could never talk to the backend.
+                    // Signed out, Profile's SESSION row opens the same
+                    // email/password sign-in as Settings (one sign-in path).
                     signedIn = sessionToken != null,
-                    onSignIn = { token -> TokenStore.setToken(token) },
-                    onSignOut = { TokenStore.clear() },
                     chatCount = profileChatRows().size,
                     agentCount = profileAgentRows(linesOf(madeAgents)).size,
                     artifactCount = profileArtifactRows(linesOf(madeArtifacts)).size,
@@ -781,8 +761,8 @@ fun DuaGenAINavHost(
                     onOpenAppearance = { navController.navigate(DuaGenAIRoutes.APPEARANCE) },
                     onOpenStorage = { navController.navigate(DuaGenAIRoutes.STORAGE) },
                     onOpenNotifications = { navController.navigate(DuaGenAIRoutes.NOTIFICATIONS) },
-                    onEnterReadOnly = {
-                        readOnly = true
+                    // The one Sign out: confirm -> server logout -> Home.
+                    onSignedOut = {
                         navController.navigate(DuaGenAIRoutes.HOME) {
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
@@ -896,7 +876,6 @@ fun DuaGenAINavHost(
                 builder = navGraph,
             )
         }
-    }
     }
     }
     }

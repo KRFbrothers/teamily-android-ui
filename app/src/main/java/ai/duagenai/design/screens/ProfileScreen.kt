@@ -25,8 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -100,24 +98,15 @@ fun ProfileScreen(
     /**
      * Whether a session token is present.
      *
-     * Drives the sign-in card: signed out shows the token field, signed in shows
-     * the sign-out button. The nav host passes `TokenStore.session != null`.
+     * Drives the SESSION card: signed out it is a "Sign in" row that opens the
+     * one email/password sign-in ([AccountSignInDialog], same as Settings);
+     * signed in it only states that the session is active. Sign out lives in
+     * Settings → Profile & Device, once. The nav host passes
+     * `TokenStore.session != null`.
      */
     signedIn: Boolean = false,
-    /**
-     * Hands a pasted session token to the app.
-     *
-     * THE ONLY WRITE PATH for a token in the whole app. Before this existed,
-     * nothing in `app/src/main` ever set `TokenStore.token`, so the remote data
-     * sources were never constructed and the app could not reach the backend at
-     * all — the single biggest blocker in the review.
-     *
-     * A real build replaces this field with a Supabase/OAuth sign-in flow; the
-     * seam is the same either way (`TokenStore.setToken`).
-     */
-    onSignIn: (String) -> Unit = {},
-    /** Clears the session token. */
-    onSignOut: () -> Unit = {},
+    /** Backs the shared sign-in dialog. */
+    accountDataSource: RemoteAccountDataSource = RemoteAccountDataSource(),
     /** Live counts. The tiles open the lists that produce these numbers. */
     chatCount: Int = 128,
     agentCount: Int = 4,
@@ -131,6 +120,7 @@ fun ProfileScreen(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    var showSignIn by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier,
@@ -320,91 +310,52 @@ fun ProfileScreen(
                 }
             }
             item {
-                // THE SIGN-IN CARD.
-                //
-                // This is the control the review said was missing: the backend's
-                // 401 body literally says "Sign in from Profile to use
-                // Artifacts.", and Profile had no way to do it. Without a token
-                // the app cannot reach the live service at all.
-                //
-                // It is deliberately a plain token field, not an OAuth flow: this
-                // module has no auth dependency, and adding one is a product
-                // decision. What it does provide is the real, working seam —
-                // paste a session token, and both repositories flip to the remote
-                // sources immediately (the nav host collects the StateFlow).
+                // THE SESSION CARD. Signed out it is a row into the one
+                // email/password sign-in (the same dialog Settings opens), so
+                // there is no raw token field anywhere in the app. Signed in it
+                // only states the session; Sign out is in Settings, once.
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = DuaGenAITheme.shapes.card,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Column(modifier = Modifier.padding(spacing.lg)) {
+                    Column {
                         Text(
                             text = "SESSION",
                             style = DuaGenAITextStyles.eyebrow,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(
+                                start = spacing.lg,
+                                end = spacing.lg,
+                                top = spacing.lg,
+                            ),
                         )
-                        Spacer(Modifier.height(spacing.sm))
                         if (signedIn) {
                             Text(
-                                text = "A session token is active. Artifacts and Memory load from the live service.",
+                                text = "You are signed in. Artifacts and Memory load from the live service.",
                                 style = DuaGenAITextStyles.meta,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(spacing.lg),
                             )
-                            Spacer(Modifier.height(spacing.md))
-                            OutlinedButton(
-                                onClick = onSignOut,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = DuaGenAITheme.shapes.pill,
-                            ) {
-                                Text("Sign out", style = DuaGenAITextStyles.button)
-                            }
                         } else {
-                            Text(
-                                text = "Paste a session token to load Artifacts and Memory from the live service.",
-                                style = DuaGenAITextStyles.meta,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            SettingsRow(
+                                title = SETTINGS_SIGN_IN_LABEL,
+                                subtitle = "Use your Dua account email and password.",
+                                icon = null,
+                                onClick = { showSignIn = true },
                             )
-                            Spacer(Modifier.height(spacing.md))
-                            // Local draft only. The token is never logged, never
-                            // persisted, and never rendered back once submitted.
-                            var draft by rememberSaveable { mutableStateOf("") }
-                            OutlinedTextField(
-                                value = draft,
-                                onValueChange = { draft = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                singleLine = true,
-                                label = { Text("Session token") },
-                                placeholder = { Text("eyJ\u2026") },
-                            )
-                            Spacer(Modifier.height(spacing.md))
-                            Button(
-                                onClick = {
-                                    if (draft.isNotBlank()) {
-                                        onSignIn(draft)
-                                        // Clear the field so the token is not
-                                        // left sitting in a text box.
-                                        draft = ""
-                                    }
-                                },
-                                enabled = draft.isNotBlank(),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = DuaGenAITheme.shapes.pill,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            ) {
-                                Text("Sign in", style = DuaGenAITextStyles.button)
-                            }
                         }
                     }
                 }
             }
-            // The old disabled "Sign out" block lived here. It is gone: sign-out
-            // is now a real control inside the SESSION card above, so a second,
-            // permanently-disabled button would be a lie about what the app can
-            // do.
         }
+    }
+
+    if (showSignIn) {
+        AccountSignInDialog(
+            accountDataSource = accountDataSource,
+            onDismiss = { showSignIn = false },
+        )
     }
 }
 

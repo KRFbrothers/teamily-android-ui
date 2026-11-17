@@ -60,11 +60,11 @@ import ai.duagenai.design.theme.MaxContentWidth
  *
  *  HONESTY RULE
  *  ------------
- *  Profile editing is not implemented, so "Edit profile" stays disabled. With
- *  no session, "Sign out" stays disabled too — the same labels and the same
- *  helper lines as before, so a signed-out build does not pretend. "Sign in"
- *  is the live control: it asks for email and password and writes the session
- *  token. Once that token exists, "Sign out" becomes a real action.
+ *  Profile editing is not implemented, so "Edit profile" stays disabled.
+ *  "Sign in" is the ONE sign-in in the app: it asks for email and password and
+ *  writes the session token (Profile's SESSION row opens this same dialog).
+ *  "Sign out" exists once, in the directory's Profile & Device group, only
+ *  while a session exists: confirm -> server logout -> Home.
  * ==========================================================================*/
 
 /** The label of the (disabled) account-edit control. */
@@ -73,14 +73,12 @@ const val SETTINGS_EDIT_PROFILE_LABEL = "Edit profile"
 /** The label of the sign-in control. */
 const val SETTINGS_SIGN_IN_LABEL = "Sign in"
 
-/** The label of the sign-out control. Disabled until a session exists. */
+/** The label of the one sign-out control (Settings → Profile & Device). */
 const val SETTINGS_SIGN_OUT_LABEL = "Sign out"
 
 /** Why the account controls are disabled. */
 const val SETTINGS_ACCOUNT_HELPER = "Account editing is not available in this build."
 
-/** Why sign-out is disabled while there is no session. */
-private const val SETTINGS_SIGN_OUT_UNAVAILABLE = "Signing out is not available in this build."
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,12 +100,11 @@ fun SettingsScreen(
     onOpenStorage: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     /**
-     * Profile & Device → Sign out, after the confirm dialog.
-     *
-     * This is the read-only veil. It does not replace the account "Sign out"
-     * row above, which still ends the real session.
+     * Fired after Profile & Device → Sign out is confirmed and
+     * [RemoteAccountDataSource.logout] has returned (the token is cleared
+     * even if the server call fails). The nav host sends the user Home.
      */
-    onEnterReadOnly: () -> Unit = {},
+    onSignedOut: () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
@@ -179,20 +176,8 @@ fun SettingsScreen(
                         onClick = {},
                         enabled = false,
                     )
-                    HorizontalDivider(color = colors.hairline)
-                    // Signed out, this is the same disabled row as before. A
-                    // session is what makes it a real sign-out.
-                    SettingsRow(
-                        title = SETTINGS_SIGN_OUT_LABEL,
-                        subtitle = if (signedIn) {
-                            "End this session on this device."
-                        } else {
-                            SETTINGS_SIGN_OUT_UNAVAILABLE
-                        },
-                        icon = null,
-                        onClick = { scope.launch { accountDataSource.logout() } },
-                        enabled = signedIn,
-                    )
+                    // Sign out is not repeated here: the one Sign out row
+                    // lives in the directory below (Profile & Device).
                 }
             }
 
@@ -235,31 +220,55 @@ fun SettingsScreen(
                 onOpenAppearance = onOpenAppearance,
                 onOpenStorage = onOpenStorage,
                 onOpenNotifications = onOpenNotifications,
-                onEnterReadOnly = onEnterReadOnly,
+                signedIn = signedIn,
+                onSignOut = {
+                    scope.launch {
+                        accountDataSource.logout()
+                        onSignedOut()
+                    }
+                },
             )
         }
         }
     }
 
     if (showSignIn) {
-        SignInDialog(
+        AccountSignInDialog(
+            accountDataSource = accountDataSource,
             onDismiss = { showSignIn = false },
-            onSubmit = { email, password, onResult ->
-                scope.launch {
-                    try {
-                        accountDataSource.emailLogin(email, password)
-                        showSignIn = false
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: ApiError) {
-                        onResult(e.userMessage)
-                    } catch (e: Exception) {
-                        onResult(e.message?.takeIf { it.isNotBlank() } ?: "Sign in: no connection.")
-                    }
-                }
-            },
         )
     }
+}
+
+/**
+ * THE sign-in: email and password against [RemoteAccountDataSource.emailLogin].
+ *
+ * Settings → Sign in and Profile → SESSION both open this one dialog, so the
+ * app has a single sign-in path. It closes itself after a successful login.
+ */
+@Composable
+internal fun AccountSignInDialog(
+    accountDataSource: RemoteAccountDataSource,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    SignInDialog(
+        onDismiss = onDismiss,
+        onSubmit = { email, password, onResult ->
+            scope.launch {
+                try {
+                    accountDataSource.emailLogin(email, password)
+                    onDismiss()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: ApiError) {
+                    onResult(e.userMessage)
+                } catch (e: Exception) {
+                    onResult(e.message?.takeIf { it.isNotBlank() } ?: "Sign in: no connection.")
+                }
+            }
+        },
+    )
 }
 
 /**

@@ -536,7 +536,10 @@ internal fun SettingsDirectory(
     onOpenAppearance: () -> Unit,
     onOpenStorage: () -> Unit,
     onOpenNotifications: () -> Unit,
-    onEnterReadOnly: () -> Unit,
+    /** Shows the one "Sign out" row. Only true while a session exists. */
+    signedIn: Boolean,
+    /** Confirmed sign-out: the caller ends the server session and goes Home. */
+    onSignOut: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     var query by rememberSaveable { mutableStateOf("") }
@@ -556,7 +559,7 @@ internal fun SettingsDirectory(
         val onClick: () -> Unit = {},
     )
 
-    val rows = listOf(
+    val rows = listOfNotNull(
         DirRow("AI & Agent Setup", "App Connectors", "Third-party accounts your agents can use", connectorSummary, onClick = onOpenConnectors),
         DirRow("AI & Agent Setup", "Runtimes", "Python 3.11, Node 20, Chromium", onClick = onOpenRuntimes),
         DirRow("AI & Agent Setup", "Skill Configuration", onClick = onOpenSkills),
@@ -569,13 +572,19 @@ internal fun SettingsDirectory(
         DirRow("Profile & Device", "Appearance", trailing = themeLabel, onClick = onOpenAppearance),
         DirRow("Profile & Device", "Storage", trailing = storageLabel, onClick = onOpenStorage),
         DirRow("Profile & Device", "Notifications", trailing = notificationsLabel, onClick = onOpenNotifications),
-        DirRow(
-            "Profile & Device",
-            "Sign out",
-            "Aap is device se sign out ho jayenge",
-            danger = true,
-            onClick = { confirmSignOut = true },
-        ),
+        // THE one Sign out in the app. Signed out there is nothing to end,
+        // so the row is absent and Settings → Sign in is the way in.
+        if (signedIn) {
+            DirRow(
+                "Profile & Device",
+                SETTINGS_SIGN_OUT_LABEL,
+                "Aap is device se sign out ho jayenge",
+                danger = true,
+                onClick = { confirmSignOut = true },
+            )
+        } else {
+            null
+        },
     )
     val visible = rows.filter { row ->
         needle.isEmpty() ||
@@ -646,8 +655,8 @@ internal fun SettingsDirectory(
             confirmButton = {
                 TextButton(onClick = {
                     confirmSignOut = false
-                    onEnterReadOnly()
-                }) { Text("Sign out") }
+                    onSignOut()
+                }) { Text(SETTINGS_SIGN_OUT_LABEL) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmSignOut = false }) { Text("Cancel") }
