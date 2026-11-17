@@ -9,4 +9,10 @@
     <string name="create_agent_action">Create</string>
     <!-- Dua home composer: Attach / Voice are not wired yet -->
     <string name="composer_coming_soon">Jaldi aa raha hai</string>
+    <!-- Dua home welcome: greeting and four quick starters (a tap sends it as a new Dua chat) -->
+    <string name="dua_home_greeting">How can I help you today?</string>
+    <string name="dua_home_starter_explain">💡 Explain a topic</string>
+    <string name="dua_home_starter_email">✍️ Write an email</string>
+    <string name="dua_home_starter_ideas">🧠 Brainstorm ideas</string>
+    <string name="dua_home_starter_plan">🗓️ Plan my day</string>
 </resources>

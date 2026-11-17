@@ -75,7 +75,8 @@ fun Modifier.teamilyRestingShadow(palette: TeamilyPalette, shape: Shape): Modifi
 
 /**
  * `--nv-primary-shadow-hover` green glow on the Send button and primary green
- * CTAs. Light mode only — the dark palette carries no glow, so this is a no-op.
+ * CTAs. Light and dark both carry a glow; a palette with null glow colours
+ * makes this a no-op.
  */
 fun Modifier.teamilyPrimaryGlow(palette: TeamilyPalette): Modifier {
     val ambient = palette.primaryGlowAmbient ?: return this

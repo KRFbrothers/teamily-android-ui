@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ai.duagenai.design.screens.SettingsStore
 import ai.duagenai.design.screens.ThemeMode
+import ai.duagenai.design.screens.TokenStore
 import ai.duagenai.design.theme.DuaGenAITheme
 
 /**
@@ -21,14 +22,16 @@ import ai.duagenai.design.theme.DuaGenAITheme
  * buried at the bottom of a 550-line nav file is not findable by anyone
  * searching for it.
  *
- * `enableEdgeToEdge()` is called before `setContent` so [DuaGenAITheme] can
- * paint the status-bar band (`#1D2220` dark, `#FAFBFA` light) and set
- * `isAppearanceLightStatusBars = !darkTheme`.
+ * `enableEdgeToEdge()` is called before `setContent` so each screen's canvas
+ * draws behind the transparent status bar, and [DuaGenAITheme] sets
+ * `isAppearanceLightStatusBars = !darkTheme` for the icon colour.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Restore the saved sign-in and keep it in sync (survives restarts).
+        TokenStore.persistTo(applicationContext)
         setContent {
             val context = LocalContext.current
             val settings = remember(context) { SettingsStore(context.applicationContext) }

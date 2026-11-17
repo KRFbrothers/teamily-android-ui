@@ -132,6 +132,10 @@ import ai.duagenai.design.theme.teamilyPressScale
 import ai.duagenai.design.theme.teamilyPrimaryGlow
 import ai.duagenai.design.theme.teamilyRestingShadow
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.fillMaxHeight
 import ai.duagenai.design.theme.MaxContentWidth
 
@@ -248,8 +252,12 @@ enum class HomeTab(val label: String) {
 fun HomeScreen(
     /** Opens the sidebar drawer. The host owns the drawer state. */
     onOpenDrawer: () -> Unit = {},
-    /** Current assistant mode. Hoisted so it survives configuration changes. */
-    mode: HomeMode = HomeMode.Dua,
+    /**
+     * Current assistant mode. Hoisted so it survives configuration changes.
+     * The app launches into Agent home; both top bars carry the Dua | Agent
+     * switch, so neither mode is a dead end.
+     */
+    mode: HomeMode = HomeMode.Agent,
     onModeChange: (HomeMode) -> Unit = {},
     /** The top bar's right button in Dua mode (the gear). */
     onOpenSettings: () -> Unit = {},
@@ -285,6 +293,8 @@ fun HomeScreen(
      * opens a NEW Dua thread (fresh chat id) that sends it.
      */
     onSendDuaMessage: (String) -> Unit = {},
+    /** Dua home's Attach `+` sheet: a Create tile was tapped (its key). */
+    onOpenCreate: (String) -> Unit = {},
     /** Header "+" menu. The button's content description stays "New chat". */
     onCreateAgent: () -> Unit = {},
     onNewGroup: () -> Unit = {},
@@ -328,14 +338,14 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // The window is edge-to-edge. This keeps the header below the
-            // status bar and the camera cutout. The status-bar band itself is
-            // painted by DuaGenAITheme. The dock still applies its own
-            // navigation-bar inset, so the bottom is not padded twice.
-            .statusBarsPadding()
-            // Teamily canvas: the zip `--nv-atmosphere` (light #E8F3EC glow
-            // over #FAFBFA, dark #242B27 glow over #171C19, both at 8%/92%).
-            .teamilyCanvas(palette),
+            // Teamily canvas: the zip `--nv-atmosphere` glow at 8%/92%. Drawn
+            // BEFORE the inset padding, so it also fills the transparent
+            // status bar (true edge-to-edge, no separate band).
+            .teamilyCanvas(palette)
+            // Keeps the header below the status bar and the camera cutout. The
+            // dock still applies its own navigation-bar inset, so the bottom
+            // is not padded twice.
+            .statusBarsPadding(),
     ) {
         Column(
             Modifier
@@ -347,11 +357,11 @@ fun HomeScreen(
 
             if (mode == HomeMode.Dua) {
                 /* ================= DUA MODE =================
-                 * Unchanged. Top bar: hamburger · Dua|Agent toggle · gear. Dua
-                 * is a chatbot, so the body is empty — no chat list, no search
-                 * row, no bottom navigation, nothing agent-related. The only
-                 * control is the composer at the bottom: typeable, and Send
-                 * opens a new Dua thread with that first message. */
+                 * Top bar: hamburger · Dua|Agent toggle · gear. Dua is a
+                 * chatbot: no chat list, no search row, no bottom navigation.
+                 * The body is a centred welcome (bot badge, greeting and four
+                 * quick starters); a starter sends exactly like the composer —
+                 * a NEW Dua thread carrying that text. */
                 HomeTopBar(
                     mode = mode,
                     onOpenDrawer = onOpenDrawer,
@@ -359,7 +369,10 @@ fun HomeScreen(
                     onOpenSettings = onOpenSettings,
                     onNewChat = onNewChat,
                 )
-                Spacer(Modifier.weight(1f).fillMaxWidth())
+                DuaHomeWelcome(
+                    onPick = { text -> onSendDuaMessage(text) },
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                )
                 Box(
                     Modifier.windowInsetsPadding(
                         WindowInsets.navigationBars.union(WindowInsets.ime),
@@ -384,6 +397,11 @@ fun HomeScreen(
                                     snackbarHostState.showSnackbar(comingSoon)
                                 }
                             },
+                            // + opens the Quick Actions sheet; Voice looks and
+                            // reads enabled but still explains "coming soon".
+                            attachEnabled = true,
+                            voiceEnabled = true,
+                            onOpenCreate = onOpenCreate,
                         )
                     }
                 }
@@ -394,6 +412,8 @@ fun HomeScreen(
                  * card, Pinned, Chats) with the floating dock drawn OVER it.
                  * No composer. */
                 AgentHomeTopBar(
+                    mode = mode,
+                    onModeChange = onModeChange,
                     onOpenDrawer = onOpenDrawer,
                     onCreateAgent = onCreateAgent,
                     onNewGroup = onNewGroup,
@@ -680,6 +700,17 @@ internal fun DuaComposer(
      * home uses this to show a "Jaldi aa raha hai" snackbar. Null: no click.
      */
     onUnavailable: (() -> Unit)? = null,
+    /**
+     * Dua home: Attach `+` is live and opens [ComposerPlusSheet] even without
+     * the agent tools. Its Skills / MCP rows then answer with [onUnavailable]
+     * (Dua is not the agent); its Create tiles call [onOpenCreate].
+     */
+    attachEnabled: Boolean = false,
+    /**
+     * Voice is announced enabled (not `disabled()`). There is still no voice
+     * capture in this kit, so a tap goes to [onUnavailable] ("Jaldi aa raha hai").
+     */
+    voiceEnabled: Boolean = false,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // Editable only when a caller supplies a change handler. This is the single
@@ -688,6 +719,7 @@ internal fun DuaComposer(
     val canSend = editable && !value.isNullOrBlank() && !sending
     val live = editable && onStop != null
     val agentTools = onToggleSkill != null && onToggleMcp != null
+    val plusLive = agentTools || attachEnabled
     var sheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
 
     Box(
@@ -721,7 +753,7 @@ internal fun DuaComposer(
                 ComposerIconButton(
                     icon = Icons.Outlined.Add,
                     contentDescription = "Attach",
-                    enabled = agentTools,
+                    enabled = plusLive,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { sheet = ComposerSheet.Plus },
                     onDisabledClick = onUnavailable,
@@ -799,6 +831,7 @@ internal fun DuaComposer(
                     onSend = { if (canSend) onSend?.invoke() },
                     onStop = { onStop?.invoke() },
                     onVoiceUnavailable = onUnavailable,
+                    voiceEnabled = voiceEnabled,
                 )
             }
         }
@@ -806,25 +839,33 @@ internal fun DuaComposer(
 
     // The sheets. Opened from the icons above; the `+` sheet hands off to the
     // Skills / MCP sheets rather than duplicating them.
-    if (agentTools) {
+    if (plusLive) {
         when (sheet) {
             ComposerSheet.Plus -> ComposerPlusSheet(
-                onOpenSkills = { sheet = ComposerSheet.Skills },
-                onOpenMcp = { sheet = ComposerSheet.Mcp },
+                // Without agent tools (Dua home) the Skills / MCP rows close the
+                // sheet and explain themselves instead of opening a dead sheet.
+                onOpenSkills = {
+                    if (agentTools) sheet = ComposerSheet.Skills
+                    else { sheet = ComposerSheet.None; onUnavailable?.invoke() }
+                },
+                onOpenMcp = {
+                    if (agentTools) sheet = ComposerSheet.Mcp
+                    else { sheet = ComposerSheet.None; onUnavailable?.invoke() }
+                },
                 onDismiss = { sheet = ComposerSheet.None },
                 onOpenCreate = { key ->
                     sheet = ComposerSheet.None
                     onOpenCreate?.invoke(key)
                 },
             )
-            ComposerSheet.Skills -> ComposerSkillsSheet(
+            ComposerSheet.Skills -> if (onToggleSkill != null) ComposerSkillsSheet(
                 enabledSkillIds = enabledSkillIds,
-                onToggleSkill = onToggleSkill!!,
+                onToggleSkill = onToggleSkill,
                 onDismiss = { sheet = ComposerSheet.None },
             )
-            ComposerSheet.Mcp -> ComposerMcpSheet(
+            ComposerSheet.Mcp -> if (onToggleMcp != null) ComposerMcpSheet(
                 mcpEnabled = mcpEnabled,
-                onToggleMcp = onToggleMcp!!,
+                onToggleMcp = onToggleMcp,
                 onDismiss = { sheet = ComposerSheet.None },
             )
             ComposerSheet.None -> Unit
@@ -894,9 +935,8 @@ private enum class SendMode { Send, Stop, Voice }
 
 /**
  * The single trailing control: a 48dp touch target wrapping a 42dp
- * `brandGradient` disc (zip `--nv-primary-fill`: light #0B8249 -> #087C45 with a
- * white glyph, dark flat #CBE7D2 with a #17201B glyph and no shadow — the same
- * pair as the dark header plus), replacing the old separate 40dp voice disc +
+ * `brandGradient` disc (emerald #0B8249 -> #087C45 in light and dark, with the
+ * `sendButtonIcon` glyph — white — and the subtle primary glow), replacing the old separate 40dp voice disc +
  * 36dp send disc.
  *
  *  • Stop  — a reply is in flight on a live thread; calls `onStop`.
@@ -912,6 +952,9 @@ private fun SendStopVoiceButton(
     // Voice is not wired: still drawn and announced disabled, but a tap can
     // explain that (Dua home's "Jaldi aa raha hai" snackbar). Null: no click.
     onVoiceUnavailable: (() -> Unit)? = null,
+    // Voice announced enabled (Dua home). The tap still goes to
+    // [onVoiceUnavailable] because no voice capture exists yet.
+    voiceEnabled: Boolean = false,
 ) {
     val palette = teamilyPalette()
     val interactionSource = remember { MutableInteractionSource() }
@@ -951,14 +994,14 @@ private fun SendStopVoiceButton(
                     SendMode.Stop -> "Stop"
                     SendMode.Voice -> "Voice input"
                 }
-                if (mode == SendMode.Voice) disabled()
+                if (mode == SendMode.Voice && !voiceEnabled) disabled()
             },
         contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
                 .size(42.dp)
-                // Light-mode primary green glow (no-op in dark).
+                // Subtle primary green glow (light and dark).
                 .teamilyPrimaryGlow(palette)
                 .clip(CircleShape)
                 .background(palette.brandGradient),
@@ -968,13 +1011,13 @@ private fun SendStopVoiceButton(
                 SendMode.Send -> Icon(
                     Icons.AutoMirrored.Outlined.Send,
                     contentDescription = null,
-                    tint = palette.accentContrast,
+                    tint = palette.sendButtonIcon,
                     modifier = Modifier.size(20.dp),
                 )
                 SendMode.Stop -> Icon(
                     Icons.Filled.Stop,
                     contentDescription = null,
-                    tint = palette.accentContrast,
+                    tint = palette.sendButtonIcon,
                     modifier = Modifier.size(20.dp),
                 )
                 SendMode.Voice -> Row(
@@ -988,7 +1031,7 @@ private fun SendStopVoiceButton(
                                 .width(2.dp)
                                 .height(h)
                                 .clip(CircleShape)
-                                .background(palette.accentContrast),
+                                .background(palette.sendButtonIcon),
                         )
                     }
                 }
@@ -1075,6 +1118,8 @@ private val HEADER_MENU = listOf(
 
 @Composable
 private fun AgentHomeTopBar(
+    mode: HomeMode,
+    onModeChange: (HomeMode) -> Unit,
     onOpenDrawer: () -> Unit,
     onCreateAgent: () -> Unit,
     onNewGroup: () -> Unit,
@@ -1084,103 +1129,161 @@ private fun AgentHomeTopBar(
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
-    ) {
-        // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
-        // accessibility label stays "Open menu". The clip stays on the photo
-        // so the online dot can sit on the circle's top-right rim.
-        val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
+    Column(Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(40.dp),
+                .fillMaxWidth()
+                .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
         ) {
+            // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
+            // accessibility label stays "Open menu". The clip stays on the photo
+            // so the online dot can sit on the circle's top-right rim.
+            val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(palette.chromeFill)
-                    .clickable(role = Role.Button, onClick = onOpenDrawer)
-                    .semantics { contentDescription = "Open menu" },
+                    .align(Alignment.CenterStart)
+                    .size(40.dp),
             ) {
-                Image(
-                    painter = photo,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            // 8.dp #42D982 fill, 2.dp #1D2220 ring.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(palette.avatarOnlineRing)
-                    .padding(2.dp)
-                    .clip(CircleShape)
-                    .background(palette.logoMint),
-            )
-        }
-
-        // CENTER — badge + app name.
-        Row(
-            modifier = Modifier.align(Alignment.Center),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
-            Spacer(Modifier.width(spacing.sm))
-            Text(
-                text = APP_NAME,
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 21.sp,
-                    lineHeight = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-0.01).em,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-        }
-
-        // RIGHT — plus. The accessible name stays "New chat" (one node). The
-        // tap opens the header menu instead of starting a blank thread.
-        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-            var menuOpen by remember { mutableStateOf(false) }
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(palette.plusFill)
-                    .clickable(role = Role.Button) { menuOpen = true }
-                    .semantics { contentDescription = "New chat" },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = null,
-                    tint = palette.plusIcon,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                for (item in HEADER_MENU) {
-                    DropdownMenuItem(
-                        text = { Text(item.label) },
-                        onClick = {
-                            menuOpen = false
-                            when (item.kind) {
-                                "agent" -> onCreateAgent()
-                                "group" -> onNewGroup()
-                                "artifact" -> onCreateArtifact()
-                            }
-                        },
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(palette.chromeFill)
+                        .clickable(role = Role.Button, onClick = onOpenDrawer)
+                        .semantics { contentDescription = "Open menu" },
+                ) {
+                    Image(
+                        painter = photo,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
+                // 8.dp #42D982 fill, 2.dp #1D2220 ring.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(palette.avatarOnlineRing)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(palette.logoMint),
+                )
             }
+
+            // CENTER — badge + app name.
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
+                Spacer(Modifier.width(spacing.sm))
+                Text(
+                    text = APP_NAME,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = 21.sp,
+                        lineHeight = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.01).em,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                )
+            }
+
+            // RIGHT — plus. The accessible name stays "New chat" (one node). The
+            // tap opens the header menu instead of starting a blank thread.
+            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                var menuOpen by remember { mutableStateOf(false) }
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(palette.plusFill)
+                        .clickable(role = Role.Button) { menuOpen = true }
+                        .semantics { contentDescription = "New chat" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = palette.plusIcon,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    for (item in HEADER_MENU) {
+                        DropdownMenuItem(
+                            text = { Text(item.label) },
+                            onClick = {
+                                menuOpen = false
+                                when (item.kind) {
+                                    "agent" -> onCreateAgent()
+                                    "group" -> onNewGroup()
+                                    "artifact" -> onCreateArtifact()
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+        // The same Dua | Agent switch Dua home's top bar draws, so Agent home is
+        // never a one-way door back to Dua.
+        ModeToggle(
+            mode = mode,
+            onModeChange = onModeChange,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .widthIn(max = 240.dp)
+                .fillMaxWidth()
+                .padding(horizontal = spacing.gutter, vertical = 4.dp),
+        )
+    }
+}
+
+/**
+ * Dua home's body: a centred bot badge, a greeting and four quick starters.
+ * Copy lives in `strings.xml` (`dua_home_greeting`, `dua_home_starter_*`).
+ */
+@Composable
+private fun DuaHomeWelcome(
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val starters = listOf(
+        stringResource(R.string.dua_home_starter_explain),
+        stringResource(R.string.dua_home_starter_email),
+        stringResource(R.string.dua_home_starter_ideas),
+        stringResource(R.string.dua_home_starter_plan),
+    )
+    // Box + centred Column: centred when it fits, scrollable when it does not
+    // (small phones, large font scale, keyboard up).
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = spacing.gutter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            BotBadge(56.dp)
+            Spacer(Modifier.height(spacing.md))
+            Text(
+                text = stringResource(R.string.dua_home_greeting),
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() },
+            )
+            Spacer(Modifier.height(spacing.sm))
+            QuickActionChips(
+                label = null,
+                actions = starters,
+                onPick = onPick,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            )
         }
     }
 }
@@ -2038,13 +2141,13 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
 @Preview(name = "Home Dua — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
 @Preview(name = "Home Dua — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
-private fun HomeDuaLight() = DuaGenAITheme(darkTheme = false) { HomeScreen() }
+private fun HomeDuaLight() = DuaGenAITheme(darkTheme = false) { HomeScreen(mode = HomeMode.Dua) }
 
 @Preview(name = "Home Dua — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Preview(name = "Home Dua — dark — tablet", showBackground = true, widthDp = 800, heightDp = 1280)
 @Preview(name = "Home Dua — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
-private fun HomeDuaDark() = DuaGenAITheme(darkTheme = true) { HomeScreen() }
+private fun HomeDuaDark() = DuaGenAITheme(darkTheme = true) { HomeScreen(mode = HomeMode.Dua) }
 
 @Preview(name = "Home Agent — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Preview(name = "Home Agent — light — tablet", showBackground = true, widthDp = 800, heightDp = 1280)

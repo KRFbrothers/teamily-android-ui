@@ -1,14 +1,7 @@
 package ai.duagenai.design.theme
 
 import android.app.Activity
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -18,7 +11,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
@@ -304,18 +296,10 @@ object DuaGenAITheme {
                 }
             }
             CompositionLocalProvider(LocalDuaGenAISpacing provides DuaGenAISpacing()) {
-                // Edge-to-edge leaves the status-bar inset transparent, so the
-                // light window background shows as a white strip. Paint that
-                // band with the palette: dark #1D2220, light #FAFBFA.
-                Box(Modifier.fillMaxSize()) {
-                    content()
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .windowInsetsTopHeight(WindowInsets.statusBars)
-                            .background(palette.statusbarBg),
-                    )
-                }
+                // True edge-to-edge: no opaque status-bar band on top. Each
+                // screen's own `teamilyCanvas` / top bar fill draws behind the
+                // transparent status bar; the icon colour is set just above.
+                content()
             }
         }
     }

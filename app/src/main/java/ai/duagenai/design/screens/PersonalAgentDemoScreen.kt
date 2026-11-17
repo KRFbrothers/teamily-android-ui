@@ -60,6 +60,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +77,17 @@ import ai.duagenai.design.theme.teamilyCanvas
 import ai.duagenai.design.theme.teamilyPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/**
+ * The Personal Agent's quick-action prompts. Shared by this demo and the live
+ * Personal Agent thread (ChatScreen), so the two can never drift.
+ */
+internal val PERSONAL_AGENT_QUICK_ACTIONS = listOf(
+    "🗓️ Today's Schedule",
+    "✍️ Draft Team Reply",
+    "📝 Daily Digest",
+    "⚡ Check Next Task",
+)
 
 /** One demo message in the Personal Agent demo screen. */
 private data class DemoChatMessage(
@@ -122,12 +136,7 @@ fun PersonalAgentDemoScreen(
         )
     }
 
-    val quickActions = listOf(
-        "🗓️ Today's Schedule",
-        "✍️ Draft Team Reply",
-        "📝 Daily Digest",
-        "⚡ Check Next Task",
-    )
+    val quickActions = PERSONAL_AGENT_QUICK_ACTIONS
 
     fun sendPrompt(prompt: String) {
         if (prompt.isBlank()) return
@@ -224,32 +233,11 @@ fun PersonalAgentDemoScreen(
                 }
 
                 item {
-                    // Quick Action Prompt Chips
-                    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        Text(
-                            text = "Try asking:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            quickActions.take(2).forEach { action ->
-                                ActionChip(label = action, onClick = { sendPrompt(action) }, palette = palette)
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            quickActions.drop(2).forEach { action ->
-                                ActionChip(label = action, onClick = { sendPrompt(action) }, palette = palette)
-                            }
-                        }
-                    }
+                    QuickActionChips(
+                        label = "Try asking:",
+                        actions = quickActions,
+                        onPick = { sendPrompt(it) },
+                    )
                 }
             }
 
@@ -351,6 +339,45 @@ private fun CapabilityCard(
     }
 }
 
+/**
+ * A caption plus prompt chips in rows of two. Shared by both demo screens, the
+ * live Personal Agent thread and Dua home's quick starters.
+ */
+@Composable
+internal fun QuickActionChips(
+    label: String?,
+    actions: List<String>,
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
+) {
+    val palette = teamilyPalette()
+    Column(modifier.fillMaxWidth().padding(top = 6.dp)) {
+        if (label != null) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(2.dp))
+        }
+        actions.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = horizontalArrangement,
+            ) {
+                row.forEach { action ->
+                    ActionChip(label = action, onClick = { onPick(action) }, palette = palette)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One prompt chip. Drawn as a compact capsule; the touch box is raised to the
+ * 48dp minimum ([minTouchTarget]) and it is announced as a button.
+ */
 @Composable
 internal fun ActionChip(
     label: String,
@@ -358,14 +385,18 @@ internal fun ActionChip(
     palette: ai.duagenai.design.theme.TeamilyPalette,
 ) {
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier
+            .minTouchTarget()
+            .semantics { role = Role.Button },
         shape = TeamilyShapes.capsule,
         color = palette.surfaceRecessed,
         border = BorderStroke(1.dp, palette.border),
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 11.sp),
+            // Lato ships 400 / 700 only; Medium (500) already resolved to 400.
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal, fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         )

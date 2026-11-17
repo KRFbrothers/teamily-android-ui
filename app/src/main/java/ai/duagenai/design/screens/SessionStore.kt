@@ -1,9 +1,20 @@
 package ai.duagenai.design.screens
 
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /* ============================================================================
@@ -41,9 +52,15 @@ import kotlinx.coroutines.launch
  *  does provide is the ONE thing that was missing: a real, observable place for
  *  a token to arrive, and a documented way to plug a provider in.
  *
- *  The token is still NOT persisted to disk. Writing a bearer token to storage
- *  needs encryption and an expiry policy; a design kit that quietly wrote one to
- *  plain preferences would be worse than one that forgets it on process death.
+ *  PERSISTENCE (sign-in survives an app restart)
+ *  ---------------------------------------------
+ *  [TokenStore.persistTo] mirrors the token into a small Preferences DataStore
+ *  ([SessionPersistence]) and restores it once at startup. MainActivity calls
+ *  it; tests that build the nav host directly never do, so they stay
+ *  in-memory. The file lives in `noBackupFilesDir`, which Android never
+ *  includes in cloud backup or device-to-device transfer, so the token does
+ *  not leave the device. It is app-private but NOT encrypted, and there is no
+ *  expiry policy on the client — the server's 401 is the expiry signal.
  * ==========================================================================*/
 
 /**
@@ -167,7 +184,74 @@ object TokenStore {
         }
     }
 
+    /** The one persistence job for this process (null until [persistTo]). */
+    private var persistJob: Job? = null
+
+    /**
+     * Restores the saved token, then writes every change back, for the life of
+     * the process. Sign-in (a non-null token) is saved; Sign out (null) removes
+     * it. Safe to call more than once — while a mirror is running, further
+     * calls do nothing (a cancelled [scope] lets a later call start a new one).
+     *
+     * A token that arrived before the saved one finished loading wins: the
+     * saved value only fills an empty session.
+     */
+    @Synchronized
+    fun persistTo(
+        context: Context,
+        scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    ) {
+        if (persistJob?.isActive == true) return
+        val persistence = SessionPersistence.get(context)
+        persistJob = scope.launch {
+            val saved = persistence.read()
+            if (_session.value == null && saved != null) setToken(saved)
+            _session.collect { persistence.write(it) }
+        }
+    }
+
     /** Trims a token and turns blank into null. */
     private fun normalize(value: String?): String? =
         value?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+/**
+ * The on-disk copy of the session token: one key in a Preferences DataStore.
+ *
+ * The file is created in `noBackupFilesDir` (not the default `files/datastore`)
+ * so it is excluded from Auto Backup and device transfer without any backup
+ * rules XML. One instance per process — DataStore must never open the same
+ * file twice — so it is reached through [get].
+ */
+internal class SessionPersistence private constructor(
+    /** Where the token lives: `noBackupFilesDir/dua_session.preferences_pb`. */
+    val file: File,
+) {
+    private val store: DataStore<Preferences> =
+        PreferenceDataStoreFactory.create(produceFile = { file })
+    private val tokenKey = stringPreferencesKey("session_token")
+
+    /** The saved token, or null. */
+    suspend fun read(): String? = store.data.first()[tokenKey]
+
+    /** Saves [token]; null (signed out) removes it. */
+    suspend fun write(token: String?) {
+        store.edit { prefs ->
+            if (token == null) prefs.remove(tokenKey) else prefs[tokenKey] = token
+        }
+    }
+
+    companion object {
+        /** File name inside `noBackupFilesDir`. */
+        const val FILE_NAME = "dua_session.preferences_pb"
+
+        @Volatile private var instance: SessionPersistence? = null
+
+        fun get(context: Context): SessionPersistence =
+            instance ?: synchronized(this) {
+                instance ?: SessionPersistence(
+                    File(context.applicationContext.noBackupFilesDir, FILE_NAME),
+                ).also { instance = it }
+            }
+    }
 }

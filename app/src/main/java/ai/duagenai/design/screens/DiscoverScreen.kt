@@ -1,5 +1,18 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.teamilyPalette
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Slideshow
+import androidx.compose.material.icons.outlined.Web
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
@@ -38,14 +51,14 @@ import ai.duagenai.design.theme.MaxContentWidth
  *  the product model's suggested starting points, and there is nothing to fetch.
  * ==========================================================================*/
 
-/** One suggested starting point. */
-private data class DiscoverCard(val title: String, val subtitle: String)
+/** One suggested starting point, with its leading glyph. */
+private data class DiscoverCard(val title: String, val subtitle: String, val icon: ImageVector)
 
 private val discoverCards = listOf(
-    DiscoverCard("Draft a landing page", "Dark hero, one CTA, mobile-first"),
-    DiscoverCard("Build a 12-slide deck", "Brand theme, exported to your workspace"),
-    DiscoverCard("Reconcile this month", "Match invoices against the ledger"),
-    DiscoverCard("Summarise a long PDF", "Cited, with the pages quoted"),
+    DiscoverCard("Draft a landing page", "Dark hero, one CTA, mobile-first", Icons.Outlined.Web),
+    DiscoverCard("Build a 12-slide deck", "Brand theme, exported to your workspace", Icons.Outlined.Slideshow),
+    DiscoverCard("Reconcile this month", "Match invoices against the ledger", Icons.AutoMirrored.Outlined.ReceiptLong),
+    DiscoverCard("Summarise a long PDF", "Cited, with the pages quoted", Icons.Outlined.Description),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +67,11 @@ fun DiscoverScreen(
     modifier: Modifier = Modifier,
     /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
     bottomBar: @Composable () -> Unit = {},
+    /**
+     * Starts a NEW thread from a card on the shared chat route. The nav host
+     * gives it a fresh id; the card title is the title and first message.
+     */
+    onStartChat: (prompt: String) -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
 
@@ -100,18 +118,28 @@ fun DiscoverScreen(
                 DemoBadge()
             }
             discoverCards.forEach { card ->
-                Column(modifier = Modifier.padding(vertical = spacing.xs)) {
-                    Text(
-                        text = card.title,
-                        style = DuaGenAITextStyles.rowTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = card.subtitle,
-                        style = DuaGenAITextStyles.snippet,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                TeamilyListCard(
+                    title = card.title,
+                    subtitle = card.subtitle,
+                    onClick = { onStartChat(card.title) },
+                    avatar = {
+                        val palette = teamilyPalette()
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(DuaGenAITheme.shapes.avatarList)
+                                .background(palette.primarySoft),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                card.icon,
+                                contentDescription = null,
+                                tint = palette.primaryInk,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    },
+                )
             }
         }
         }

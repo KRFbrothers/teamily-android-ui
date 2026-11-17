@@ -97,8 +97,9 @@ import ai.duagenai.design.theme.teamilyPalette
  *  content y measured from below the status bar). Shared colours come from
  *  TeamilyPalette; the ones the palette has no slot for (icon-well accents,
  *  switch track / thumb, scrim, sheet handle) are listed once in [AgentColors].
- *  Placeholders stay literal: [agent-id], [agent-url], [agent-skill-id],
- *  [agent-skill-description].
+ *  Placeholders stay literal: [agent-skill-id], [agent-skill-description].
+ *  Overview's agent id / public URL have no source yet, so they read
+ *  "Agent ID: Not set" / "Public URL: Not set" instead of raw placeholders.
  * ==========================================================================*/
 
 // ---------------------------------------------------------------------------
@@ -1039,14 +1040,14 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
                     .background(c.chrome).border(1.dp, c.border, RoundedCornerShape(20.dp)),
             ) {
                 AgentCubeAvatar(52.dp, Modifier.offset(16.dp, 16.dp))
-                Text("[agent-id]", style = t(12, 16), color = c.ink2, modifier = Modifier.offset(80.dp, 14.dp))
+                Text("Agent ID: Not set", style = t(12, 16), color = c.ink2, modifier = Modifier.offset(80.dp, 14.dp))
                 Text("Dua Agent", style = t(18, 26, true), color = c.ink, modifier = Modifier.offset(80.dp, 36.dp))
                 Text(
                     "I'm Dua Agent — the official agent of Dua Gen AI", style = t(14, 20), color = c.ink2,
                     modifier = Modifier.offset(16.dp, 80.dp).width(326.dp),
                 )
                 Row(Modifier.offset(16.dp, 116.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("[agent-url]", style = t(12, 16), color = c.ink2)
+                    Text("Public URL: Not set", style = t(12, 16), color = c.ink2)
                     AgentIcon("copy", 14.dp, c.ink2, Modifier.offset(y = 1.dp))
                 }
                 Box(

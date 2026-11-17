@@ -8,7 +8,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,9 +30,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -66,6 +72,7 @@ import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
+import ai.duagenai.design.theme.teamilyPrimaryGlow
 import ai.duagenai.design.theme.teamilyRestingShadow
 
 /**
@@ -76,7 +83,15 @@ import ai.duagenai.design.theme.teamilyRestingShadow
  * - Floating card container with rounded corners and soft resting shadow.
  * - Row 1: Text input field ("Type a message...").
  * - Row 2: Action toolbar:
- *   [+] [Auto ▾] [|] [Meeting Minutes] [Dictate] [|] [Emoji] ... [Voice msg] [Voice call] / [Send]
+ *   [+] [Auto ▾] [|] [Meeting Minutes] [Dictate] [|] [Emoji] ... [Voice msg] [Voice call] / [Send] / [Stop]
+ *
+ * Every toolbar control keeps its small drawn size but gets a 48dp touch box
+ * via [touchTarget48], so the row still fits a 390dp phone.
+ *
+ * Live threads (ChatScreen) also pass [sending] + [onStop] (the trailing
+ * control becomes Stop while a reply is in flight) and [onOpenSkills] /
+ * [onOpenMcp], which add "Skills" and "MCP Tools" to the mode pill's menu so
+ * the existing Skills / MCP sheets open from it.
  */
 @Composable
 fun TeamilyAgentChatBar(
@@ -94,10 +109,19 @@ fun TeamilyAgentChatBar(
     onVoiceMessageClick: () -> Unit = {},
     onVoiceCallClick: () -> Unit = {},
     modifier: Modifier = Modifier,
+    /** A reply is in flight. With [onStop] the trailing control becomes Stop. */
+    sending: Boolean = false,
+    onStop: (() -> Unit)? = null,
+    /** Mode-pill menu entries that open the Skills / MCP sheets. Null hides them. */
+    onOpenSkills: (() -> Unit)? = null,
+    onOpenMcp: (() -> Unit)? = null,
 ) {
     val palette = teamilyPalette()
     var modeMenuExpanded by remember { mutableStateOf(false) }
     val hasText = value.isNotBlank()
+    // Guarded: blank text or an in-flight reply never sends.
+    val canSend = hasText && !sending
+    val showStop = sending && onStop != null
 
     Surface(
         modifier = modifier
@@ -131,7 +155,7 @@ fun TeamilyAgentChatBar(
                     ),
                     cursorBrush = SolidColor(palette.signalGreen),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(onSend = { if (hasText) onSend() }),
+                    keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
                     decorationBox = { innerTextField ->
                         if (value.isEmpty()) {
                             Text(
@@ -169,14 +193,23 @@ fun TeamilyAgentChatBar(
 
                 // Mode Selector Pill: "Auto ▾"
                 Box {
+                    val pillSource = remember { MutableInteractionSource() }
                     Surface(
                         shape = TeamilyShapes.capsule,
                         color = palette.surfaceRecessed,
                         border = BorderStroke(1.dp, palette.border),
                         modifier = Modifier
+                            .touchTarget48(
+                                Modifier
+                                    .clickable(
+                                        interactionSource = pillSource,
+                                        indication = null,
+                                        role = Role.Button,
+                                    ) { modeMenuExpanded = true }
+                                    .semantics { contentDescription = "Mode: $selectedMode" },
+                            )
                             .clip(TeamilyShapes.capsule)
-                            .clickable(role = Role.Button) { modeMenuExpanded = true }
-                            .semantics { contentDescription = "Mode: $selectedMode" },
+                            .indication(pillSource, LocalIndication.current),
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -211,6 +244,33 @@ fun TeamilyAgentChatBar(
                                 onClick = {
                                     onModeChange(mode)
                                     modeMenuExpanded = false
+                                },
+                            )
+                        }
+                        if (onOpenSkills != null || onOpenMcp != null) {
+                            HorizontalDivider(color = palette.border)
+                        }
+                        if (onOpenSkills != null) {
+                            DropdownMenuItem(
+                                text = { Text("Skills") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Build, contentDescription = null)
+                                },
+                                onClick = {
+                                    modeMenuExpanded = false
+                                    onOpenSkills()
+                                },
+                            )
+                        }
+                        if (onOpenMcp != null) {
+                            DropdownMenuItem(
+                                text = { Text("MCP Tools") },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Extension, contentDescription = null)
+                                },
+                                onClick = {
+                                    modeMenuExpanded = false
+                                    onOpenMcp()
                                 },
                             )
                         }
@@ -253,27 +313,52 @@ fun TeamilyAgentChatBar(
 
                 Spacer(Modifier.weight(1f))
 
-                // RIGHT GROUP: Dynamic transition between [Voice msg + Call] vs [Send]
+                // RIGHT GROUP: [Stop] while a reply is in flight, else [Send]
+                // when there is text, else [Voice msg + Call].
+                val trailing = when {
+                    showStop -> TrailingAction.Stop
+                    hasText -> TrailingAction.Send
+                    else -> TrailingAction.Voice
+                }
                 AnimatedContent(
-                    targetState = hasText,
+                    targetState = trailing,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "SendActionTransition",
-                ) { targetHasText ->
-                    if (targetHasText) {
-                        // Green Send Button
+                ) { target ->
+                    if (target != TrailingAction.Voice) {
+                        // Emerald primary disc (brandGradient + sendButtonIcon),
+                        // drawn 32dp inside a 48dp touch box.
+                        val isStop = target == TrailingAction.Stop
+                        val sendSource = remember { MutableInteractionSource() }
                         Box(
                             modifier = Modifier
+                                .touchTarget48(
+                                    Modifier
+                                        .clickable(
+                                            interactionSource = sendSource,
+                                            indication = null,
+                                            role = Role.Button,
+                                            onClick = {
+                                                if (isStop) onStop?.invoke()
+                                                else if (canSend) onSend()
+                                            },
+                                        )
+                                        .semantics {
+                                            contentDescription = if (isStop) "Stop" else "Send message"
+                                        },
+                                )
                                 .size(32.dp)
+                                .teamilyPrimaryGlow(palette)
                                 .clip(CircleShape)
-                                .background(palette.signalGreen)
-                                .clickable(role = Role.Button, onClick = onSend)
-                                .semantics { contentDescription = "Send" },
+                                .background(palette.brandGradient)
+                                .indication(sendSource, LocalIndication.current),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Outlined.Send,
+                                imageVector = if (isStop) Icons.Filled.Stop
+                                else Icons.AutoMirrored.Outlined.Send,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = palette.sendButtonIcon,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -303,6 +388,10 @@ fun TeamilyAgentChatBar(
     }
 }
 
+/** The chat bar's single trailing control. */
+private enum class TrailingAction { Voice, Send, Stop }
+
+/** A 30dp toolbar glyph with a 48dp touch box ([touchTarget48]). */
 @Composable
 private fun ToolbarIconButton(
     contentDescription: String,
@@ -310,17 +399,22 @@ private fun ToolbarIconButton(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val source = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
+            .touchTarget48(
+                Modifier
+                    .clickable(
+                        role = Role.Button,
+                        onClick = onClick,
+                        interactionSource = source,
+                        indication = null,
+                    )
+                    .semantics { this.contentDescription = contentDescription },
+            )
             .size(30.dp)
             .clip(CircleShape)
-            .clickable(
-                role = Role.Button,
-                onClick = onClick,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            )
-            .semantics { this.contentDescription = contentDescription },
+            .indication(source, LocalIndication.current),
         contentAlignment = Alignment.Center,
     ) {
         content()
