@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
 
 /**
  * The agent reply parser.
@@ -15,6 +16,9 @@ import org.junit.runner.RunWith
  * field name so that regression cannot come back silently.
  */
 @RunWith(AndroidJUnit4::class)
+// Robolectric 4.12.2 has no SDK 36 runtime; without this pin it would pick
+// targetSdk (36) and fail. Same pin as DuaGenAINavHostTest.
+@Config(sdk = [34])
 class ChatTranscriptStoreTest {
 
     @Test
