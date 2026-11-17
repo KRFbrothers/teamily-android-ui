@@ -19,6 +19,7 @@ import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.longClick
@@ -75,6 +76,7 @@ import ai.duagenai.design.cube.AgentSwatch
 import ai.duagenai.design.screens.UrlOpener
 import ai.duagenai.design.screens.WriteResult
 import ai.duagenai.design.screens.DuaAgentSkills
+import ai.duagenai.design.screens.ProfileScreen
 import ai.duagenai.design.screens.RemoteAccountDataSource
 import ai.duagenai.design.screens.RemoteArtifactsDataSource
 import ai.duagenai.design.screens.RemoteChatDataSource
@@ -493,6 +495,7 @@ private const val SHARED_OPENER_URL = "https://static.teamily.ai/sites/demo/q3-l
 /** The Profile screen's two inert controls and the reason shown for one. */
 private const val EDIT_PROFILE_LABEL = "Edit profile"
 private const val SIGN_IN_LABEL = "Sign in"
+/** The raw token field Profile used to show. It must not exist any more. */
 private const val SESSION_TOKEN_LABEL = "Session token"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
@@ -1528,20 +1531,20 @@ class DuaGenAINavHostTest {
         ).fetchSemanticsNodes().count { isOnScreen(it) }
         assertTrue("\"$EDIT_PROFILE_LABEL\" must be announced as disabled", disabled >= 1)
 
-        // "Sign out" is no longer a permanently-disabled placeholder: it is a
-        // real control inside the SESSION card, and it only exists when a token
-        // is present. Signed out (the default here) the card shows the token
-        // field instead, so the assertion is that the sign-in affordance is
-        // reachable — not that a dead button is announced as dead.
+        // Signed out (the default here) the SESSION card is a "Sign in" row
+        // into the one email/password sign-in. There is no raw token field and
+        // no Sign out here: the one Sign out lives in Settings.
         //
         // The card sits below the fold, so it is scrolled into view first: a
         // LazyColumn does not compose an off-screen item, and asserting on one
         // would fail for a reason that has nothing to do with the fix.
         compose.onAllNodes(hasScrollAction()).onFirst()
-            .performScrollToNode(hasText(SESSION_TOKEN_LABEL))
+            .performScrollToNode(hasText(SIGN_IN_LABEL))
         compose.waitForIdle()
-        assertVisible(SESSION_TOKEN_LABEL)
         assertVisible(SIGN_IN_LABEL)
+        assertNotVisible(SESSION_TOKEN_LABEL)
+        assertNotVisible(SETTINGS_SIGN_OUT_LABEL)
+
 
         // The reason is on screen, not left to the user to guess.
         assertVisible(EDIT_PROFILE_HELPER)
@@ -4196,8 +4199,8 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * Signed out, Settings keeps the disabled account rows and offers Sign in.
-     * A token enables Sign out and drops the Sign in row.
+     * Signed out, Settings offers Sign in and no Sign out. A token drops the
+     * Sign in row and shows exactly ONE Sign out (Profile & Device).
      */
     @Test
     fun settingsAccountRowsFollowTheSessionToken() {
@@ -4209,26 +4212,92 @@ class DuaGenAINavHostTest {
 
         assertVisible(SETTINGS_SIGN_IN_LABEL)
         assertVisible(SETTINGS_ACCOUNT_HELPER)
-        assertVisible("Signing out is not available in this build.")
         val editDisabled = compose.onAllNodes(
             hasText(SETTINGS_EDIT_PROFILE_LABEL) and isNotEnabled(),
         ).fetchSemanticsNodes().count { isOnScreen(it) }
         assertTrue("Edit profile must stay disabled", editDisabled >= 1)
-        val signOutDisabled = compose.onAllNodes(
-            hasText(SETTINGS_SIGN_OUT_LABEL) and isNotEnabled(),
-        ).fetchSemanticsNodes().count { isOnScreen(it) }
-        assertTrue("Sign out must stay disabled while signed out", signOutDisabled >= 1)
+        assertEquals(
+            "No Sign out while signed out",
+            0,
+            compose.onAllNodes(hasText(SETTINGS_SIGN_OUT_LABEL)).fetchSemanticsNodes().size,
+        )
 
         compose.runOnIdle { TokenStore.token = "session-token" }
         compose.waitForIdle()
 
-        assertVisible("End this session on this device.")
-        assertNotVisible("Signing out is not available in this build.")
         assertNotVisible("Use your Dua account email and password.")
-        val signOutEnabled = compose.onAllNodes(
-            hasText(SETTINGS_SIGN_OUT_LABEL) and hasClickAction(),
-        ).fetchSemanticsNodes().count { isOnScreen(it) }
-        assertTrue("Sign out must be clickable once a session exists", signOutEnabled >= 1)
+        compose.onAllNodes(hasScrollAction()).onFirst()
+            .performScrollToNode(hasText(SETTINGS_SIGN_OUT_LABEL))
+        compose.waitForIdle()
+        assertEquals(
+            "Exactly one Sign out once a session exists",
+            1,
+            compose.onAllNodes(hasText(SETTINGS_SIGN_OUT_LABEL) and hasClickAction())
+                .fetchSemanticsNodes().size,
+        )
+        TokenStore.token = null
+    }
+
+    /**
+     * Profile's SESSION card: signed out it is a clickable "Sign in" row (it
+     * opens [AccountSignInDialog], the same dialog as Settings) and there is no
+     * raw token field. Opening the dialog itself is not asserted: its text
+     * fields keep Robolectric from ever going idle.
+     */
+    @Test
+    fun profileSessionCardIsASignInRowWithNoTokenField() {
+        TokenStore.token = null
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) { ProfileScreen() }
+        }
+        compose.waitForIdle()
+        compose.onAllNodes(hasScrollAction()).onFirst()
+            .performScrollToNode(hasText(SIGN_IN_LABEL))
+        compose.waitForIdle()
+        assertTrue(
+            compose.onAllNodes(hasText(SIGN_IN_LABEL) and hasClickAction())
+                .fetchSemanticsNodes().isNotEmpty(),
+        )
+        assertEquals(0, compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithText(SESSION_TOKEN_LABEL).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithText(SETTINGS_SIGN_OUT_LABEL).fetchSemanticsNodes().size)
+    }
+
+    /**
+     * The one Sign out: confirm dialog -> server logout (POST
+     * /api/account/logout, token cleared) -> onSignedOut (the host goes Home).
+     */
+    @Test
+    fun settingsSignOutConfirmsThenLogsOutOnTheServer() {
+        ApiConfig.overrideBaseUrl = "https://api.example"
+        TokenStore.token = "session-token"
+        val transport = RecordingTransport(response = "{}")
+        val source = RemoteAccountDataSource(
+            client = JsonHttpClient(transport = transport, label = "Sign out"),
+        )
+        var signedOut = false
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                SettingsScreen(accountDataSource = source, onSignedOut = { signedOut = true })
+            }
+        }
+        compose.waitForIdle()
+        compose.onAllNodes(hasScrollAction()).onFirst()
+            .performScrollToNode(hasText(SETTINGS_SIGN_OUT_LABEL))
+        compose.onNodeWithText(SETTINGS_SIGN_OUT_LABEL).performClick()
+        compose.waitForIdle()
+
+        // Nothing happens before the confirm.
+        assertVisible("Sign out?")
+        assertTrue(transport.calls.isEmpty())
+        assertEquals("session-token", TokenStore.token)
+
+        // The dialog's confirm button is the last "Sign out" node.
+        compose.onAllNodesWithText(SETTINGS_SIGN_OUT_LABEL).onLast().performClick()
+        compose.waitUntil(timeoutMillis = 5_000) { signedOut }
+
+        assertEquals(null, TokenStore.token)
+        assertEquals("https://api.example/api/account/logout", transport.calls[0].second)
     }
 
     // ------------------------------------------------------------- labels
