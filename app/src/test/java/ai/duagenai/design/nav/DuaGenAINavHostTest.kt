@@ -246,6 +246,9 @@ private const val AGENT_ROLE_LINE = "fareed's Personal Agent"
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
 private const val CHATS_HEADER = "Chats \u00b7 6"
+
+/** res/values/strings.xml demo_label. */
+private const val DEMO_LABEL = "Demo"
 private const val APP_NAME_TEXT = "Dua Gen AI"
 private const val DUA_AGENT_ROW = "Dua Agent"
 
@@ -977,6 +980,57 @@ class DuaGenAINavHostTest {
             compose.onAllNodes(hasContentDescription(VOICE_LABEL) and isNotEnabled())
                 .fetchSemanticsNodes().count { isOnScreen(it) },
         )
+    }
+
+    /**
+     * Sample data stays, but carries the small "Demo" label: drawer history and
+     * plan, agent home chats, Agents, Discover, Profile plan, offline reply.
+     */
+    @Test
+    fun sampleDataCarriesTheDemoLabel() {
+        TokenStore.token = null
+        launch()
+        fun demoCount() = compose.onAllNodes(hasText(DEMO_LABEL, substring = true))
+            .fetchSemanticsNodes().count { isOnScreen(it) }
+
+        // Drawer: HISTORY header + plan label.
+        openDrawer()
+        assertTrue("drawer history + plan carry Demo", demoCount() >= 2)
+        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertTrue("profile plan carries Demo", demoCount() >= 1)
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+
+        // Agent home chat list.
+        switchTo(HomeMode.Agent)
+        assertTrue("agent home chats carry Demo", demoCount() >= 1)
+
+        // Agents and Discover.
+        compose.onNodeWithText(HomeTab.Managed.label).performClick()
+        compose.waitForIdle()
+        assertTrue("Agents list carries Demo", demoCount() >= 1)
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        compose.onNodeWithText(HomeTab.Discover.label).performClick()
+        compose.waitForIdle()
+        assertTrue("Discover cards carry Demo", demoCount() >= 1)
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+
+        // Offline canned reply in a thread.
+        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.waitForIdle()
+        val before = demoCount()
+        compose.onNode(hasSetTextAction()).performTextInput("Hi")
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
+        }
+        compose.waitForIdle()
+        assertTrue("offline canned reply carries Demo", demoCount() > before)
     }
 
     // ------------------------------------------- Agent mode is the agent surface

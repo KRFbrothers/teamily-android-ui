@@ -1,5 +1,9 @@
 package ai.duagenai.design.screens
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,11 +84,16 @@ fun DiscoverScreen(modifier: Modifier = Modifier) {
                 .padding(horizontal = spacing.gutter, vertical = spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            Text(
-                text = "START WITH",
-                style = DuaGenAITextStyles.eyebrow,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "START WITH",
+                    style = DuaGenAITextStyles.eyebrow,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // Sample cards, not a live catalogue yet.
+                Spacer(Modifier.width(spacing.xs))
+                DemoBadge()
+            }
             discoverCards.forEach { card ->
                 Column(modifier = Modifier.padding(vertical = spacing.xs)) {
                     Text(

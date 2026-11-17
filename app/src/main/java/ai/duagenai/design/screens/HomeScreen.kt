@@ -11,6 +11,7 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -1575,6 +1576,8 @@ private fun SectionHeader(
     label: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    /** Shows the small "Demo" label after [label] (sample rows). */
+    demo: Boolean = false,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1628,6 +1631,10 @@ private fun SectionHeader(
             ),
             color = ink,
         )
+        if (demo) {
+            Spacer(Modifier.width(spacing.xs))
+            DemoBadge()
+        }
         Spacer(Modifier.width(spacing.xs))
         Canvas(Modifier.size(11.dp).rotate(if (expanded) 0f else -90f)) {
             val w = size.width
@@ -1699,6 +1706,8 @@ private fun AgentHomeList(
                     label = "Chats \u00b7 ${agentHomeChats.size}",
                     expanded = chatsExpanded,
                     onToggle = { chatsExpanded = !chatsExpanded },
+                    // Sample chats, not the user's real list yet.
+                    demo = true,
                 )
             }
         }

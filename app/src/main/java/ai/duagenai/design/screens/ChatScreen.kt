@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.DemoBadge
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.foundation.background
@@ -577,11 +578,18 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
                 )
             }
             Spacer(Modifier.height(spacing.xxs))
-            Text(
-                text = msg.time,
-                style = DuaGenAITextStyles.meta,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = msg.time,
+                    style = DuaGenAITextStyles.meta,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // The offline canned reply is not a real answer: say so.
+                if (msg.text == AGENT_REPLY) {
+                    Spacer(Modifier.width(spacing.xs))
+                    DemoBadge()
+                }
+            }
         }
     }
 }
