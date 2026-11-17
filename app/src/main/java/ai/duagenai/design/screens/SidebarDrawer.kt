@@ -18,15 +18,18 @@ import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -56,6 +59,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -236,9 +243,10 @@ fun SidebarDrawer(
                 DrawerModeToggle(
                     mode = mode,
                     onModeChange = onModeChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.lg, vertical = spacing.xs),
+                    // Wrap-content, left-aligned under the title. No extra
+                    // vertical padding: the 48dp touch row already leaves 6dp
+                    // of air above and below the 36dp pill.
+                    modifier = Modifier.padding(horizontal = spacing.lg),
                 )
 
                 /* ---------- nav rows ---------- */
@@ -378,14 +386,22 @@ private fun drawerRowText() = MaterialTheme.typography.bodyLarge.copy(
 /**
  * The Dua | Agent segmented control, under the drawer title.
  *
- * Same pill language as Dua home's header toggle (`surfaceVariant` track,
- * 3dp inset, pill cells, Lato label, Role.Tab + selected) — that composable is
- * private to the frozen HomeScreen.kt, so it is not shared from here. In the
- * drawer the ACTIVE cell is filled with the theme primary (Dua green #087C45)
- * and carries `onPrimary` text, so the current mode reads at a glance.
+ * A slim, wrap-content pill in the same language as Dua home's header toggle
+ * (`surfaceVariant` track, 3dp inset, pill cells, Lato, Role.Tab + selected) —
+ * that composable is private to the frozen HomeScreen.kt, so it is not shared
+ * from here. In the drawer the ACTIVE cell is filled with the theme primary
+ * (Dua green #087C45) with `onPrimary` text, so the current mode reads at a
+ * glance.
  *
- * Each cell is at least 48dp tall. TalkBack hears "Switch to Dua/Agent mode,
- * Tab, selected/not selected"; a tap reports THAT cell's mode.
+ * SIZES — drawn 36dp tall (3dp inset + 30dp cells), cells 16dp horizontal
+ * padding, 14sp text (bold active, regular inactive). The TOUCH target is the
+ * full 48dp row height: each cell's clickable spans the row and the visuals
+ * are drawn inset inside it (the track via `drawBehind`, the cell 9dp in), so
+ * the pill looks compact without shrinking the tap area. The ripple is clipped
+ * to the drawn cell.
+ *
+ * TalkBack hears "Switch to Dua/Agent mode, Tab, selected/not selected"; a tap
+ * reports THAT cell's mode.
  */
 @Composable
 private fun DrawerModeToggle(
@@ -393,12 +409,22 @@ private fun DrawerModeToggle(
     onModeChange: (HomeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
     Row(
         modifier = modifier
-            .clip(DuaGenAITheme.shapes.pill)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+            .height(MinTouchTarget)
+            .drawBehind {
+                val inset = (MinTouchTarget - ToggleVisualHeight).toPx() / 2f
+                val h = ToggleVisualHeight.toPx()
+                drawRoundRect(
+                    color = trackColor,
+                    topLeft = Offset(0f, inset),
+                    size = Size(size.width, h),
+                    cornerRadius = CornerRadius(h / 2f),
+                )
+            }
+            .padding(horizontal = ToggleInset),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         HomeMode.entries.forEach { entry ->
             val active = entry == mode
@@ -412,24 +438,27 @@ private fun DrawerModeToggle(
                     R.string.drawer_switch_to_agent_talkback
                 },
             )
+            val interaction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .clip(DuaGenAITheme.shapes.pill)
-                    .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { onModeChange(entry) }
+                    .fillMaxHeight()
+                    // 48dp tall tap area; the drawn cell sits inside it.
+                    .clickable(interaction, indication = null) { onModeChange(entry) }
                     .semantics {
                         contentDescription = talkback
                         role = Role.Tab
                         selected = active
                     }
-                    .sizeIn(minHeight = 48.dp),
+                    .padding(vertical = (MinTouchTarget - ToggleVisualHeight) / 2 + ToggleInset)
+                    .clip(DuaGenAITheme.shapes.pill)
+                    .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .indication(interaction, LocalIndication.current)
+                    .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = label,
-                    style = drawerRowText().copy(
-                        fontSize = 15.sp,
+                    style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                     ),
                     color = if (active) MaterialTheme.colorScheme.onPrimary
@@ -440,6 +469,12 @@ private fun DrawerModeToggle(
         }
     }
 }
+
+/** Drawn height of the drawer toggle's track (the touch row stays 48dp). */
+private val ToggleVisualHeight = 36.dp
+
+/** Gap between the drawer toggle's track edge and its cells. */
+private val ToggleInset = 3.dp
 
 /** One nav row: a 22dp outline icon, then the label, 56dp tall, no highlight. */
 @Composable
