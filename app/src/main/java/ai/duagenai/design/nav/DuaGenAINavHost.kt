@@ -359,8 +359,8 @@ fun DuaGenAINavHost(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     // The app launches into Agent home (Teamily chat list). Dua home's top bar
-    // has the Dua | Agent switch; from Agent home the drawer's "Dua" row
-    // switches back to Dua.
+    // has the Dua | Agent switch; from Agent home the drawer's mode row
+    // ("Agent mode", TalkBack "Switch to Dua mode") switches to Dua.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
@@ -429,7 +429,7 @@ fun DuaGenAINavHost(
                 // specific person's name and email in its source was leaking PII
                 // into every build.
                 userName = if (sessionToken != null) "Signed in" else "Not signed in",
-                planLabel = if (sessionToken != null) "PRO" else "FREE",
+                mode = mode,
                 // The SAME list Home renders — one source, so a history row and
                 // its Home row can never disagree about a name or a cube.
                 history = sampleChats,
@@ -443,28 +443,19 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // Dua is a MODE too: Agent home has no toggle, so this
-                        // row is the way back to Dua's home.
-                        DrawerDestination.Dua -> {
-                            mode = HomeMode.Dua
-                            navController.navigate(DuaGenAIRoutes.HOME) {
-                                popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                        // Agent is a MODE, not a screen: it switches the
-                        // composer and leaves the user on Home.
-                        DrawerDestination.Agent -> {
-                            mode = HomeMode.Agent
+                        // ONE mode row: it shows the current mode and a tap
+                        // flips to the other one, landing on that mode's home.
+                        // Agent home has no toggle, so this is its way to Dua.
+                        DrawerDestination.ModeSwitch -> {
+                            mode = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
                             navController.navigate(DuaGenAIRoutes.HOME) {
                                 popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
                         // Library / Images / Computer / Videos have no screen
-                        // yet — the request was explicitly two screens only.
-                        // They close the drawer and do nothing else, rather
-                        // than navigating to a route that does not exist.
+                        // yet. The drawer answers them itself with the "Jaldi
+                        // aa raha hai" snackbar and never calls onSelect.
                         DrawerDestination.Library,
                         DrawerDestination.Images,
                         DrawerDestination.Computer,

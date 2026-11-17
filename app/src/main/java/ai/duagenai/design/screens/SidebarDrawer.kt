@@ -11,6 +11,7 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.theme.DemoBadge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,18 +31,32 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import ai.duagenai.design.R
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +74,6 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyStroke
-import ai.duagenai.design.theme.teamilyPalette
 import kotlin.math.cos
 import kotlin.math.sin
 import androidx.compose.foundation.layout.widthIn
@@ -79,8 +93,9 @@ import androidx.compose.foundation.layout.widthIn
  *      `CubeCatalog.forEntity` the Home list and ChatScreen use. Opening a
  *      history row therefore lands on the same cube the row showed.
  *
- *  The "Agent" nav item's glyph is a WIREFRAME nav icon (hexagon + Y seam,
- *  stroke only, no fill). The "Dua" nav item's glyph is a front-facing
+ *  Every nav row leads with a 20dp outline icon (ChatGPT-style). The mode
+ *  row shows "Agent mode" with a WIREFRAME nav icon (hexagon + Y seam,
+ *  stroke only, no fill), or "Dua mode" with a front-facing
  *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
  *  and from Library's isometric box in the HTML preview. Neither is a cube
  *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
@@ -94,21 +109,23 @@ import androidx.compose.foundation.layout.widthIn
 /**
  * Every destination the drawer offers.
  *
- * `Library`, `Images`, `Computer` and `Videos` have no screen yet — the request
- * was explicitly "sirf ye 2 screens" (Home + drawer), so they are listed but
- * inert. They are still real enum entries so the host can wire them the moment
- * a screen exists, without touching this file.
+ * `Library`, `Images`, `Computer` and `Videos` have no screen yet
+ * ([comingSoon] = true): the drawer answers a tap with the shared "Jaldi aa
+ * raha hai" snackbar, stays open, and does NOT call `onSelect`. They are still
+ * real enum entries so a screen can be wired later by flipping the flag.
  */
-enum class DrawerDestination(val label: String) {
+enum class DrawerDestination(val label: String, val comingSoon: Boolean = false) {
     NewChat("New chat"),
-    Library("Library"),
-    Images("Images"),
-    Computer("Computer"),
-    Videos("Videos"),
-    /** Switches Home to Dua mode — the way back from Agent home, whose header
-     *  has no Dua | Agent toggle. */
-    Dua("Dua"),
-    Agent("Agent"),
+    Library("Library", comingSoon = true),
+    Images("Images", comingSoon = true),
+    Computer("Computer", comingSoon = true),
+    Videos("Videos", comingSoon = true),
+    /**
+     * ONE row for the Dua | Agent mode. It shows the CURRENT mode ("Agent mode"
+     * / "Dua mode", with that mode's glyph) and a tap switches to the other
+     * one. Agent home has no toggle, so this is its way to Dua.
+     */
+    ModeSwitch("Mode"),
 }
 
 /**
@@ -119,6 +136,8 @@ enum class DrawerDestination(val label: String) {
  * the kit already uses, so no custom animation code is introduced.
  *
  * @param cubeId the USER's saved cube, for the footer avatar only.
+ * @param userName footer name ("Not signed in" when there is no session).
+ * @param mode the current Home mode, shown by the [DrawerDestination.ModeSwitch] row.
  * @param history the same [ChatRow] list Home renders, so the two cannot drift.
  * @param selected the currently active destination, or null for none.
  * @param onSelect fired for every nav item. The host decides what each one does.
@@ -133,7 +152,7 @@ enum class DrawerDestination(val label: String) {
 fun SidebarDrawer(
     cubeId: String,
     userName: String,
-    planLabel: String,
+    mode: HomeMode,
     history: List<ChatRow>,
     selected: DrawerDestination?,
     onSelect: (DrawerDestination) -> Unit,
@@ -144,6 +163,11 @@ fun SidebarDrawer(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    // The coming-soon rows answer inside the drawer itself: a snackbar in the
+    // app Scaffold would sit behind the drawer's scrim and never be seen.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val comingSoon = stringResource(R.string.composer_coming_soon)
 
     ModalDrawerSheet(
         // fillMaxWidth so a narrow multi-window pane still uses the window;
@@ -154,6 +178,7 @@ fun SidebarDrawer(
         drawerContainerColor = MaterialTheme.colorScheme.surface,
         drawerShape = DuaGenAITheme.shapes.sheet,
     ) {
+        Box(Modifier.fillMaxHeight()) {
         Column(Modifier.fillMaxHeight()) {
 
             /* ---------- brand + close ---------- */
@@ -185,18 +210,19 @@ fun SidebarDrawer(
                     .padding(horizontal = spacing.lg, vertical = spacing.sm),
                 shape = DuaGenAITheme.shapes.pill,
                 color = colors.field,
-                // Zip `--nv-field-edge` (light #5C6D63, dark #AEBBB1).
-                border = androidx.compose.foundation.BorderStroke(1.dp, teamilyPalette().fieldEdge),
+                // Lighter than before: the soft hairline instead of the heavy
+                // `fieldEdge` outline, and a slimmer 44dp pill (not a tap target).
+                border = BorderStroke(1.dp, colors.hairline),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .sizeIn(minHeight = 48.dp)
+                        .sizeIn(minHeight = 44.dp)
                         .padding(horizontal = spacing.md),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        Icons.Filled.Search,
+                        Icons.Outlined.Search,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
@@ -218,8 +244,18 @@ fun SidebarDrawer(
                 DrawerDestination.entries.forEach { destination ->
                     DrawerNavItem(
                         destination = destination,
+                        mode = mode,
                         active = destination == selected,
-                        onClick = { onSelect(destination) },
+                        onClick = {
+                            if (destination.comingSoon) {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            } else {
+                                onSelect(destination)
+                            }
+                        },
                     )
                 }
             }
@@ -284,93 +320,91 @@ fun SidebarDrawer(
                     contentDescription = "Your avatar, ${CubeIds.label(cubeId)}",
                 )
                 Spacer(Modifier.width(spacing.md))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = userName,
-                        style = DuaGenAITextStyles.rowTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Row(
-                        modifier = Modifier.padding(top = spacing.xxs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(DuaGenAITheme.shapes.pill)
-                                .background(colors.logoMint)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        ) {
-                            Text(
-                                text = planLabel,
-                                style = DuaGenAITextStyles.eyebrow,
-                                color = colors.onLogoMint,
-                            )
-                        }
-                        // The plan is not read from billing yet.
-                        Spacer(Modifier.width(spacing.xs))
-                        DemoBadge()
-                    }
-                }
+                // Name only: the plan badge and its Demo label are gone (the
+                // plan was never read from billing).
+                Text(
+                    text = userName,
+                    style = DuaGenAITextStyles.rowTitle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
                 IconButton(onClick = onOpenProfile) {
                     Icon(
-                        Icons.Filled.Settings,
+                        Icons.Outlined.Settings,
                         contentDescription = "Profile",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 72.dp),
+        )
+        }
     }
 }
 
 /**
- * One nav row.
+ * One nav row: a 20dp OUTLINE icon, then the label, in a 48dp pill.
  *
  * The active row is a soft brand pill — the same `brandSoft` / `onBrandSoft`
- * pair the kit's chips use, so the drawer's selection reads like the rest of
- * the app rather than like a new component.
+ * pair the kit's chips use. The [DrawerDestination.ModeSwitch] row shows the
+ * current mode's glyph and label, and TalkBack hears what a tap does
+ * ("Switch to Dua mode").
  */
 @Composable
 private fun DrawerNavItem(
     destination: DrawerDestination,
+    mode: HomeMode,
     active: Boolean,
     onClick: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    val iconTint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant
+    val isModeRow = destination == DrawerDestination.ModeSwitch
+    val label = if (isModeRow) "${mode.label} mode" else destination.label
+    val other = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(DuaGenAITheme.shapes.pill)
             .background(if (active) colors.brandSoft else Color.Transparent)
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
+            .then(
+                if (isModeRow) {
+                    Modifier.semantics { contentDescription = "Switch to ${other.label} mode" }
+                } else {
+                    Modifier
+                },
+            )
             .sizeIn(minHeight = 48.dp)
             .padding(horizontal = spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val iconModifier = Modifier.size(20.dp)
         when (destination) {
-            DrawerDestination.NewChat -> Icon(
-                Icons.Filled.Add,
-                contentDescription = null,
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-            // Front-facing wireframe cube, NOT a cube avatar — see the file header.
-            DrawerDestination.Dua -> DuaCubeGlyph(
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // A wireframe glyph, NOT a cube avatar — see the file header.
-            DrawerDestination.Agent -> AgentCubeGlyph(
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            else -> Box(Modifier.size(20.dp))
+            DrawerDestination.NewChat -> Icon(Icons.Filled.Add, null, iconModifier, tint = iconTint)
+            DrawerDestination.Library ->
+                Icon(Icons.AutoMirrored.Outlined.LibraryBooks, null, iconModifier, tint = iconTint)
+            DrawerDestination.Images -> Icon(Icons.Outlined.Image, null, iconModifier, tint = iconTint)
+            DrawerDestination.Computer -> Icon(Icons.Outlined.Computer, null, iconModifier, tint = iconTint)
+            DrawerDestination.Videos -> Icon(Icons.Outlined.VideoLibrary, null, iconModifier, tint = iconTint)
+            // Wireframe glyphs, NOT cube avatars — see the file header.
+            DrawerDestination.ModeSwitch -> when (mode) {
+                HomeMode.Dua -> DuaCubeGlyph(tint = iconTint)
+                HomeMode.Agent -> AgentCubeGlyph(tint = iconTint)
+            }
         }
         Spacer(Modifier.width(spacing.md))
         Text(
-            text = destination.label,
+            text = label,
             style = DuaGenAITextStyles.rowTitle,
             color = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurface,
         )

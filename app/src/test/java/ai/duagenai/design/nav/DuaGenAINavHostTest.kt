@@ -920,14 +920,19 @@ class DuaGenAINavHostTest {
 
     /**
      * Switches mode the way a user does. Dua home has the toggle; Agent home
-     * has none, so going back to Dua uses the drawer's "Dua" row.
+     * has none, so going to Dua uses the drawer's ONE mode row.
      */
     private fun switchTo(mode: HomeMode) {
         if (visibleDescCount("${mode.label} mode") > 0) {
             compose.onNodeWithContentDescription("${mode.label} mode").performClick()
         } else {
             openDrawer()
-            compose.onNode(hasText(mode.label) and hasClickAction()).performClick()
+            if (visibleDescCount("Switch to ${mode.label} mode") > 0) {
+                compose.onNodeWithContentDescription("Switch to ${mode.label} mode").performClick()
+            } else {
+                // Already in [mode]: the row offers the other mode. Just close.
+                compose.onNodeWithContentDescription("Close menu").performClick()
+            }
         }
         compose.waitForIdle()
     }
@@ -1298,11 +1303,13 @@ class DuaGenAINavHostTest {
         launch()
 
         // Launch is Agent home, which has no toggle. Agent -> Dua goes through
-        // the drawer: avatar ("Open menu") -> the "Dua" row.
+        // the drawer: avatar ("Open menu") -> the ONE mode row, which shows
+        // "Agent mode" and tells TalkBack "Switch to Dua mode".
         assertVisible(CHATS_HEADER)
         assertVisibleDescCount("Dua mode", 0)
         openDrawer()
-        compose.onNode(hasText(HomeMode.Dua.label) and hasClickAction()).performClick()
+        assertVisible("Agent mode")
+        compose.onNodeWithContentDescription("Switch to Dua mode").performClick()
         compose.waitForIdle()
         assertVisible(DUA_ASK_HINT)
         assertNotVisible(CHATS_HEADER)
@@ -1348,9 +1355,9 @@ class DuaGenAINavHostTest {
         fun demoCount() = compose.onAllNodes(hasText(DEMO_LABEL, substring = true))
             .fetchSemanticsNodes().count { isOnScreen(it) }
 
-        // Drawer: HISTORY header + plan label.
+        // Drawer: the HISTORY header (the footer plan badge is gone).
         openDrawer()
-        assertTrue("drawer history + plan carry Demo", demoCount() >= 2)
+        assertTrue("drawer history carries Demo", demoCount() >= 1)
         compose.onNodeWithContentDescription("Profile").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
@@ -2969,6 +2976,56 @@ class DuaGenAINavHostTest {
         assertNotVisible("HISTORY")
         assertVisible(PINNED_HEADER)
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+    }
+
+    /** ChatGPT-style drawer: one mode row, no separate Dua / Agent rows. */
+    @Test
+    fun theDrawerHasOneModeRowThatFlipsBothWays() {
+        launch()
+        openDrawer()
+        assertVisible("Agent mode")
+        assertNotVisible("Dua mode")
+        compose.onNodeWithContentDescription("Switch to Dua mode").performClick()
+        compose.waitForIdle()
+        assertVisible(DUA_ASK_HINT)
+        // Back in the drawer the row now reads "Dua mode" and flips to Agent.
+        openDrawer()
+        assertVisible("Dua mode")
+        compose.onNodeWithContentDescription("Switch to Agent mode").performClick()
+        compose.waitForIdle()
+        assertVisible(CHATS_HEADER)
+        assertNotVisible(DUA_ASK_HINT)
+    }
+
+    /** Library / Images / Computer / Videos: snackbar inside the open drawer. */
+    @Test
+    fun comingSoonDrawerRowsShowTheSnackbarAndKeepTheDrawerOpen() {
+        launch()
+        listOf("Library", "Images", "Computer", "Videos").forEach { label ->
+            openDrawerIfClosed()
+            compose.onNode(hasText(label) and hasClickAction()).performClick()
+            compose.waitForIdle()
+            assertVisible("Jaldi aa raha hai")
+            // The drawer stayed open: its close X is still on screen.
+            assertTrue(visibleDescCount("Close menu") > 0)
+            assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        }
+    }
+
+    /** Footer: avatar + name + gear. No plan badge, no Demo badge. */
+    @Test
+    fun theDrawerFooterIsAvatarNameAndGearOnly() {
+        TokenStore.token = null
+        launch()
+        openDrawer()
+        assertVisible("Not signed in")
+        assertNotVisible("FREE")
+        assertNotVisible("PRO")
+        assertTrue(visibleDescCount("Profile") > 0)
+    }
+
+    private fun openDrawerIfClosed() {
+        if (visibleDescCount("Close menu") == 0) openDrawer()
     }
 
     @Test
