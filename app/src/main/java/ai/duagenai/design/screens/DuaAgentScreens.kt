@@ -417,7 +417,7 @@ private fun AgentTop(
     below: (@Composable () -> Unit)? = null,
     bar: @Composable () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().background(Color(0xFF1D2120)).statusBarsPadding()) {
+    Column(Modifier.fillMaxWidth().background(c.topbar).statusBarsPadding()) {
         if (subtitle != null) {
             Box {
                 bar()
@@ -543,12 +543,12 @@ fun DuaAgentProfileScreen(
     if (initialScrollToEnd) LaunchedEffect(Unit) { scrollState.scrollTo(scrollState.maxValue) }
     val titleInk = if (sheet) c.dim else c.ink
 
-    Box(modifier.fillMaxSize().background(Color(0xFF1D2120))) {
+    Box(modifier.fillMaxSize().background(c.topbar)) {
         Column(Modifier.fillMaxSize()) {
             AgentTop(c) { AgentAppBar(agentName, c, onBack, titleColor = titleInk) }
             Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 // Hero — top-bar colour down to content.
-                Box(Modifier.fillMaxWidth().height(230.dp).background(Color(0xFF1D2120))) {
+                Box(Modifier.fillMaxWidth().height(230.dp).background(c.topbar)) {
                     Image(
                         painter = painterResource(R.drawable.dua_bot_badge),
                         contentDescription = "Dua Agent avatar",
@@ -571,7 +571,7 @@ fun DuaAgentProfileScreen(
                         ) { Text("AI", style = t(10, 12, true), color = c.aiInk) }
                     }
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 150.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(Color(0xFF282E2C)),
+                        Modifier.align(Alignment.TopCenter).offset(y = 150.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.body),
                     ) {
                         val actions = listOf<Triple<String, String, (() -> Unit)?>>(
                             Triple("workspace", "Open agent workspace", onOpenWorkspace),
@@ -595,7 +595,7 @@ fun DuaAgentProfileScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF282E2C))
+                        .background(c.body)
                         .padding(top = 10.dp, bottom = 40.dp),
                 ) {
                     Box(Modifier.fillMaxWidth().height(56.dp)) {
@@ -935,7 +935,7 @@ fun DuaAgentWorkspaceScreen(
         AgentTop(c) { AgentAppBar("Agent workspace", c, onBack, center = true) }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(10.dp))
-            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF282E2C))) {
+            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(c.body)) {
                 Image(
                     painter = painterResource(R.drawable.dua_bot_badge),
                     contentDescription = "Dua Agent avatar",
@@ -975,7 +975,7 @@ fun DuaAgentWorkspaceScreen(
                                     .weight(1f)
                                     .height(64.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF282E2C))
+                                    .background(c.body)
                                     .clickable { onOpen(dest) }
                             ) {
                                 AgentIcon(icon, 18.dp, c.wellInk, Modifier.align(Alignment.TopCenter).offset(y = 10.dp))
