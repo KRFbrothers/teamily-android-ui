@@ -151,12 +151,12 @@ import kotlinx.coroutines.launch
  *  ChatScreen derives its cube from that id with the same
  *  `CubeCatalog.forEntity` the row used. Back pops to Home.
  *
- *  PROFILE is reached from the DRAWER FOOTER GEAR. The route and its
- *  `ProfileScreen` destination already existed; what was missing was a caller,
- *  so the screen was unreachable. The gear now navigates there through the same
- *  `navController.navigate(...)` every other destination uses — no new route,
- *  no new screen, and the gear's icon and styling are untouched. Back pops to
- *  whatever opened the drawer, which is Home in the normal flow.
+ *  SETTINGS is reached from the DRAWER FOOTER AVATAR. The route and its
+ *  `SettingsScreen` destination already existed; the avatar now navigates
+ *  there through the same `navController.navigate(...)` every other
+ *  destination uses — no new route, no new screen. PROFILE is reached only
+ *  via Settings → Edit profile. Back from Settings pops to whatever opened
+ *  the drawer, which is Home in the normal flow.
  *
  *  Why not from Home: Dua's home is deliberately empty (Dua is a chatbot, not an
  *  agent host), so it draws no chat list. The drawer's history section is the
@@ -462,14 +462,13 @@ fun DuaGenAINavHost(
                     scope.launch { drawerState.close() }
                     navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                 },
-                // The drawer footer's gear opens PROFILE. It is the SAME
-                // `profile` destination the graph already registers — this is
-                // the wiring that was missing, not a new screen. The drawer
+                // The drawer footer's avatar opens SETTINGS. Profile is
+                // reached only via Settings → Edit profile. The drawer
                 // closes first, exactly like a history row, so the destination
                 // is revealed in the pain area rather than behind the sheet.
                 onOpenProfile = {
                     scope.launch { drawerState.close() }
-                    navController.navigate(DuaGenAIRoutes.PROFILE)
+                    navController.navigate(DuaGenAIRoutes.SETTINGS)
                 },
             )
         },
@@ -800,8 +799,8 @@ fun DuaGenAINavHost(
                 MemoryScreen(
                     repository = memoryRepository,
                     // A 401 is not retryable: the honest action is to sign in,
-                    // not to tap Retry forever. Profile is where the token is set.
-                    onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                    // not to tap Retry forever. Sign in lives only in Settings.
+                    onSignIn = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     bottomBar = tabDock,
                 )
             }
@@ -809,7 +808,7 @@ fun DuaGenAINavHost(
                 // The screen reads from the repository, not a hardcoded list.
                 ArtifactsScreen(
                     repository = artifactsRepository,
-                    onSignIn = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                    onSignIn = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     bottomBar = tabDock,
                 )
             }
