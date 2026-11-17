@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dua Gen AI</string>
+    <!-- Small label on sample (non-live) data -->
+    <string name="demo_label">Demo</string>
     <!-- Create Agent (Agent home plus menu) -->
     <string name="create_agent_title">Create Agent</string>
     <string name="create_agent_name_hint">Name your Agent</string>
     <string name="create_agent_action">Create</string>
-    <!-- Small label on sample (non-live) data -->
-    <string name="demo_label">Demo</string>
 </resources>
