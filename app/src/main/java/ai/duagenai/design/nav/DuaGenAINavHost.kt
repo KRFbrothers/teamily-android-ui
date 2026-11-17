@@ -396,15 +396,7 @@ fun DuaGenAINavHost(
     val channels = decodeChannels(channelState)
     val languageLabel = APP_LANGUAGES.firstOrNull { it.id == languageId }?.label ?: "English"
 
-    // Which drawer row is highlighted. Derived from the current route rather
-    // than stored separately, so the drawer can never claim a destination the
-    // NavHost is not actually showing.
-    val currentRoute = navController.currentBackStackEntry?.destination?.route
-    val selectedDestination = when (currentRoute) {
-        DuaGenAIRoutes.HOME -> DrawerDestination.NewChat
-        DuaGenAIRoutes.SETTINGS -> null
-        else -> null
-    }
+    // The drawer highlights no row (ChatGPT style), so no selection is derived.
 
     val isDark = when (themeMode) {
         ThemeMode.Light -> false
@@ -424,20 +416,17 @@ fun DuaGenAINavHost(
         drawerContent = {
             SidebarDrawer(
                 cubeId = savedCubeId,
-                // No hardcoded identity. The drawer shows a neutral label until a
-                // real session supplies one — a design kit that shipped a
-                // specific person's name and email in its source was leaking PII
-                // into every build.
-                userName = if (sessionToken != null) "Signed in" else "Not signed in",
+                // No hardcoded identity: the avatar only says "Signed in" /
+                // "Not signed in" until a real session supplies a name.
+                signedIn = sessionToken != null,
                 mode = mode,
                 // The SAME list Home renders — one source, so a history row and
                 // its Home row can never disagree about a name or a cube.
                 history = sampleChats,
-                selected = selectedDestination,
                 onSelect = { destination ->
                     scope.launch { drawerState.close() }
                     when (destination) {
-                        // New chat returns to the list. A real app would create
+                        // New chat (the drawer's green "Chat" pill) returns to the list. A real app would create
                         // a conversation here; the kit has no such screen.
                         DrawerDestination.NewChat -> navController.navigate(DuaGenAIRoutes.HOME) {
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
@@ -475,7 +464,6 @@ fun DuaGenAINavHost(
                     scope.launch { drawerState.close() }
                     navController.navigate(DuaGenAIRoutes.PROFILE)
                 },
-                onClose = { scope.launch { drawerState.close() } },
             )
         },
     ) {

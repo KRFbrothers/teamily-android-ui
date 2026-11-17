@@ -11,7 +11,9 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isNotEnabled
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isRoot
@@ -349,6 +351,10 @@ private const val CLEAR_CACHE_CONFIRM = "Clear"
  * line is the state a query that matches nothing must show.
  */
 private const val PICKER_SEARCH_HINT = "Search cubes"
+/** The drawer's footer avatar: "Profile, Not signed in" / "Profile, Signed in". */
+private const val DRAWER_PROFILE = "Profile, "
+/** M3's scrim label: the drawer has no X, the scrim (and Back) close it. */
+private const val CLOSE_DRAWER = "Close navigation menu"
 private val PICKER_CATEGORIES = listOf("All", "Orange", "Charcoal", "Multi")
 private const val PICKER_NO_RESULTS = "Koi cube nahi mila"
 private const val PICKER_CLEAR_FILTERS = "Clear filters"
@@ -931,7 +937,7 @@ class DuaGenAINavHostTest {
                 compose.onNodeWithContentDescription("Switch to ${mode.label} mode").performClick()
             } else {
                 // Already in [mode]: the row offers the other mode. Just close.
-                compose.onNodeWithContentDescription("Close menu").performClick()
+                compose.onNodeWithContentDescription(CLOSE_DRAWER).performClick()
             }
         }
         compose.waitForIdle()
@@ -1182,7 +1188,7 @@ class DuaGenAINavHostTest {
 
         // The avatar opens the existing drawer.
         openDrawer()
-        assertVisibleDescCount("Close menu", 1)
+        assertVisibleDescCount(CLOSE_DRAWER, 1)
     }
 
     // ------------------------------------------------- Create Agent
@@ -1358,7 +1364,7 @@ class DuaGenAINavHostTest {
         // Drawer: the HISTORY header (the footer plan badge is gone).
         openDrawer()
         assertTrue("drawer history carries Demo", demoCount() >= 1)
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
         assertTrue("profile plan carries Demo", demoCount() >= 1)
@@ -1794,7 +1800,7 @@ class DuaGenAINavHostTest {
         openDrawer()
         // The drawer gear is "Profile". The home gear is "Settings" and opens
         // the settings screen; this test is about the profile controls.
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         // Both inert controls are announced as disabled.
@@ -2616,7 +2622,7 @@ class DuaGenAINavHostTest {
     fun theCubePickerChipsAreAtLeast48dpTall() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
@@ -2647,7 +2653,7 @@ class DuaGenAINavHostTest {
     fun theCubePickerChipLongPressShowsATooltipWithTheFullLabel() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
@@ -2766,13 +2772,14 @@ class DuaGenAINavHostTest {
     // ------------------------------------------- drawer -> thread
 
     @Test
-    fun theDrawerListsEveryChatWithItsOwnCube() {
+    fun theDrawerListsEveryChatAsAPlainTitle() {
         launch()
         openDrawer()
 
         for (chat in CHATS) {
-            // One avatar per history row, so exactly one visible node per label.
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
+            // ChatGPT style: the title only, no avatar in the drawer.
+            assertVisible(chat.title)
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 0)
         }
     }
 
@@ -2781,12 +2788,10 @@ class DuaGenAINavHostTest {
         launch()
         openDrawer()
 
+        // The cubes still differ per chat (they show in each thread), even
+        // though the drawer itself lists plain titles.
         val distinct = CHATS.map { it.cubeId }.toSet()
         assertEquals("the seven rows must carry seven different cubes", 7, distinct.size)
-
-        for (chat in CHATS) {
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
-        }
     }
 
     @Test
@@ -2963,13 +2968,13 @@ class DuaGenAINavHostTest {
     // ------------------------------------------------------- drawer chrome
 
     @Test
-    fun theDrawerClosesOnItsCloseButton() {
+    fun theDrawerClosesFromTheScrimAndHasNoCloseX() {
         launch()
         openDrawer()
         assertVisible("HISTORY")
-
-        // The drawer's own close X.
-        compose.onNodeWithContentDescription("Close menu").performClick()
+        // ChatGPT layout: no X. TalkBack closes it through M3's scrim.
+        assertVisibleDescCount("Close menu", 0)
+        compose.onNodeWithContentDescription(CLOSE_DRAWER).performClick()
         compose.waitForIdle()
 
         // Closed: the history section is off screen, Agent home is back.
@@ -3001,31 +3006,59 @@ class DuaGenAINavHostTest {
     @Test
     fun comingSoonDrawerRowsShowTheSnackbarAndKeepTheDrawerOpen() {
         launch()
-        listOf("Library", "Images", "Computer", "Videos").forEach { label ->
+        listOf("Library", "Images", "Computer", "Videos", "See all").forEach { label ->
             openDrawerIfClosed()
             compose.onNode(hasText(label) and hasClickAction()).performClick()
             compose.waitForIdle()
             assertVisible("Jaldi aa raha hai")
             // The drawer stayed open: its close X is still on screen.
-            assertTrue(visibleDescCount("Close menu") > 0)
+            assertTrue(visibleDescCount(CLOSE_DRAWER) > 0)
             assertEquals(DuaGenAIRoutes.HOME, currentRoute())
         }
     }
 
-    /** Footer: avatar + name + gear. No plan badge, no Demo badge. */
+    /** Footer: green "Chat" pill + round avatar only. No name, no plan, no gear. */
     @Test
-    fun theDrawerFooterIsAvatarNameAndGearOnly() {
+    fun theDrawerFooterIsTheChatPillAndTheAvatarOnly() {
         TokenStore.token = null
         launch()
         openDrawer()
-        assertVisible("Not signed in")
+        assertVisible("Chat")
+        assertVisibleDescCount("Profile, Not signed in", 1)
+        assertNotVisible("Not signed in")
         assertNotVisible("FREE")
         assertNotVisible("PRO")
-        assertTrue(visibleDescCount("Profile") > 0)
+        assertVisibleDescCount("Profile", 0)
+    }
+
+    /** The round search button replaces the field; search is not built yet. */
+    @Test
+    fun theDrawerSearchButtonShowsComingSoon() {
+        launch()
+        openDrawer()
+        // Home's own Search pill is disabled; the drawer's round button is the
+        // one enabled, tappable "Search".
+        compose.onNode(hasContentDescription("Search") and hasClickAction() and isEnabled()).performClick()
+        compose.waitForIdle()
+        assertVisible("Jaldi aa raha hai")
+    }
+
+    /** The green "Chat" pill is the old New chat: back to the home list. */
+    @Test
+    fun theDrawerChatPillStartsANewChat() {
+        launch()
+        openDrawer()
+        assertVisible("HISTORY")
+        compose.onNodeWithContentDescription("Start a new chat").performClick()
+        compose.waitForIdle()
+        // The drawer closed and the home list is showing.
+        assertNotVisible("HISTORY")
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertVisible(PINNED_HEADER)
     }
 
     private fun openDrawerIfClosed() {
-        if (visibleDescCount("Close menu") == 0) openDrawer()
+        if (visibleDescCount(CLOSE_DRAWER) == 0) openDrawer()
     }
 
     @Test
@@ -3038,8 +3071,8 @@ class DuaGenAINavHostTest {
         openDrawer()
 
         // The footer avatar is the USER's saved cube — a different thing from a
-        // chat's cube, and the only place Home's shell draws it.
-        assertVisibleDescCount("Your avatar, ${CubeIds.label(CubeIds.DEFAULT)}", 1)
+        // chat's cube. TalkBack hears "Profile, …"; the tag carries the cube.
+        compose.onNodeWithTag(ai.duagenai.design.screens.drawerAvatarTag(CubeIds.DEFAULT)).assertExists()
     }
 
     // ------------------------------------------------- drawer gear -> Profile
@@ -3063,9 +3096,9 @@ class DuaGenAINavHostTest {
         openDrawer()
 
         // The gear is in the drawer footer, on screen while the sheet is open.
-        assertVisibleDescCount("Profile", 1)
+        assertVisibleDescCount("Profile, Not signed in", 1)
 
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         assertEquals(
@@ -3091,7 +3124,7 @@ class DuaGenAINavHostTest {
     fun backFromProfileReturnsToHome() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
 
@@ -3121,7 +3154,7 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
         openDrawer()
 
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
@@ -3141,7 +3174,7 @@ class DuaGenAINavHostTest {
     fun theChangeCubeRowOpensTheCubePicker() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
 
@@ -3168,7 +3201,7 @@ class DuaGenAINavHostTest {
     fun cancelFromThePickerReturnsToProfileWithoutSaving() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
@@ -3196,7 +3229,7 @@ class DuaGenAINavHostTest {
     fun saveFromThePickerPersistsAndReturnsToProfile() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
@@ -3232,7 +3265,7 @@ class DuaGenAINavHostTest {
     fun theAppearanceRowOpensTheAppearanceScreen() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
 
@@ -3260,7 +3293,7 @@ class DuaGenAINavHostTest {
     fun choosingAThemePersistsAndUpdatesTheProfileRow() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         // The row starts on the default.
         assertVisible("System default")
@@ -3290,7 +3323,7 @@ class DuaGenAINavHostTest {
     fun theStorageRowOpensTheStorageScreenAndClearCacheConfirms() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText("Storage").performClick()
@@ -3321,7 +3354,7 @@ class DuaGenAINavHostTest {
     fun theNotificationsRowOpensTheNotificationsScreen() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         compose.onNodeWithText("Notifications").performClick()
@@ -3349,7 +3382,7 @@ class DuaGenAINavHostTest {
     fun thePickerSearchFiltersTheGrid() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
@@ -3378,7 +3411,7 @@ class DuaGenAINavHostTest {
     fun thePickerShowsNoResultsForAnUnmatchedQuery() {
         launch()
         openDrawer()
-        compose.onNodeWithContentDescription("Profile").performClick()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Change cube").performClick()
         compose.waitForIdle()
