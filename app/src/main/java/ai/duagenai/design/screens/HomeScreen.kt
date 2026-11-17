@@ -116,10 +116,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import ai.duagenai.design.R
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
@@ -316,12 +313,6 @@ fun HomeScreen(
      * that circle's top-right rim. The green app badge is [AppBadge].
      */
     userAvatar: Painter? = null,
-    /**
-     * Preview/test override for the Sheet-driven hero banner. When non-null,
-     * that component is shown and no network call is made. Production leaves
-     * this null; the slot then loads `hero_banner` once from the Sheet.
-     */
-    sheetHeroBanner: SheetUiComponent? = null,
     modifier: Modifier = Modifier,
 ) {
     // Local only when the host does not own the flag. On means the public
@@ -378,10 +369,6 @@ fun HomeScreen(
                     onOpenSettings = onOpenSettings,
                     onNewChat = onNewChat,
                 )
-                // Sheet `hero_banner`, if any. Occupies no space while loading,
-                // on failure, or when the tab has no such row — so the existing
-                // welcome and composer stay put and never wait on the network.
-                SheetHeroBannerSlot(previewBanner = sheetHeroBanner)
                 DuaHomeWelcome(
                     onPick = { text -> onSendDuaMessage(text) },
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -2131,168 +2118,6 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
             }
         }
     }
-}
-
-private const val SHEET_HERO_BANNER_ID = "hero_banner"
-
-/**
- * Preview fixture that matches the live `ui_config` hero_banner row. Never
- * fetched — previews pass this in so they do not touch the network.
- */
-private val previewSheetHeroBanner = SheetUiComponent(
-    componentId = SHEET_HERO_BANNER_ID,
-    visible = true,
-    title = "Welcome to Dua AI",
-    subtitle = "Ask anything today",
-    bgHex = "#1E293B",
-    order = 1,
-)
-
-/**
- * Loads the Sheet `hero_banner` once and shows [SheetHeroBanner], or nothing.
- *
- * [previewBanner] is the preview/test hook: a non-null value is shown as-is.
- * [LocalInspectionMode] also skips the network, so the existing Home previews
- * stay offline and simply omit the banner.
- */
-@Composable
-private fun SheetHeroBannerSlot(previewBanner: SheetUiComponent? = null) {
-    val inPreview = LocalInspectionMode.current
-    val banner by produceState(
-        initialValue = previewBanner,
-        previewBanner,
-        inPreview,
-    ) {
-        if (previewBanner != null) {
-            value = previewBanner
-            return@produceState
-        }
-        if (inPreview) return@produceState
-        value = SheetBackendClient.fetchUiConfig()
-            .getOrNull()
-            ?.firstOrNull { it.componentId == SHEET_HERO_BANNER_ID }
-    }
-    val item = banner ?: return
-    if (item.title.isBlank() && item.subtitle.isBlank()) return
-    val spacing = LocalDuaGenAISpacing.current
-    SheetHeroBanner(
-        component = item,
-        modifier = Modifier.padding(
-            start = spacing.gutter,
-            end = spacing.gutter,
-            bottom = spacing.sm,
-        ),
-    )
-}
-
-/**
- * Rounded title + subtitle card for a Sheet `hero_banner` row.
- *
- * [SheetUiComponent.bgHex] is the fill; a typo or blank value falls back to
- * [TeamilyPalette.cardHeroColor] so a bad cell never crashes Home. Text ink
- * is picked from the fill's luminance, not the theme, so a dark hex stays
- * readable in light mode and a light hex stays readable in dark mode.
- */
-@Composable
-internal fun SheetHeroBanner(
-    component: SheetUiComponent,
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-    val palette = teamilyPalette()
-    val background = remember(component.bgHex, palette.cardHeroColor) {
-        parseSheetHexColor(component.bgHex, fallback = palette.cardHeroColor)
-    }
-    val titleColor =
-        if (background.luminance() > 0.45f) palette.tileInk else palette.sendButtonIcon
-    val subtitleColor = titleColor.copy(alpha = 0.78f)
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .teamilyRestingShadow(palette, TeamilyShapes.card),
-        shape = TeamilyShapes.card,
-        color = background,
-        border = BorderStroke(1.dp, palette.heroCardBorder),
-    ) {
-        Column(
-            modifier = Modifier.padding(
-                horizontal = spacing.md,
-                vertical = spacing.md,
-            ),
-        ) {
-            if (component.title.isNotBlank()) {
-                Text(
-                    text = component.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                    color = titleColor,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
-            if (component.subtitle.isNotBlank()) {
-                if (component.title.isNotBlank()) {
-                    Spacer(Modifier.height(spacing.xs))
-                }
-                Text(
-                    text = component.subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = subtitleColor,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-/**
- * Parses a CSS-style hex colour (`#RGB`, `#RRGGBB`, `#AARRGGBB`, with or
- * without the leading `#`). Returns [fallback] for blank or malformed input.
- */
-internal fun parseSheetHexColor(hex: String, fallback: Color): Color {
-    val raw = hex.trim().removePrefix("#")
-    val argb = when (raw.length) {
-        3 -> {
-            val n = raw.toIntOrNull(16) ?: return fallback
-            val r = (n shr 8) and 0xF
-            val g = (n shr 4) and 0xF
-            val b = n and 0xF
-            (0xFF shl 24) or (r * 0x11 shl 16) or (g * 0x11 shl 8) or (b * 0x11)
-        }
-        6 -> {
-            val n = raw.toLongOrNull(16) ?: return fallback
-            (0xFF000000L or n).toInt()
-        }
-        8 -> raw.toLongOrNull(16)?.toInt() ?: return fallback
-        else -> return fallback
-    }
-    return Color(argb)
-}
-
-@Preview(name = "Sheet hero banner", showBackground = true, widthDp = 390)
-@Composable
-private fun SheetHeroBannerCardPreview() = DuaGenAITheme(darkTheme = true) {
-    val spacing = LocalDuaGenAISpacing.current
-    SheetHeroBanner(
-        component = previewSheetHeroBanner,
-        modifier = Modifier.padding(spacing.gutter),
-    )
-}
-
-@Preview(name = "Home Dua — sheet banner — light", showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-private fun HomeDuaSheetBannerLight() = DuaGenAITheme(darkTheme = false) {
-    HomeScreen(mode = HomeMode.Dua, sheetHeroBanner = previewSheetHeroBanner)
-}
-
-@Preview(name = "Home Dua — sheet banner — dark", showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-private fun HomeDuaSheetBannerDark() = DuaGenAITheme(darkTheme = true) {
-    HomeScreen(mode = HomeMode.Dua, sheetHeroBanner = previewSheetHeroBanner)
 }
 
 @Preview(name = "Home Dua — light", showBackground = true, widthDp = 390, heightDp = 844)
