@@ -2,10 +2,12 @@ package ai.duagenai.design.theme
 
 import ai.duagenai.design.R
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
@@ -45,31 +47,45 @@ val TeamilySansFontFamily: FontFamily = FontFamily(
 /** Code blocks use the system monospace family. */
 val TeamilyMonoFontFamily: FontFamily = FontFamily.Monospace
 
+/**
+ * Lato's ascender/descender metrics put extra font padding above the glyphs on
+ * Android, so text sits visually low inside chips, pills and buttons. Every
+ * slot below starts from this base: no font padding, glyphs centred in the
+ * full line height (nothing trimmed).
+ */
+private val TeamilyBaseTextStyle = TextStyle(
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.None,
+    ),
+)
+
 /** The spec's M3 type scale for the given sans family (Lato in the app). */
 fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Typography(
     // Remaining M3 roles: Lato + 400/700 only. Sizes follow the M3 defaults
     // so layout stays stable; Medium (500) is not used.
-    displayLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
-    displayMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp),
-    displaySmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp),
-    headlineLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 40.sp),
+    displayLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
+    displayMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp),
+    displaySmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp),
+    headlineLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 40.sp),
     // --nv-type-display + --nv-tracking-tight
-    headlineMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = TrackingTight),
-    headlineSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp),
+    headlineMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = TrackingTight),
+    headlineSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp),
     // --nv-type-title + --nv-tracking-tight
-    titleLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 23.sp, letterSpacing = TrackingTight),
+    titleLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 23.sp, letterSpacing = TrackingTight),
     // --nv-type-heading
-    titleMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 26.sp),
-    titleSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    titleMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 26.sp),
+    titleSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
     // --nv-type-body
-    bodyLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+    bodyLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
     // --nv-type-body-sm
-    bodyMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 22.sp),
-    bodySmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp),
-    labelLarge = TextStyle(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    bodyMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 22.sp),
+    bodySmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp),
+    labelLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
     // --nv-type-caption
-    labelMedium = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
-    labelSmall = TextStyle(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
+    labelMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp),
+    labelSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
 )
 
 /** Kit typography with Lato 400 / 700. */

@@ -358,8 +358,9 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // Default is Dua home, matching test expectations where launch starts in Dua mode.
-    var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
+    // The app launches into Agent home (Teamily chat list). Both top bars carry
+    // the Dua | Agent switch, so the user can always move between the two.
+    var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
@@ -441,8 +442,8 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // Dua is a MODE too: Agent home has no toggle, so this
-                        // row is the way back to Dua's home.
+                        // Dua is a MODE too: this row (like the top-bar
+                        // Dua | Agent switch) switches Home to Dua.
                         DrawerDestination.Dua -> {
                             mode = HomeMode.Dua
                             navController.navigate(DuaGenAIRoutes.HOME) {
@@ -505,6 +506,9 @@ fun DuaGenAINavHost(
                     },
                     // The top bar's right button is a gear in Dua mode and a plus
                     // in Agent mode, so the two callbacks are separate.
+                    // Dua home's + sheet: Create tiles open the same create
+                    // route a thread's + sheet uses.
+                    onOpenCreate = { kind -> navController.navigate(DuaGenAIRoutes.create(kind)) },
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
                     // Every tab has a destination (see [navigateToTab]).
@@ -716,6 +720,10 @@ fun DuaGenAINavHost(
                     onOpenCreate = { kind ->
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
+                    // Dua Agent's thread header: the "Workspace" capsule.
+                    onOpenWorkspace = if (chatId == AGENT_CHAT_ID) {
+                        { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) }
+                    } else null,
                 )
             }
 
@@ -778,8 +786,27 @@ fun DuaGenAINavHost(
 
             // The four tab screens carry the same dock as Home, so the user
             // can always switch tabs; Back from any of them returns Home.
-            composable(DuaGenAIRoutes.AGENTS) { AgentsScreen(bottomBar = tabDock) }
-            composable(DuaGenAIRoutes.DISCOVER) { DiscoverScreen(bottomBar = tabDock) }
+            // Agents: each card opens that agent's thread on the shared chat route.
+            composable(DuaGenAIRoutes.AGENTS) {
+                AgentsScreen(
+                    bottomBar = tabDock,
+                    onOpenChat = { chatId, title ->
+                        navController.navigate(DuaGenAIRoutes.chat(chatId, title))
+                    },
+                )
+            }
+            composable(DuaGenAIRoutes.DISCOVER) {
+                DiscoverScreen(
+                    bottomBar = tabDock,
+                    // A card is a starting point: a NEW thread (fresh id) titled
+                    // with the card and carrying it as the first message.
+                    onStartChat = { prompt ->
+                        navController.navigate(
+                            DuaGenAIRoutes.chat(DuaGenAIRoutes.newDuaChatId(), prompt, message = prompt),
+                        )
+                    },
+                )
+            }
             composable(DuaGenAIRoutes.MEMORY) {
                 // The screen reads from the repository, not a hardcoded list.
                 MemoryScreen(

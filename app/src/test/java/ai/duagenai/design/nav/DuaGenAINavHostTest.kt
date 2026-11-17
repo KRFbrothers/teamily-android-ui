@@ -262,6 +262,14 @@ private const val SEND_LABEL = "Send message"
 private const val STOP_LABEL = "Stop"
 private const val VOICE_LABEL = "Voice input"
 
+/* The thread composer is the 2-row TeamilyAgentChatBar: its own labels. */
+private const val THREAD_VOICE_LABEL = "Voice message"
+private const val THREAD_MODE_PREFIX = "Mode: "
+
+/** Dua home's welcome: greeting and one of the four quick starters. */
+private const val DUA_GREETING = "How can I help you today?"
+private const val DUA_STARTER = "\uD83D\uDDD3\uFE0F Plan my day"
+
 /** The Skills sheet's rows — Dua-ai's `DuaAgentSkills` titles, in order. */
 private val DUA_AGENT_SKILL_TITLES = listOf(
     "Frontend Developer",
@@ -835,13 +843,12 @@ class DuaGenAINavHostTest {
     /**
      * Asserts the thread HAS a composer, with [placeholder] as its hint.
      *
-     * The composer is the shared `DuaComposer` pill. A thread's pill is
-     * identified by what it draws, left to right: the "Attach" `+`, the field
-     * (exactly one editable node, showing the placeholder), then the agent tools
-     * "Skills" and "MCP Tools", then the single Send/Stop/Voice control. With an
-     * empty field that control is the voice waveform ("Voice input"), so no
+     * The composer is the 2-row `TeamilyAgentChatBar`: row 1 the field (exactly
+     * one editable node, showing the placeholder), row 2 the toolbar — the
+     * "Attach" `+`, the "Mode: …" pill (its menu lists Skills / MCP Tools, so
+     * there are no separate Skills / MCP icons), Meeting Minutes, Dictate,
+     * Emoji and, with an empty field, "Voice message" + "Voice call". No
      * "Send message" node exists yet — Send appears only once text is typed.
-     * There is no separate mic glyph any more.
      *
      * The old generic placeholder must be gone: a thread's hint is
      * `"Message <title>..."`, so seeing `"Type a message"` would mean the
@@ -851,9 +858,13 @@ class DuaGenAINavHostTest {
         assertVisible(placeholder)
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 1)
-        assertVisibleDescCount(SKILLS_LABEL, 1)
-        assertVisibleDescCount(MCP_LABEL, 1)
-        assertVisibleDescCount(VOICE_LABEL, 1)
+        assertEquals(
+            "the composer must have exactly one mode pill",
+            1,
+            compose.onAllNodes(hasContentDescription(THREAD_MODE_PREFIX, substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        assertVisibleDescCount(THREAD_VOICE_LABEL, 1)
         assertVisibleDescCount(SEND_LABEL, 0)
         assertEquals(
             "the composer must have exactly one editable field",
@@ -882,6 +893,7 @@ class DuaGenAINavHostTest {
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 0)
         assertVisibleDescCount(VOICE_LABEL, 0)
+        assertVisibleDescCount(THREAD_VOICE_LABEL, 0)
         assertVisibleDescCount(SKILLS_LABEL, 0)
         assertVisibleDescCount(MCP_LABEL, 0)
     }
@@ -907,8 +919,8 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * Switches mode the way a user does. Dua home has the toggle; Agent home
-     * has none, so going back to Dua uses the drawer's "Dua" row.
+     * Switches mode the way a user does: both homes carry the Dua | Agent
+     * toggle. The drawer's "Dua" / "Agent" rows remain the fallback.
      */
     private fun switchTo(mode: HomeMode) {
         if (visibleDescCount("${mode.label} mode") > 0) {
@@ -964,6 +976,7 @@ class DuaGenAINavHostTest {
     @Test
     fun duaModeShowsOnlyTheComposerAndNoAgentSurface() {
         launch()
+        switchTo(HomeMode.Dua)
 
         // The composer is there…
         assertVisible(DUA_ASK_HINT)
@@ -991,6 +1004,7 @@ class DuaGenAINavHostTest {
     @Test
     fun duaModeHasNoAgentEntryPointAtAll() {
         launch()
+        switchTo(HomeMode.Dua)
 
         // The three agents Agent manages must not appear anywhere in Dua mode —
         // not as a row, not as a badge, not as a tab label.
@@ -1002,19 +1016,18 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Settings", 1)
         assertVisibleDescCount("New chat", 0)
 
-        // Dua's pill carries no agent tools: Skills and MCP are Dua Agent
-        // capabilities, so they are drawn only under a thread. Its Attach has no
-        // sheet to open here, so it is announced unavailable, and its voice
-        // waveform is not wired either. There is no separate mic glyph.
+        // Dua's pill carries no Skills / MCP icons (Dua Agent capabilities).
+        // Attach (+) and Voice are announced ENABLED now: + opens the Quick
+        // Actions sheet and Voice explains "coming soon" on tap.
         assertVisibleDescCount(SKILLS_LABEL, 0)
         assertVisibleDescCount(MCP_LABEL, 0)
         assertEquals(
-            1,
+            0,
             compose.onAllNodes(hasContentDescription(ATTACH_LABEL) and isNotEnabled())
                 .fetchSemanticsNodes().count { isOnScreen(it) },
         )
         assertEquals(
-            1,
+            0,
             compose.onAllNodes(hasContentDescription(VOICE_LABEL) and isNotEnabled())
                 .fetchSemanticsNodes().count { isOnScreen(it) },
         )
@@ -1029,6 +1042,7 @@ class DuaGenAINavHostTest {
     fun duaHomeSendOpensANewDuaThreadWithTheFirstMessage() {
         TokenStore.token = null
         launch()
+        switchTo(HomeMode.Dua)
 
         compose.onNode(hasSetTextAction()).performTextInput("Plan my week")
         compose.waitForIdle()
@@ -1062,11 +1076,18 @@ class DuaGenAINavHostTest {
         assertNotVisible("Plan my week")
     }
 
-    /** Dua home's Attach and Voice stay disabled but a tap shows "Jaldi aa raha hai". */
+    /**
+     * Dua home's + opens the Quick Actions sheet; its Skills row (Dua is not
+     * the agent) and the Voice control answer with "Jaldi aa raha hai".
+     */
     @Test
-    fun duaHomeAttachAndVoiceTapShowComingSoon() {
+    fun duaHomePlusOpensQuickActionsAndVoiceShowsComingSoon() {
         launch()
+        switchTo(HomeMode.Dua)
         compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Quick Actions").assertExists()
+        compose.onNode(hasText(SKILLS_LABEL) and hasContentDescription(SKILLS_LABEL)).performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText(COMING_SOON).fetchSemanticsNodes().isNotEmpty()
         }
@@ -1075,12 +1096,32 @@ class DuaGenAINavHostTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText(COMING_SOON).fetchSemanticsNodes().isNotEmpty()
         }
-        // Still announced as disabled for TalkBack, labels unchanged.
-        assertEquals(
-            1,
-            compose.onAllNodes(hasContentDescription(ATTACH_LABEL) and isNotEnabled())
-                .fetchSemanticsNodes().count { isOnScreen(it) },
-        )
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+    }
+
+    /** Dua home's welcome: badge, greeting and starters; a starter opens a new Dua chat. */
+    @Test
+    fun duaHomeStarterChipOpensANewDuaThreadWithThatText() {
+        TokenStore.token = null
+        launch()
+        switchTo(HomeMode.Dua)
+        assertVisible(DUA_GREETING)
+        compose.onNodeWithText(DUA_STARTER).performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val id = navController.currentBackStackEntry?.arguments?.getString("chatId").orEmpty()
+        assertTrue("a fresh Dua chat id", id.startsWith("dua-"))
+        assertEquals(DUA_STARTER, navController.currentBackStackEntry?.arguments?.getString("message"))
+    }
+
+    /** The app launches straight into Agent home (the Teamily chat list). */
+    @Test
+    fun theAppLaunchesIntoAgentHome() {
+        launch()
+        assertVisible(APP_NAME_TEXT)
+        assertVisible(PINNED_HEADER)
+        assertNotVisible(DUA_ASK_HINT)
+        assertVisibleDescCount("Agent mode", 1)
     }
 
     // ------------------------------------------- Agent mode is the agent surface
@@ -1119,9 +1160,9 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Settings", 0)
     }
 
-    /** Agent home's header: avatar (opens the drawer) · "Dua Gen AI" · plus. No toggle. */
+    /** Agent home's header: avatar (opens the drawer) · "Dua Gen AI" · plus, then the Dua | Agent toggle. */
     @Test
-    fun agentHomeHeaderIsAvatarBrandAndPlusWithNoToggle() {
+    fun agentHomeHeaderIsAvatarBrandPlusAndTheModeToggle() {
         launch()
         switchTo(HomeMode.Agent)
 
@@ -1129,8 +1170,9 @@ class DuaGenAINavHostTest {
         assertNotVisible("Teamily AI")
         assertVisibleDescCount("Open menu", 1)
         assertVisibleDescCount("New chat", 1)
-        assertVisibleDescCount("Dua mode", 0)
-        assertVisibleDescCount("Agent mode", 0)
+        assertVisibleDescCount("Dua mode", 1)
+        assertVisibleDescCount("Agent mode", 1)
+        compose.onNode(hasContentDescription("Agent mode") and isSelected()).assertExists()
 
         // The avatar opens the existing drawer.
         openDrawer()
@@ -1241,6 +1283,7 @@ class DuaGenAINavHostTest {
     @Test
     fun duaHomeKeepsTheToggleAndTheComposer() {
         launch()
+        switchTo(HomeMode.Dua)
 
         assertVisibleDescCount("Open menu", 1)
         assertVisibleDescCount("Dua mode", 1)
@@ -1253,16 +1296,18 @@ class DuaGenAINavHostTest {
     fun theModeSwitchesBothWays() {
         launch()
 
-        // Dua -> Agent, through the toggle.
-        switchTo(HomeMode.Agent)
+        // Launch is Agent home. Agent -> Dua, through Agent home's toggle.
         assertVisible(CHATS_HEADER)
-        assertNotVisible(DUA_ASK_HINT)
-
-        // Agent -> Dua, through the drawer's "Dua" row (Agent home has no toggle).
-        switchTo(HomeMode.Dua)
+        compose.onNodeWithContentDescription("Dua mode").performClick()
+        compose.waitForIdle()
         assertVisible(DUA_ASK_HINT)
         assertNotVisible(CHATS_HEADER)
-        assertVisibleDescCount("Dua mode", 1)
+
+        // Dua -> Agent, through Dua home's toggle.
+        compose.onNodeWithContentDescription("Agent mode").performClick()
+        compose.waitForIdle()
+        assertVisible(CHATS_HEADER)
+        assertNotVisible(DUA_ASK_HINT)
     }
 
     /** The Pinned and Chats section headers collapse and expand their rows. */
@@ -2812,10 +2857,10 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
 
-        // Home is back: the thread's status line is gone and Dua's own composer
-        // is visible again.
+        // Home is back: the thread's status line is gone and Agent home (the
+        // launch home) is visible again.
         assertNotVisible(CHAT_MARKER)
-        assertVisible(DUA_ASK_HINT)
+        assertVisible(PINNED_HEADER)
         assertEquals(
             "back must pop the chat entry, leaving Home on top",
             DuaGenAIRoutes.HOME,
@@ -2914,9 +2959,9 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Close menu").performClick()
         compose.waitForIdle()
 
-        // Closed: the history section is off screen, Home's composer is back.
+        // Closed: the history section is off screen, Agent home is back.
         assertNotVisible("HISTORY")
-        assertVisible(DUA_ASK_HINT)
+        assertVisible(PINNED_HEADER)
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
@@ -2997,8 +3042,8 @@ class DuaGenAINavHostTest {
             DuaGenAIRoutes.HOME,
             currentRoute(),
         )
-        // Home is really back: Dua's own composer is visible again.
-        assertVisible(DUA_ASK_HINT)
+        // Home is really back: Agent home (the launch home) is visible again.
+        assertVisible(PINNED_HEADER)
     }
 
     /**
@@ -3420,37 +3465,38 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The right side of the thread composer is Skills, MCP Tools, then the
-     * Send/Voice control — in that order, left to right — and every one of
-     * them, plus Attach, is at least the 48dp M3 touch target.
+     * The thread chat bar's toolbar reads Attach, the mode pill, then the
+     * tools, with Send at the far end once text is typed — and every control's
+     * touch box is at least the 48dp M3 minimum (drawn smaller, [touchTarget48]).
      */
     @Test
-    fun theComposerRightSideIsSkillsThenMcpThenSendAndAllAre48dp() {
+    fun theChatBarToolbarOrderAndAll48dp() {
         openAgentThread()
+        fun bounds(desc: String) =
+            compose.onNodeWithContentDescription(desc, substring = true).fetchSemanticsNode().boundsInRoot
+        val min = 48f * compose.density.density - 1f
+        val idle = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Meeting Minutes", "Dictate", "Emoji", THREAD_VOICE_LABEL, "Voice call")
+            .map { bounds(it) }
+        for (i in 1 until idle.size) {
+            assertTrue("toolbar order, item $i", idle[i - 1].center.x < idle[i].center.x)
+        }
         compose.onNode(hasSetTextAction()).performTextInput("Hi")
         compose.waitForIdle()
-
-        fun bounds(desc: String) =
-            compose.onNodeWithContentDescription(desc).fetchSemanticsNode().boundsInRoot
-        val attach = bounds(ATTACH_LABEL)
-        val skills = bounds(SKILLS_LABEL)
-        val mcp = bounds(MCP_LABEL)
         val send = bounds(SEND_LABEL)
-        assertTrue("Attach sits left of Skills", attach.right <= skills.left)
-        assertTrue("Skills sits left of MCP Tools", skills.right <= mcp.left + 1f)
-        assertTrue("MCP Tools sits left of Send", mcp.right <= send.left + 1f)
-        val min = 48f * compose.density.density - 1f
-        for (b in listOf(attach, skills, mcp, send)) {
-            assertTrue("composer control must be >= 48dp wide", b.width >= min)
-            assertTrue("composer control must be >= 48dp tall", b.height >= min)
+        assertTrue("Send sits at the end", idle[4].right <= send.left + 1f)
+        for (b in idle + send) {
+            assertTrue("chat bar control must be >= 48dp wide", b.width >= min)
+            assertTrue("chat bar control must be >= 48dp tall", b.height >= min)
         }
     }
 
-    /** Skills opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
+    /** The mode pill's menu opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
     @Test
-    fun theSkillsIconOpensTheSkillsSheetAndTogglesASkill() {
+    fun theModePillOpensTheSkillsSheetAndTogglesASkill() {
         openAgentThread()
-        compose.onNodeWithContentDescription(SKILLS_LABEL).performClick()
+        compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(SKILLS_LABEL).performClick()
         compose.waitForIdle()
 
         for (title in DUA_AGENT_SKILL_TITLES) {
@@ -3467,9 +3513,11 @@ class DuaGenAINavHostTest {
      * invented external servers, and the built-in tool ids as status chips.
      */
     @Test
-    fun theMcpIconOpensTheMcpSheetWithTheBuiltInTools() {
+    fun theModePillOpensTheMcpSheetWithTheBuiltInTools() {
         openAgentThread()
-        compose.onNodeWithContentDescription(MCP_LABEL).performClick()
+        compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText(MCP_LABEL).performClick()
         compose.waitForIdle()
 
         compose.onNode(hasContentDescription(MCP_LABEL) and isOn()).assertExists()
@@ -3490,7 +3538,7 @@ class DuaGenAINavHostTest {
 
         compose.onNodeWithText("Quick Actions").assertExists()
         compose.onNodeWithText("Agent tools").assertExists()
-        // The sheet's Skills row (the composer's Skills icon carries no text).
+        // The sheet's Skills row.
         compose.onNode(hasText(SKILLS_LABEL) and hasContentDescription(SKILLS_LABEL)).performClick()
         compose.waitForIdle()
         compose.onNode(hasContentDescription(DUA_AGENT_SKILL_TITLES.first())).assertExists()
@@ -3522,7 +3570,7 @@ class DuaGenAINavHostTest {
                 .fetchSemanticsNodes().size,
         )
         assertVisibleDescCount(STOP_LABEL, 0)
-        assertVisibleDescCount(VOICE_LABEL, 1)
+        assertVisibleDescCount(THREAD_VOICE_LABEL, 1)
     }
 
     /** Back from Agent's thread lands on Agent's home, not on Dua's. */
@@ -4512,6 +4560,132 @@ class DuaGenAINavHostTest {
 
         assertEquals(null, TokenStore.token)
         assertEquals("https://api.example/api/account/logout", transport.calls[0].second)
+    }
+
+    // ------------------------------------------- genuine Teamily UI wiring
+
+    /** Personal Agent's thread: its quick-action chips are live and send like typing. */
+    @Test
+    fun personalAgentThreadShowsTheQuickActionChips() {
+        TokenStore.token = null
+        launch()
+        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.waitForIdle()
+        assertEquals(
+            ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID,
+            navController.currentBackStackEntry?.arguments?.getString("chatId"),
+        )
+        assertVisible("Try asking:")
+        val chip = ai.duagenai.design.screens.PERSONAL_AGENT_QUICK_ACTIONS.first()
+        compose.onNodeWithText(chip).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
+        }
+    }
+
+    /** Dua Agent's thread header: verified check and a Workspace capsule that opens the workspace. */
+    @Test
+    fun duaAgentThreadHeaderWorkspaceOpensTheWorkspace() {
+        openAgentThread()
+        assertVisibleDescCount("Verified", 1)
+        compose.onNodeWithText("Workspace").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.AGENT_WORKSPACE, currentRoute())
+    }
+
+    /** An Agents card opens that agent's own thread on the shared chat route. */
+    @Test
+    fun anAgentsCardOpensThatAgentsThread() {
+        launch()
+        compose.onNodeWithText(HomeTab.Managed.label).performClick()
+        compose.waitForIdle()
+        // The closed drawer also composes a "Slides Assistant" row: tap the card on screen.
+        val matches = compose.onAllNodesWithText("Slides Assistant")
+        val onScreen = matches.fetchSemanticsNodes().indexOfFirst { isOnScreen(it) }
+        matches[onScreen].performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        assertEquals(
+            "chat_slides_assistant",
+            navController.currentBackStackEntry?.arguments?.getString("chatId"),
+        )
+        assertVisible(CHAT_MARKER)
+    }
+
+    /** A Discover card starts a NEW thread carrying the card as its first message. */
+    @Test
+    fun aDiscoverCardStartsANewThread() {
+        TokenStore.token = null
+        launch()
+        compose.onNodeWithText(HomeTab.Discover.label).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Draft a landing page").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val args = navController.currentBackStackEntry?.arguments
+        assertTrue(args?.getString("chatId").orEmpty().startsWith("dua-"))
+        assertEquals("Draft a landing page", args?.getString("message"))
+    }
+
+    /** Overview shows clean values instead of the raw [agent-id] / [agent-url] placeholders. */
+    @Test
+    fun theOverviewHasNoRawAgentPlaceholders() {
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ai.duagenai.design.screens.DuaAgentOverviewScreen()
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithText("Agent ID: Not set").assertExists()
+        compose.onNodeWithText("Public URL: Not set").assertExists()
+        assertEquals(0, compose.onAllNodesWithText("[agent-id]").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithText("[agent-url]").fetchSemanticsNodes().size)
+    }
+
+    /** The session file saves and clears the token, and lives outside Auto Backup. */
+    @Test
+    fun theSessionPersistenceSavesAndClearsTheToken() {
+        val context = compose.activity.applicationContext
+        val persistence = ai.duagenai.design.screens.SessionPersistence.get(context)
+        runBlocking {
+            persistence.write("tok-saved")
+            assertEquals("tok-saved", persistence.read())
+            persistence.write(null)
+            assertEquals(null, persistence.read())
+        }
+        // noBackupFilesDir is `<data>/no_backup`, which Auto Backup never includes.
+        assertEquals(context.noBackupFilesDir.name, persistence.file.parentFile?.name)
+        assertEquals(ai.duagenai.design.screens.SessionPersistence.FILE_NAME, persistence.file.name)
+        assertTrue("the session file must exist after a write", persistence.file.exists())
+    }
+
+    /** A saved token is restored at startup, and Sign out (null) removes it from disk. */
+    @Test
+    fun persistToRestoresTheSavedTokenAndSignOutClearsIt() {
+        val context = compose.activity.applicationContext
+        val persistence = ai.duagenai.design.screens.SessionPersistence.get(context)
+        runBlocking { persistence.write("tok-restored") }
+        TokenStore.token = null
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+        try {
+            TokenStore.persistTo(context, scope)
+            val deadline = System.currentTimeMillis() + 5_000
+            while (TokenStore.token == null && System.currentTimeMillis() < deadline) Thread.sleep(20)
+            assertEquals("tok-restored", TokenStore.token)
+
+            TokenStore.clear()
+            val clearBy = System.currentTimeMillis() + 5_000
+            var saved: String? = "tok-restored"
+            while (saved != null && System.currentTimeMillis() < clearBy) {
+                saved = runBlocking { persistence.read() }
+                if (saved != null) Thread.sleep(20)
+            }
+            assertEquals(null, saved)
+        } finally {
+            scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
+            TokenStore.token = null
+        }
     }
 
     // ------------------------------------------------------------- labels

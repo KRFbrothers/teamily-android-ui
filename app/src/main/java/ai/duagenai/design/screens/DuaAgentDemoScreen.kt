@@ -228,19 +228,7 @@ fun DuaAgentDemoScreen(
                     }
                 }
                 Spacer(Modifier.width(spacing.xs))
-                OutlinedButton(
-                    onClick = onOpenWorkspace,
-                    shape = TeamilyShapes.capsule,
-                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 2.dp),
-                    border = BorderStroke(1.dp, palette.border),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.signalGreen),
-                    modifier = Modifier.height(30.dp),
-                ) {
-                    Text(
-                        text = "Workspace",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp),
-                    )
-                }
+                WorkspaceHeaderButton(onOpenWorkspace = onOpenWorkspace)
             }
 
             // Scrollable Content & Chat List
@@ -258,32 +246,11 @@ fun DuaAgentDemoScreen(
                 }
 
                 item {
-                    // Quick Action Prompt Chips
-                    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-                        Text(
-                            text = "Orchestration commands:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            demoActions.take(2).forEach { action ->
-                                ActionChip(label = action, onClick = { sendCommand(action) }, palette = palette)
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            demoActions.drop(2).forEach { action ->
-                                ActionChip(label = action, onClick = { sendCommand(action) }, palette = palette)
-                            }
-                        }
-                    }
+                    QuickActionChips(
+                        label = "Orchestration commands:",
+                        actions = demoActions,
+                        onPick = { sendCommand(it) },
+                    )
                 }
             }
 
@@ -314,6 +281,34 @@ fun DuaAgentDemoScreen(
                     .padding(horizontal = spacing.gutter, vertical = spacing.sm),
             )
         }
+    }
+}
+
+/**
+ * Dua Agent's header "Workspace" capsule. Shared by this demo and the live
+ * Dua Agent thread (ChatScreen). Drawn 30dp tall; the touch box is 48dp.
+ */
+@Composable
+internal fun WorkspaceHeaderButton(
+    onOpenWorkspace: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = teamilyPalette()
+    OutlinedButton(
+        onClick = onOpenWorkspace,
+        shape = TeamilyShapes.capsule,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+        border = BorderStroke(1.dp, palette.border),
+        // primaryInk, not signalGreen: #00D95A on the light canvas is ~1.9:1.
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.primaryInk),
+        modifier = modifier
+            .minTouchTarget()
+            .height(30.dp),
+    ) {
+        Text(
+            text = "Workspace",
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 12.sp),
+        )
     }
 }
 

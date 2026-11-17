@@ -35,6 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -56,6 +58,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import ai.duagenai.design.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -88,16 +92,22 @@ import ai.duagenai.design.theme.teamilyPalette
  *  `chatId` is a required parameter: the nav host passes the id of the row that
  *  was tapped, and `onBack` pops to Home.
  *
- *  COMPOSER — now LIVE
- *  -------------------
- *  The thread's composer is NOT a new component: it is `DuaComposer` from
- *  HomeScreen.kt — the exact same pill Dua's home draws, same tokens, same
- *  32dp radius, same spacing. Dua's call site passes no value/change/send, so
- *  its pill stays static; this screen passes them, which makes the field live,
- *  plus the agent tools: Attach `+` (opens ComposerPlusSheet), Skills and MCP
- *  Tools (open ComposerSkillsSheet / ComposerMcpSheet), and the single
- *  Send/Stop/Voice control. While Agent's reply is pending (`agentTyping`) the
- *  control is Stop, which cancels the reply.
+ *  COMPOSER — the 2-row Teamily chat bar
+ *  -------------------------------------
+ *  The thread's composer is [TeamilyAgentChatBar] (TeamilyAgentChatBar.kt):
+ *  row 1 the field, row 2 the toolbar. `+` opens ComposerPlusSheet, which hands
+ *  off to ComposerSkillsSheet / ComposerMcpSheet; the mode pill's menu also
+ *  lists Skills and MCP Tools. While Agent's reply is pending (`agentTyping`)
+ *  the trailing control is Stop, which cancels the reply. Meeting Minutes,
+ *  Dictate, Emoji, Voice message and Voice call have no backend yet, so a tap
+ *  shows the "Jaldi aa raha hai" snackbar (the same answer Dua home gives).
+ *
+ *  HEADERS — the two pinned agents
+ *  -------------------------------
+ *  [PERSONAL_AGENT_CHAT_ID]: BotBadge avatar + the Personal Agent quick-action
+ *  chips (shared with PersonalAgentDemoScreen). [AGENT_CHAT_ID]: SignalBotBadge
+ *  + VerifiedCheck + the "Workspace" capsule (shared with DuaAgentDemoScreen).
+ *  Every other thread keeps its own cube avatar.
  *
  *  The composer sits in `Scaffold`'s `bottomBar`, so the `inner` padding the
  *  LazyColumn consumes already includes its height — the last message can never
@@ -283,6 +293,8 @@ fun ChatScreen(
     onOpenAgentProfile: (() -> Unit)? = null,
     /** Create tiles in the composer + sheet. */
     onOpenCreate: ((String) -> Unit)? = null,
+    /** Dua Agent's thread only: the header "Workspace" capsule. Null hides it. */
+    onOpenWorkspace: (() -> Unit)? = null,
     // Where the transcript LIVES. A ViewModel, not `rememberSaveable`: see
     // ChatTranscriptStore for why a whole conversation must never go into the
     // saved-instance Bundle. Hoisted by the nav host so every thread shares one
@@ -359,9 +371,25 @@ fun ChatScreen(
     val mcp = if (onToggleMcp != null) mcpEnabled else localMcp
     val toggleMcp: (Boolean) -> Unit = onToggleMcp ?: { localMcp = it }
     val listState = rememberLazyListState()
+    // Composer sheets (+ / Skills / MCP) and the display-only mode pill.
+    var sheet by rememberSaveable(chatId) { mutableStateOf(ComposerSheet.None) }
+    var chatMode by rememberSaveable(chatId) {
+        mutableStateOf(if (chatId == AGENT_CHAT_ID) "Agent Engine" else "Auto")
+    }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val comingSoon = stringResource(R.string.composer_coming_soon)
+    val showComingSoon: () -> Unit = {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(comingSoon)
+        }
+    }
+    val isPersonal = chatId == PERSONAL_AGENT_CHAT_ID
+    val isDuaAgent = chatId == AGENT_CHAT_ID
 
-    // The list is the conversation plus, while Agent is "typing", one extra row.
-    val rows = messages.size + if (agentTyping) 1 else 0
+    // The list is the conversation plus, while Agent is "typing", one extra row
+    // (and, on the Personal Agent thread, the quick-action chips row).
+    val rows = messages.size + (if (agentTyping) 1 else 0) + (if (isPersonal) 1 else 0)
 
     // Keep the newest message in view. Keyed on the row count so it fires when a
     // message is added (and when the typing row appears), not on every frame.
@@ -430,28 +458,46 @@ fun ChatScreen(
     Scaffold(
         modifier = modifier.teamilyCanvas(teamilyPalette()),
         containerColor = Color.Transparent,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
-                    Column(modifier = profileClick) {
-                        Text(
-                            text = chatTitle,
-                            style = DuaGenAITextStyles.rowTitle,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(colors.logoMint),
-                            )
-                            Spacer(Modifier.width(spacing.xs))
-                            Text(
-                                text = "Agent · always on",
-                                style = DuaGenAITextStyles.meta,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    Row(modifier = profileClick, verticalAlignment = Alignment.CenterVertically) {
+                        // The two pinned agents carry their own badge in front of
+                        // the title (Personal: BotBadge, Dua Agent: SignalBotBadge).
+                        if (isPersonal) {
+                            BotBadge(32.dp)
+                            Spacer(Modifier.width(spacing.sm))
+                        } else if (isDuaAgent) {
+                            SignalBotBadge(32.dp)
+                            Spacer(Modifier.width(spacing.sm))
+                        }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = chatTitle,
+                                    style = DuaGenAITextStyles.rowTitle,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
+                                if (isDuaAgent) {
+                                    Spacer(Modifier.width(4.dp))
+                                    VerifiedCheck()
+                                }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.logoMint),
+                                )
+                                Spacer(Modifier.width(spacing.xs))
+                                Text(
+                                    text = "Agent · always on",
+                                    style = DuaGenAITextStyles.meta,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 },
@@ -461,23 +507,30 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // 32dp header avatar — this conversation's cube, untinted.
-                    CubeAvatar(
-                        cubeId = cubeId,
-                        size = 32.dp,
-                        shape = DuaGenAITheme.shapes.avatarMessage,
-                        contentDescription = "$chatTitle avatar, ${CubeIds.label(cubeId)}",
-                        modifier = Modifier.padding(end = spacing.gutter).then(profileClick),
-                    )
+                    when {
+                        // Dua Agent: the "Workspace" capsule (opens the workspace).
+                        isDuaAgent && onOpenWorkspace != null -> WorkspaceHeaderButton(
+                            onOpenWorkspace = onOpenWorkspace,
+                            modifier = Modifier.padding(end = spacing.sm),
+                        )
+                        // Personal Agent: its badge is already in the title.
+                        isPersonal || isDuaAgent -> Unit
+                        // 32dp header avatar — this conversation's cube, untinted.
+                        else -> CubeAvatar(
+                            cubeId = cubeId,
+                            size = 32.dp,
+                            shape = DuaGenAITheme.shapes.avatarMessage,
+                            contentDescription = "$chatTitle avatar, ${CubeIds.label(cubeId)}",
+                            modifier = Modifier.padding(end = spacing.gutter).then(profileClick),
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                 ),
             )
         },
-        // The composer is the SAME pill Dua's home draws — one implementation,
-        // two call sites. Only the placeholder is thread-specific; the value /
-        // change / send parameters are what make it live.
+        // The 2-row Teamily chat bar. Only the placeholder is thread-specific.
         bottomBar = {
             // The scaffold pins this bar to the screen bottom, which on an
             // edge-to-edge window is behind the navigation bar and the keyboard.
@@ -487,18 +540,29 @@ fun ChatScreen(
                     WindowInsets.navigationBars.union(WindowInsets.ime),
                 ),
             ) {
-                DuaComposer(
-                    placeholder = "Message $chatTitle…",
+                TeamilyAgentChatBar(
                     value = draft,
                     onValueChange = { draft = it },
                     onSend = { send() },
+                    placeholder = "Message $chatTitle…",
+                    selectedMode = chatMode,
+                    onModeChange = { chatMode = it },
+                    onAttachClick = { sheet = ComposerSheet.Plus },
+                    onMeetingMinutesClick = showComingSoon,
+                    onDictateClick = showComingSoon,
+                    onEmojiClick = showComingSoon,
+                    onVoiceMessageClick = showComingSoon,
+                    onVoiceCallClick = showComingSoon,
                     sending = agentTyping,
                     onStop = { stop() },
-                    enabledSkillIds = skills,
-                    onToggleSkill = toggleSkill,
-                    mcpEnabled = mcp,
-                    onToggleMcp = toggleMcp,
-                    onOpenCreate = onOpenCreate,
+                    onOpenSkills = { sheet = ComposerSheet.Skills },
+                    onOpenMcp = { sheet = ComposerSheet.Mcp },
+                    modifier = Modifier.padding(
+                        start = spacing.gutter,
+                        end = spacing.gutter,
+                        top = spacing.sm,
+                        bottom = spacing.md,
+                    ),
                 )
             }
         },
@@ -523,7 +587,48 @@ fun ChatScreen(
             if (agentTyping) {
                 item { TypingBubble(cubeId, chatTitle) }
             }
+            // Personal Agent: the same quick-action chips as its demo screen.
+            // A chip sends its text like a typed message.
+            if (isPersonal) {
+                item {
+                    QuickActionChips(
+                        label = "Try asking:",
+                        actions = PERSONAL_AGENT_QUICK_ACTIONS,
+                        onPick = { prompt ->
+                            if (!agentTyping) {
+                                draft = prompt
+                                send()
+                            }
+                        },
+                    )
+                }
+            }
         }
+    }
+
+    // The composer's sheets. `+` opens Quick Actions, which hands off to the
+    // Skills / MCP sheets rather than duplicating them.
+    when (sheet) {
+        ComposerSheet.Plus -> ComposerPlusSheet(
+            onOpenSkills = { sheet = ComposerSheet.Skills },
+            onOpenMcp = { sheet = ComposerSheet.Mcp },
+            onDismiss = { sheet = ComposerSheet.None },
+            onOpenCreate = { key ->
+                sheet = ComposerSheet.None
+                onOpenCreate?.invoke(key)
+            },
+        )
+        ComposerSheet.Skills -> ComposerSkillsSheet(
+            enabledSkillIds = skills,
+            onToggleSkill = toggleSkill,
+            onDismiss = { sheet = ComposerSheet.None },
+        )
+        ComposerSheet.Mcp -> ComposerMcpSheet(
+            mcpEnabled = mcp,
+            onToggleMcp = toggleMcp,
+            onDismiss = { sheet = ComposerSheet.None },
+        )
+        ComposerSheet.None -> Unit
     }
 }
 

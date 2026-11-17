@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -30,11 +29,12 @@ import androidx.compose.ui.unit.dp
  *            bgElevated #F6F8F5 · chromeFill/composerBg #EEF2EF
  *            border #DDE6E0 · borderStrong #C9D5CD · textPrimary #182B23
  *            borderGradient (--nv-edge) 145deg #FFF 0% / #E8EDE9 35% / #CFD9D2 100%
- *    dark    atmosphere: #242B27 ellipse at 8% 92%, transparent at 48%, over #171C19
- *            bgSurface/bottomnavBg #1F2521 · composerBg #29322C
+ *    dark    AMOLED depth (freeze override by Fareed, fix/genuine-teamily-android-ui):
+ *            canvas #0F1412 (#242B27 glow at 8% 92%, transparent at 48%)
+ *            bgSurface/bottomnavBg #1A231E · composerBg #222D27 · cardHero #1E3A2B
  *            border / rim #D1DAD3 @ 0x38 · borderGradient (--nv-edge) #AEBBB1 @ 0x5C -> #4B5750
- *            primary fill #CBE7D2 with #17201B ink, no shadow
- *            bubbleUser #505752 · bubbleAgent #303433
+ *            primary fill = brandGradient #0B8249 -> #087C45, white glyph, subtle glow
+ *            bubbleUser #1E4632 · bubbleAgent #1A231E
  *
  *  Compose has no backdrop blur, so the "frosted" dock is the opaque-ish
  *  `bottomnavBg` fill plus a 1dp `borderGradient` edge — no faked blur.
@@ -124,21 +124,22 @@ data class TeamilyPalette(
     val restingShadowElevation: Dp,
     val restingShadowAmbient: Color,
     val restingShadowSpot: Color,
-    /** `--nv-primary-shadow-hover` green glow; Light mode only, null in dark. */
+    /** `--nv-primary-shadow-hover` green glow. Null disables it. */
     val primaryGlowAmbient: Color?,
     val primaryGlowSpot: Color?,
 )
 
 val TeamilyDarkPalette = TeamilyPalette(
-    // Uniform #1D2120 dark canvas matching official Teamily AI app.
-    bgCanvas = Color(0xFF1D2120),
-    bgCanvasTop = Color(0xFF1D2120),
-    bgCanvasBottom = Color(0xFF1D2120),
+    // AMOLED depth (Fareed, freeze override): near-black #0F1412 canvas so the
+    // #1A231E surfaces, #222D27 composer and #1E3A2B hero separate cleanly.
+    bgCanvas = Color(0xFF0F1412),
+    bgCanvasTop = Color(0xFF0F1412),
+    bgCanvasBottom = Color(0xFF0F1412),
     bgCanvasGradient = Brush.verticalGradient(
-        listOf(Color(0xFF1D2120), Color(0xFF1D2120), Color(0xFF1D2120)),
+        listOf(Color(0xFF0F1412), Color(0xFF0F1412), Color(0xFF0F1412)),
     ),
-    // Live measured surface & dock: #1F2521 (R=31, G=37, B=33)
-    bgSurface = Color(0xFF1F2521),
+    // AMOLED surface & dock.
+    bgSurface = Color(0xFF1A231E),
     // --nv-glass-2-surface dark
     surfaceGradient = Brush.verticalGradient(
         0f to Color(0xBD2F3932),
@@ -162,16 +163,16 @@ val TeamilyDarkPalette = TeamilyPalette(
         ),
     ),
     // Hero pinned card fill (dark).
-    cardHeroColor = Color(0xFF253D31),
+    cardHeroColor = Color(0xFF1E3A2B),
     heroCardBorder = Color(0x22AEBBB1),
     // Live measured recessed search field: #181D1B (R=24, G=29, B=27)
     surfaceRecessed = Color(0xFF181D1B),
-    // Reference dark header. The status-bar band uses this so it matches the header.
-    statusbarBg = Color(0xFF1D2120),
-    topbarBg = Color(0xFF1D2120),
+    // Header sits on the canvas, so it matches it (no band at the top).
+    statusbarBg = Color(0xFF0F1412),
+    topbarBg = Color(0xFF0F1412),
     // Top of `--nv-glass-surface` dark (spec allows solid #323B36 only as an elevated fallback).
-    composerBg = Color(0xFF29322C),
-    bottomnavBg = Color(0xFF1F2521),
+    composerBg = Color(0xFF222D27),
+    bottomnavBg = Color(0xFF1A231E),
     // Live measured primary text: #F7F9F7 (R=247, G=249, B=247)
     textPrimary = Color(0xFFF7F9F7),
     // Section labels on the home list, sampled 8 Nov 2026: #B4BFB8
@@ -198,17 +199,19 @@ val TeamilyDarkPalette = TeamilyPalette(
     // --nv-brand-product / --nv-signal
     logoMint = Color(0xFF42D982),
     signalGreen = Color(0xFF00D95A),
-    // Dark --nv-primary-fill is a flat #cbe7d2 (no gradient, --nv-primary-shadow none).
-    gradientStart = Color(0xFFCBE7D2),
-    gradientEnd = Color(0xFFCBE7D2),
-    brandGradient = SolidColor(Color(0xFFCBE7D2)),
-    // --nv-user-bubble / --nv-agent-bubble
-    bubbleUser = Color(0xFF505752),
+    // Rich emerald primary fill, same as light: #0B8249 -> #087C45 (white glyph).
+    gradientStart = Color(0xFF0B8249),
+    gradientEnd = Color(0xFF087C45),
+    brandGradient = Brush.verticalGradient(
+        listOf(Color(0xFF0B8249), Color(0xFF087C45)),
+    ),
+    // AMOLED bubbles: deep green user bubble, surface-toned agent bubble.
+    bubbleUser = Color(0xFF1E4632),
     bubbleUserText = Color(0xFFFFFFFF),
-    bubbleAgent = Color(0xFF303433),
+    bubbleAgent = Color(0xFF1A231E),
     bubbleAgentText = Color(0xFFEAF0EC),
-    sendButton = Color(0xFFCBE7D2),
-    sendButtonIcon = Color(0xFF17201B),
+    sendButton = Color(0xFF087C45),
+    sendButtonIcon = Color(0xFFFFFFFF),
     // Blank chat page. Right side stays #171C19. Lower left lifts to #222926.
     chatCanvas = Color(0xFF171C19),
     chatGlow = Color(0xFF222926),
@@ -232,18 +235,20 @@ val TeamilyDarkPalette = TeamilyPalette(
     tilePink = Color(0xFFE84A9B),
     // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
     atmosphereDeep = Color(0xFF242B27),
-    atmosphereBase = Color(0xFF1D2120),
+    atmosphereBase = Color(0xFF0F1412),
     atmosphereStop = 0.48f,
     toolActive = Color(0xFF42D982),
     notificationDot = Color(0xFFA2E4B6),
     // Dark --nv-notification-outline = --nv-canvas.
-    notificationOutline = Color(0xFF141816),
-    avatarOnlineRing = Color(0xFF1D2220),
+    notificationOutline = Color(0xFF0F1412),
+    // Matches the dark header (= canvas).
+    avatarOnlineRing = Color(0xFF0F1412),
     restingShadowElevation = 6.dp,
     restingShadowAmbient = Color(0x55000000),
     restingShadowSpot = Color(0x88000000),
-    primaryGlowAmbient = null,
-    primaryGlowSpot = null,
+    // Subtle emerald ambient glow under the Send disc / primary CTAs.
+    primaryGlowAmbient = Color(0x33087C45),
+    primaryGlowSpot = Color(0x66087C45),
 )
 
 val TeamilyLightPalette = TeamilyPalette(
