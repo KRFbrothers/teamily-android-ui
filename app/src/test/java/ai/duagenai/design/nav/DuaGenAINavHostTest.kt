@@ -921,6 +921,38 @@ class DuaGenAINavHostTest {
     // ------------------------------------------------- Dua mode is plain
 
     @Test
+    fun colorSchemes_mapSurfaceRolesFromPalette_primaryUnchanged() {
+        val light = ai.duagenai.design.theme.DuaGenAITheme.lightScheme(
+            ai.duagenai.design.theme.TeamilyLightPalette,
+        )
+        val dark = ai.duagenai.design.theme.DuaGenAITheme.darkScheme(
+            ai.duagenai.design.theme.TeamilyDarkPalette,
+        )
+        val lp = ai.duagenai.design.theme.TeamilyLightPalette
+        val dp = ai.duagenai.design.theme.TeamilyDarkPalette
+        // Freeze primary stays #087C45 in both schemes.
+        org.junit.Assert.assertEquals(androidx.compose.ui.graphics.Color(0xFF087C45), light.primary)
+        org.junit.Assert.assertEquals(androidx.compose.ui.graphics.Color(0xFF087C45), dark.primary)
+        // Dialog container (surfaceContainerHigh) comes from the palette, not M3 baseline.
+        org.junit.Assert.assertEquals(lp.surfaceRecessed, light.surfaceContainerHigh)
+        org.junit.Assert.assertEquals(dp.bgElevated, dark.surfaceContainerHigh)
+        val lightRoles = listOf(
+            light.surfaceContainerLowest, light.surfaceContainerLow, light.surfaceContainer,
+            light.surfaceContainerHigh, light.surfaceContainerHighest, light.surfaceDim,
+            light.surfaceBright, light.surfaceTint,
+        )
+        val darkRoles = listOf(
+            dark.surfaceContainerLowest, dark.surfaceContainerLow, dark.surfaceContainer,
+            dark.surfaceContainerHigh, dark.surfaceContainerHighest, dark.surfaceDim,
+            dark.surfaceBright, dark.surfaceTint,
+        )
+        val lightTokens = setOf(lp.bgSurface, lp.bottomnavBg, lp.bgElevated, lp.surfaceRecessed, lp.bgCanvas, lp.accent)
+        val darkTokens = setOf(dp.surfaceRecessed, dp.bgCanvas, dp.bgSurface, dp.bgElevated, dp.chromeFill, dp.accent)
+        org.junit.Assert.assertTrue(lightTokens.containsAll(lightRoles))
+        org.junit.Assert.assertTrue(darkTokens.containsAll(darkRoles))
+    }
+
+    @Test
     fun duaModeShowsOnlyTheComposerAndNoAgentSurface() {
         launch()
 

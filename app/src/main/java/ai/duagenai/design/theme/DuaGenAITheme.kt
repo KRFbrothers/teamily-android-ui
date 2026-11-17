@@ -321,7 +321,7 @@ object DuaGenAITheme {
     }
 
     /** The light [TeamilyPalette] mapped onto M3's roles. */
-    private fun lightScheme(p: TeamilyPalette) = lightColorScheme(
+    internal fun lightScheme(p: TeamilyPalette) = lightColorScheme(
         primary = p.accent,
         onPrimary = p.accentContrast,
         primaryContainer = p.accentSoft,
@@ -346,10 +346,22 @@ object DuaGenAITheme {
         onErrorContainer = p.dangerInk,
         inverseSurface = p.textPrimary,
         inverseOnSurface = p.bgCanvas,
+        // M3 surface roles (dialogs, menus, sheets, nav bars read these).
+        // Unset, they fall back to M3's baseline purple-grey tones. Mapped
+        // lightest -> darkest from existing palette tokens; no new colors.
+        surfaceContainerLowest = p.bgSurface,
+        surfaceContainerLow = p.bottomnavBg,
+        surfaceContainer = p.bgElevated,
+        surfaceContainerHigh = p.surfaceRecessed,
+        surfaceContainerHighest = p.bgCanvas,
+        surfaceDim = p.bgCanvas,
+        surfaceBright = p.bgSurface,
+        surfaceTint = p.accent,
+        scrim = Color.Black,
     )
 
     /** The dark [TeamilyPalette] mapped onto M3's roles. */
-    private fun darkScheme(p: TeamilyPalette) = darkColorScheme(
+    internal fun darkScheme(p: TeamilyPalette) = darkColorScheme(
         // Freeze primary #087C45. onPrimary is textPrimary (#F7F9F7), not
         // accentContrast (#17201B), which fails contrast on this fill.
         primary = p.accent,
@@ -376,6 +388,17 @@ object DuaGenAITheme {
         onErrorContainer = p.dangerInk,
         inverseSurface = p.textPrimary,
         inverseOnSurface = p.bgCanvas,
+        // M3 surface roles, darkest -> lightest from existing palette tokens.
+        // Primary / text-button colors are intentionally unchanged.
+        surfaceContainerLowest = p.surfaceRecessed,
+        surfaceContainerLow = p.bgCanvas,
+        surfaceContainer = p.bgSurface,
+        surfaceContainerHigh = p.bgElevated,
+        surfaceContainerHighest = p.chromeFill,
+        surfaceDim = p.surfaceRecessed,
+        surfaceBright = p.chromeFill,
+        surfaceTint = p.accent,
+        scrim = Color.Black,
     )
 
     /** `accentSoft` is the light palette's brand-soft fill. */
