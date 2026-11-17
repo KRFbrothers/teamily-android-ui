@@ -10,6 +10,7 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -240,6 +241,9 @@ fun SidebarDrawer(
                     style = DuaGenAITextStyles.eyebrow,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // Sample history, not the user's real chats yet.
+                Spacer(Modifier.width(spacing.xs))
+                DemoBadge()
                 Spacer(Modifier.weight(1f))
                 Text(
                     text = "All",
@@ -288,18 +292,25 @@ fun SidebarDrawer(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Box(
-                        modifier = Modifier
-                            .padding(top = spacing.xxs)
-                            .clip(DuaGenAITheme.shapes.pill)
-                            .background(colors.logoMint)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    Row(
+                        modifier = Modifier.padding(top = spacing.xxs),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = planLabel,
-                            style = DuaGenAITextStyles.eyebrow,
-                            color = colors.onLogoMint,
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(DuaGenAITheme.shapes.pill)
+                                .background(colors.logoMint)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = planLabel,
+                                style = DuaGenAITextStyles.eyebrow,
+                                color = colors.onLogoMint,
+                            )
+                        }
+                        // The plan is not read from billing yet.
+                        Spacer(Modifier.width(spacing.xs))
+                        DemoBadge()
                     }
                 }
                 IconButton(onClick = onOpenProfile) {

@@ -1,5 +1,7 @@
 package ai.duagenai.design.theme
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -112,4 +114,28 @@ fun Modifier.teamilyPressScale(
         scaleX = scale
         scaleY = scale
     }
+}
+
+/**
+ * The small "Demo" label on sample data that is not live yet (drawer history,
+ * agent home chats, Agents, Discover, the plan label and the offline canned
+ * reply). A capsule outline in M3 theme roles only (`outlineVariant`
+ * edge, `onSurfaceVariant` ink, `labelSmall` Lato), so it adds no new colour
+ * and follows light/dark on its own. The text is `R.string.demo_label`.
+ */
+@Composable
+fun DemoBadge(modifier: Modifier = Modifier) {
+    androidx.compose.material3.Text(
+        text = androidx.compose.ui.res.stringResource(ai.duagenai.design.R.string.demo_label),
+        style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant,
+                shape = TeamilyShapes.capsule,
+            )
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }

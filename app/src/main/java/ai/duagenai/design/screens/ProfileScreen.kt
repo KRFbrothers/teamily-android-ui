@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -192,17 +193,22 @@ fun ProfileScreen(
                             textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(spacing.sm))
-                        Box(
-                            modifier = Modifier
-                                .clip(DuaGenAITheme.shapes.pill)
-                                .background(colors.logoMint)
-                                .padding(horizontal = 10.dp, vertical = 3.dp),
-                        ) {
-                            Text(
-                                text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
-                                style = DuaGenAITextStyles.eyebrow,
-                                color = colors.onLogoMint,
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(DuaGenAITheme.shapes.pill)
+                                    .background(colors.logoMint)
+                                    .padding(horizontal = 10.dp, vertical = 3.dp),
+                            ) {
+                                Text(
+                                    text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
+                                    style = DuaGenAITextStyles.eyebrow,
+                                    color = colors.onLogoMint,
+                                )
+                            }
+                            // The plan is not read from billing yet.
+                            Spacer(Modifier.width(spacing.xs))
+                            DemoBadge()
                         }
                         Spacer(Modifier.height(spacing.lg))
                         // Audit fix #9: this used to be `onClick = {}` — a button
