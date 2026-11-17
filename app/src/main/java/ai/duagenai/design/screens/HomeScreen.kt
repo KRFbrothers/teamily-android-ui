@@ -1727,9 +1727,12 @@ private fun AgentHomeList(
  * The floating bottom dock: a detached 999dp capsule (16dp side margin, 12dp
  * bottom margin) on `bottomnavBg`, 1dp `borderGradient` rim and a drop
  * shadow. Five tabs; the active one sits in a `navSelected` pill.
+ *
+ * Internal so the nav host can hand the SAME dock to the four tab screens
+ * (Agents, Discover, Memory, Artifacts) through their `bottomBar` slot.
  */
 @Composable
-private fun HomeBottomNav(
+internal fun HomeBottomNav(
     selected: HomeTab,
     onSelect: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,

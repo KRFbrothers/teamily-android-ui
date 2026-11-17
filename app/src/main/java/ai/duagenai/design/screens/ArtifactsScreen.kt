@@ -213,6 +213,8 @@ fun ArtifactsScreen(
      * is where that button goes.
      */
     onSignIn: () -> Unit = {},
+    /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
+    bottomBar: @Composable () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // The shared opener. The injected lambda (or the platform handler) is the
@@ -264,6 +266,7 @@ fun ArtifactsScreen(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = bottomBar,
         topBar = {
             TopAppBar(
                 title = {
