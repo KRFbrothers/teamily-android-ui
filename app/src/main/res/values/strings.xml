@@ -5,4 +5,6 @@
     <string name="create_agent_title">Create Agent</string>
     <string name="create_agent_name_hint">Name your Agent</string>
     <string name="create_agent_action">Create</string>
+    <!-- Dua home composer: Attach / Voice are not wired yet -->
+    <string name="composer_coming_soon">Jaldi aa raha hai</string>
 </resources>

@@ -291,6 +291,12 @@ fun ChatScreen(
     // session token exists, and the canned offline reply when it does not. A
     // test injects a fake; the default keeps every existing caller compiling.
     chatDataSource: ChatDataSource? = null,
+    /**
+     * A NEW thread's first message (Dua home's composer Send). Non-null: the
+     * thread starts empty (no sample seed) and this is sent once, as if typed,
+     * so the reply lands here. Ignored once the thread has any message.
+     */
+    initialMessage: String? = null,
 ) {
     val profileClick = if (onOpenAgentProfile != null) {
         Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
@@ -300,7 +306,11 @@ fun ChatScreen(
     // Agent's own thread is the one conversation whose content is not the
     // generic sample: it is Agent reporting on the agents it controls. Every
     // other id keeps the sample thread, so nothing else changes.
-    val seed = if (chatId == AGENT_CHAT_ID) agentThread else sampleThread
+    val seed = when {
+        initialMessage != null -> emptyList()
+        chatId == AGENT_CHAT_ID -> agentThread
+        else -> sampleThread
+    }
     // Derived, never accepted as a parameter: the conversation's cube is a pure
     // function of its stable id, so this screen cannot drift from the Home row
     // that opened it — and it is not the user's saved cube.
@@ -392,6 +402,17 @@ fun ChatScreen(
                 agentTyping = false
                 transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, replyText, nowLabel()))
             }
+        }
+    }
+
+    // A new thread opened with a first message sends it exactly once: only
+    // while the retained store still holds no message for this chat id.
+    LaunchedEffect(chatId) {
+        val first = initialMessage?.trim().orEmpty()
+        transcriptStore.ensure(chatId, seed.map { it.toSaved() })
+        if (first.isNotEmpty() && transcriptStore.threads.value[chatId].isNullOrEmpty()) {
+            draft = first
+            send()
         }
     }
 
