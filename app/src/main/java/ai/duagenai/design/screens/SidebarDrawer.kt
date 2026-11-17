@@ -10,59 +10,69 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.R
+import ai.duagenai.design.cube.CubeAvatar
 import ai.duagenai.design.theme.DemoBadge
+import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.DuaGenAITheme
+import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyStroke
+import ai.duagenai.design.theme.teamilyPalette
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeIds
-import ai.duagenai.design.theme.DuaGenAITextStyles
-import ai.duagenai.design.theme.DuaGenAITheme
-import ai.duagenai.design.theme.LocalDuaGenAISpacing
-import ai.duagenai.design.theme.TeamilyStroke
-import ai.duagenai.design.theme.teamilyPalette
+import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
-import androidx.compose.foundation.layout.widthIn
+import kotlinx.coroutines.launch
 
 /* ============================================================================
  *  Dua Gen AI — Sidebar drawer
@@ -74,13 +84,14 @@ import androidx.compose.foundation.layout.widthIn
  *
  *    • [CubeAvatar] for the footer avatar — the USER's saved cube, the same id
  *      Home's top bar and Profile draw. No second avatar implementation.
- *    • [ChatRow] for the history entries — so a history row carries that
- *      conversation's own cube, derived from its stable `chatId` by the same
- *      `CubeCatalog.forEntity` the Home list and ChatScreen use. Opening a
- *      history row therefore lands on the same cube the row showed.
+ *    • [ChatRow] for the history entries — the same list Home renders. The
+ *      drawer shows only the title (ChatGPT style); opening a row lands on
+ *      that conversation's own cube in ChatScreen.
  *
- *  The "Agent" nav item's glyph is a WIREFRAME nav icon (hexagon + Y seam,
- *  stroke only, no fill). The "Dua" nav item's glyph is a front-facing
+ *  Layout follows the ChatGPT Android drawer in Dua colours. Every nav row
+ *  leads with an outline icon. The mode
+ *  row shows "Agent mode" with a WIREFRAME nav icon (hexagon + Y seam,
+ *  stroke only, no fill), or "Dua mode" with a front-facing
  *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
  *  and from Library's isometric box in the HTML preview. Neither is a cube
  *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
@@ -94,325 +105,349 @@ import androidx.compose.foundation.layout.widthIn
 /**
  * Every destination the drawer offers.
  *
- * `Library`, `Images`, `Computer` and `Videos` have no screen yet — the request
- * was explicitly "sirf ye 2 screens" (Home + drawer), so they are listed but
- * inert. They are still real enum entries so the host can wire them the moment
- * a screen exists, without touching this file.
+ * `Library`, `Images`, `Computer` and `Videos` have no screen yet
+ * ([comingSoon] = true): the drawer answers a tap with the shared "Jaldi aa
+ * raha hai" snackbar, stays open, and does NOT call `onSelect`.
+ *
+ * [NewChat] is not a nav row any more: it is the floating green "Chat" pill at
+ * the bottom-left (ChatGPT Android layout), which fires the same `onSelect`.
  */
-enum class DrawerDestination(val label: String) {
+enum class DrawerDestination(val label: String, val comingSoon: Boolean = false) {
     NewChat("New chat"),
-    Library("Library"),
-    Images("Images"),
-    Computer("Computer"),
-    Videos("Videos"),
-    /** Switches Home to Dua mode — the way back from Agent home, whose header
-     *  has no Dua | Agent toggle. */
-    Dua("Dua"),
-    Agent("Agent"),
+    Library("Library", comingSoon = true),
+    Images("Images", comingSoon = true),
+    Computer("Computer", comingSoon = true),
+    Videos("Videos", comingSoon = true),
+    /**
+     * ONE row for the Dua | Agent mode. It shows the CURRENT mode ("Agent mode"
+     * / "Dua mode", with that mode's glyph) and a tap switches to the other
+     * one. Agent home has no toggle, so this is its way to Dua.
+     */
+    ModeSwitch("Mode"),
 }
 
+/** The drawer's one width cap (ChatGPT-like; leaves a home strip beside it). */
+internal val DRAWER_MAX_WIDTH = 280.dp
+
+/** Test tag on the footer avatar, carrying the cube it draws. */
+internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
+
 /**
- * The drawer sheet.
+ * The drawer sheet, laid out like the ChatGPT Android drawer in Dua colours:
+ *
+ *   "Dua Gen AI" title · round search button
+ *   Library / Images / Computer / Videos / mode row  (icon + label, no highlight)
+ *   thin divider
+ *   HISTORY [Demo] · plain chat titles · "See all"
+ *   green "Chat" pill (new chat)            round avatar (Profile)
+ *
+ * There is no close X: the M3 scrim (TalkBack "Close navigation menu"), a
+ * swipe and system Back close it.
  *
  * Rendered inside [androidx.compose.material3.ModalNavigationDrawer], which
- * supplies the scrim and the open/close animation — the M3 pattern the rest of
- * the kit already uses, so no custom animation code is introduced.
+ * supplies the scrim and the open/close animation.
  *
  * @param cubeId the USER's saved cube, for the footer avatar only.
+ * @param signedIn whether a session exists; read out on the avatar
+ *   ("Profile, Signed in" / "Profile, Not signed in").
+ * @param mode the current Home mode, shown by the [DrawerDestination.ModeSwitch] row.
  * @param history the same [ChatRow] list Home renders, so the two cannot drift.
- * @param selected the currently active destination, or null for none.
- * @param onSelect fired for every nav item. The host decides what each one does.
+ * @param onSelect fired by the mode row and the Chat pill. The host decides
+ *   what each one does. Coming-soon rows never reach it.
  * @param onOpenChat fired by a history row, with that row's own id and title.
- * @param onOpenProfile fired by the footer gear. The gear is the drawer's
- *   entry point to the PROFILE destination — the same `profile` route the
- *   NavHost already registers. Its icon and styling are unchanged; only the
- *   callback it fires and its accessibility label say what it now does.
- * @param onClose fired by the close X. The scrim is handled by the drawer host.
+ * @param onOpenProfile fired by the footer avatar: the `profile` route.
  */
 @Composable
 fun SidebarDrawer(
     cubeId: String,
-    userName: String,
-    planLabel: String,
+    signedIn: Boolean,
+    mode: HomeMode,
     history: List<ChatRow>,
-    selected: DrawerDestination?,
     onSelect: (DrawerDestination) -> Unit,
     onOpenChat: (chatId: String, title: String) -> Unit,
     onOpenProfile: () -> Unit,
-    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
+    // Coming-soon taps answer inside the drawer itself: a snackbar in the app
+    // Scaffold would sit behind the drawer's scrim and never be seen.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val comingSoonText = stringResource(R.string.composer_coming_soon)
+    val showComingSoon: () -> Unit = {
+        snackbarScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(comingSoonText)
+        }
+    }
 
     ModalDrawerSheet(
-        // fillMaxWidth so a narrow multi-window pane still uses the window;
-        // widthIn caps the drawer at the phone width of 320dp.
+        // Capped at DRAWER_MAX_WIDTH FIRST, then filling: on a phone the home screen
+        // stays visible as a strip beside the sheet (ChatGPT reference), and a
+        // narrow multi-window pane still uses the whole window.
         modifier = modifier
-            .fillMaxWidth()
-            .widthIn(max = 320.dp),
+            .widthIn(max = DRAWER_MAX_WIDTH)
+            .fillMaxWidth(),
+        // Clean white in light (bgSurface #FFFFFF), dark surface in dark.
         drawerContainerColor = MaterialTheme.colorScheme.surface,
         drawerShape = DuaGenAITheme.shapes.sheet,
     ) {
-        Column(Modifier.fillMaxHeight()) {
+        Box(Modifier.fillMaxHeight()) {
+            Column(Modifier.fillMaxHeight()) {
 
-            /* ---------- brand + close ---------- */
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = spacing.lg, end = spacing.sm, top = spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Dua",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onClose) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close menu",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            /* ---------- search ---------- */
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.lg, vertical = spacing.sm),
-                shape = DuaGenAITheme.shapes.pill,
-                color = colors.field,
-                // Zip `--nv-field-edge` (light #5C6D63, dark #AEBBB1).
-                border = androidx.compose.foundation.BorderStroke(1.dp, teamilyPalette().fieldEdge),
-            ) {
+                /* ---------- title + round search ---------- */
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .sizeIn(minHeight = 48.dp)
-                        .padding(horizontal = spacing.md),
+                        .padding(start = spacing.lg, end = spacing.md, top = spacing.lg, bottom = spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        Icons.Filled.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(spacing.sm))
+                    // The app's own name (`app_name`, "Dua Gen AI"). headlineSmall
+                    // bold, one line, so it fits beside the 48dp search button
+                    // at 280dp.
                     Text(
-                        text = "Search",
-                        style = DuaGenAITextStyles.snippet,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            /* ---------- nav list ---------- */
-            Column(
-                modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xs),
-                verticalArrangement = Arrangement.spacedBy(spacing.xxs),
-            ) {
-                DrawerDestination.entries.forEach { destination ->
-                    DrawerNavItem(
-                        destination = destination,
-                        active = destination == selected,
-                        onClick = { onSelect(destination) },
-                    )
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
-                color = colors.hairline,
-            )
-
-            /* ---------- history ---------- */
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.lg, vertical = spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "HISTORY",
-                    style = DuaGenAITextStyles.eyebrow,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // Sample history, not the user's real chats yet.
-                Spacer(Modifier.width(spacing.xs))
-                DemoBadge()
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = "All",
-                    style = DuaGenAITextStyles.meta,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = spacing.sm,
-                    end = spacing.sm,
-                    bottom = spacing.sm,
-                ),
-                verticalArrangement = Arrangement.spacedBy(spacing.xxs),
-            ) {
-                items(history) { row ->
-                    DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
-                }
-            }
-
-            HorizontalDivider(color = colors.hairline)
-
-            /* ---------- footer ---------- */
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.lg, vertical = spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // The USER's saved cube — the same id Home's top bar and Profile
-                // draw, so all three agree by construction.
-                CubeAvatar(
-                    cubeId = cubeId,
-                    size = 36.dp,
-                    shape = DuaGenAITheme.shapes.avatarList,
-                    contentDescription = "Your avatar, ${CubeIds.label(cubeId)}",
-                )
-                Spacer(Modifier.width(spacing.md))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = userName,
-                        style = DuaGenAITextStyles.rowTitle,
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
-                    Row(
-                        modifier = Modifier.padding(top = spacing.xxs),
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Search had no behaviour before (a static pill), so the
+                    // round button answers with the coming-soon snackbar.
+                    Surface(
+                        onClick = showComingSoon,
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 4.dp,
+                        // Hairline edge so the white circle still reads where
+                        // the shadow is faint (dark mode, flat renderers).
+                        border = BorderStroke(1.dp, colors.hairline),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .semantics { contentDescription = "Search" },
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(DuaGenAITheme.shapes.pill)
-                                .background(colors.logoMint)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        ) {
-                            Text(
-                                text = planLabel,
-                                style = DuaGenAITextStyles.eyebrow,
-                                color = colors.onLogoMint,
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(22.dp),
                             )
                         }
-                        // The plan is not read from billing yet.
-                        Spacer(Modifier.width(spacing.xs))
-                        DemoBadge()
                     }
                 }
-                IconButton(onClick = onOpenProfile) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = "Profile",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                /* ---------- nav rows ---------- */
+                Column(Modifier.padding(vertical = spacing.xs)) {
+                    DrawerDestination.entries
+                        .filter { it != DrawerDestination.NewChat }
+                        .forEach { destination ->
+                            DrawerNavItem(
+                                destination = destination,
+                                mode = mode,
+                                onClick = {
+                                    if (destination.comingSoon) showComingSoon() else onSelect(destination)
+                                },
+                            )
+                        }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
+                    color = colors.hairline,
+                )
+
+                /* ---------- history ---------- */
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.lg, vertical = spacing.xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "HISTORY",
+                        style = DuaGenAITextStyles.eyebrow,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Sample history, not the user's real chats yet.
+                    Spacer(Modifier.width(spacing.xs))
+                    DemoBadge()
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    // Room under the last row so the floating footer never
+                    // covers it.
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
+                ) {
+                    items(history) { row ->
+                        DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
+                    }
+                    // "All" was a static label; "See all" now answers like
+                    // the other unbuilt destinations.
+                    item {
+                        Text(
+                            text = "See all",
+                            style = drawerRowText().copy(fontSize = 15.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(role = Role.Button, onClick = showComingSoon)
+                                .sizeIn(minHeight = 48.dp)
+                                .padding(horizontal = spacing.lg, vertical = spacing.md),
+                        )
+                    }
+                }
+            }
+
+            /* ---------- floating footer: Chat pill · avatar ---------- */
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.lg, vertical = spacing.lg),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    onClick = { onSelect(DrawerDestination.NewChat) },
+                    shape = CircleShape,
+                    color = palette.accent,
+                    contentColor = palette.sendButtonIcon,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier
+                        .sizeIn(minHeight = 52.dp)
+                        .semantics { contentDescription = "Start a new chat" },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Chat,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(spacing.sm))
+                        Text(
+                            text = "Chat",
+                            style = drawerRowText().copy(fontWeight = FontWeight.Bold),
+                        )
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                // Round avatar only. TalkBack hears one label, e.g.
+                // "Profile, Not signed in".
+                val profileLabel = "Profile, ${if (signedIn) "Signed in" else "Not signed in"}"
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable(role = Role.Button, onClick = onOpenProfile)
+                        .semantics { contentDescription = profileLabel }
+                        .testTag(drawerAvatarTag(cubeId)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CubeAvatar(
+                        cubeId = cubeId,
+                        size = 40.dp,
+                        shape = CircleShape,
+                        contentDescription = null,
                     )
                 }
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 88.dp),
+            )
         }
     }
 }
 
+/** Drawer row text: regular weight, ~17sp, Lato via the theme. */
+@Composable
+private fun drawerRowText() = MaterialTheme.typography.bodyLarge.copy(
+    fontSize = 17.sp,
+    fontWeight = FontWeight.Normal,
+)
+
 /**
- * One nav row.
- *
- * The active row is a soft brand pill — the same `brandSoft` / `onBrandSoft`
- * pair the kit's chips use, so the drawer's selection reads like the rest of
- * the app rather than like a new component.
+ * One nav row: a 22dp outline icon, then the label, 56dp tall, no highlight.
+ * The [DrawerDestination.ModeSwitch] row shows the current mode's glyph and
+ * label, and TalkBack hears what a tap does ("Switch to Dua mode").
  */
 @Composable
 private fun DrawerNavItem(
     destination: DrawerDestination,
-    active: Boolean,
+    mode: HomeMode,
     onClick: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
+    val iconTint = MaterialTheme.colorScheme.onSurface
+    val isModeRow = destination == DrawerDestination.ModeSwitch
+    val label = if (isModeRow) "${mode.label} mode" else destination.label
+    val other = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(DuaGenAITheme.shapes.pill)
-            .background(if (active) colors.brandSoft else Color.Transparent)
-            .clickable(onClick = onClick)
-            .sizeIn(minHeight = 48.dp)
-            .padding(horizontal = spacing.md),
+            .clickable(role = Role.Button, onClick = onClick)
+            .then(
+                if (isModeRow) {
+                    Modifier.semantics { contentDescription = "Switch to ${other.label} mode" }
+                } else {
+                    Modifier
+                },
+            )
+            .sizeIn(minHeight = 56.dp)
+            .padding(horizontal = spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val iconModifier = Modifier.size(22.dp)
         when (destination) {
-            DrawerDestination.NewChat -> Icon(
-                Icons.Filled.Add,
-                contentDescription = null,
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-            // Front-facing wireframe cube, NOT a cube avatar — see the file header.
-            DrawerDestination.Dua -> DuaCubeGlyph(
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            // A wireframe glyph, NOT a cube avatar — see the file header.
-            DrawerDestination.Agent -> AgentCubeGlyph(
-                tint = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            else -> Box(Modifier.size(20.dp))
+            DrawerDestination.Library ->
+                Icon(Icons.AutoMirrored.Outlined.LibraryBooks, null, iconModifier, tint = iconTint)
+            DrawerDestination.Images -> Icon(Icons.Outlined.Image, null, iconModifier, tint = iconTint)
+            DrawerDestination.Computer -> Icon(Icons.Outlined.Computer, null, iconModifier, tint = iconTint)
+            DrawerDestination.Videos -> Icon(Icons.Outlined.VideoLibrary, null, iconModifier, tint = iconTint)
+            // Wireframe glyphs, NOT cube avatars — see the file header.
+            DrawerDestination.ModeSwitch -> when (mode) {
+                HomeMode.Dua -> DuaCubeGlyph(tint = iconTint, modifier = iconModifier)
+                HomeMode.Agent -> AgentCubeGlyph(tint = iconTint, modifier = iconModifier)
+            }
+            // Not listed as a row (it is the Chat pill).
+            DrawerDestination.NewChat -> Unit
         }
-        Spacer(Modifier.width(spacing.md))
+        Spacer(Modifier.width(spacing.lg))
         Text(
-            text = destination.label,
-            style = DuaGenAITextStyles.rowTitle,
-            color = if (active) colors.onBrandSoft else MaterialTheme.colorScheme.onSurface,
+            text = label,
+            style = drawerRowText(),
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
-/**
- * A history entry.
- *
- * Carries that conversation's OWN cube (from [ChatRow.cubeId], i.e.
- * `CubeCatalog.forEntity(chatId)`), never the saved avatar — so the drawer, the
- * Home list and the thread all show the same cube for the same chat.
- */
+/** A history entry: the plain chat title, no avatar (ChatGPT style). */
 @Composable
 private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
     val spacing = LocalDuaGenAISpacing.current
-    val cubeId = row.cubeId
-
-    Row(
+    Text(
+        text = row.name,
+        style = drawerRowText(),
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(DuaGenAITheme.shapes.card)
-            .clickable(onClick = onClick)
-            .sizeIn(minHeight = 48.dp)
-            .padding(horizontal = spacing.sm, vertical = spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CubeAvatar(
-            cubeId = cubeId,
-            size = 28.dp,
-            shape = DuaGenAITheme.shapes.avatarMessage,
-            contentDescription = "${row.name} avatar, ${CubeIds.label(cubeId)}",
-        )
-        Spacer(Modifier.width(spacing.sm))
-        Text(
-            text = row.name,
-            style = DuaGenAITextStyles.snippet,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+            .clickable(role = Role.Button, onClick = onClick)
+            .sizeIn(minHeight = 52.dp)
+            .padding(horizontal = spacing.lg, vertical = 14.dp),
+    )
 }
 
 /**
