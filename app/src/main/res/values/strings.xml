@@ -47,4 +47,22 @@
     <string name="profile_save">Save</string>
     <string name="profile_cancel">Cancel</string>
     <string name="back">Back</string>
+    <!-- Agent thread header pill + composer (every agent's chat) -->
+    <string name="agent_invite">Invite</string>
+    <string name="chat_agent_placeholder">Type a message...</string>
+    <!-- Agent profile: toggles, more-sheet, confirms -->
+    <string name="agent_mute">Mute Notifications</string>
+    <string name="agent_pin">Pin to Top</string>
+    <string name="agent_share">Share</string>
+    <string name="agent_share_text">Chat with %1$s on Dua Gen AI</string>
+    <string name="agent_clear_history">Clear Chat History</string>
+    <string name="agent_delete">Delete agent</string>
+    <string name="agent_clear_confirm_title">Clear chat history?</string>
+    <string name="agent_clear_confirm_body">All messages with %1$s will be removed from this device.</string>
+    <string name="agent_clear_confirm">Clear</string>
+    <string name="agent_history_cleared">Chat history cleared</string>
+    <string name="agent_delete_confirm_title">Delete %1$s?</string>
+    <string name="agent_delete_confirm_body">This agent and its chat will be removed.</string>
+    <string name="agent_delete_confirm">Delete</string>
+    <string name="agent_builtin_no_delete">Built-in agents can\'t be deleted</string>
 </resources>

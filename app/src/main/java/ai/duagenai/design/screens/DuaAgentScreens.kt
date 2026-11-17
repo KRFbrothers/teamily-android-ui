@@ -30,11 +30,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.rememberCoroutineScope
+import android.content.Intent
+import ai.duagenai.design.cube.CubeAvatar
+import ai.duagenai.design.cube.CubeCatalog
+import ai.duagenai.design.cube.CubeIds
+import kotlinx.coroutines.launch
 import ai.duagenai.design.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -226,6 +238,7 @@ private val ICONS: Map<String, List<Part>> = mapOf(
     "api" to listOf(Part(circle(12f, 6.2f, 2.1f)), Part(circle(6.2f, 17f, 2.1f)), Part(circle(17.8f, 17f, 2.1f)), Part("M12 8.4v3.2M12 11.6L7.6 15.4M12 11.6l4.4 3.8")),
     "book" to listOf(Part("M5 5.2c1.8-.8 3.8-.8 5.8 0v13.2c-2-.8-4-.8-5.8 0zM13.2 5.2c1.8-.8 3.8-.8 5.8 0v13.2c-2-.8-4-.8-5.8 0z"), Part("M12 5.2v13.2")),
     "bolt" to listOf(Part("M13.2 3.5L6.5 13.2h5.2L10.8 20.5l6.8-9.8h-5.2z")),
+    "trash" to listOf(Part("M4.5 7h15M9.5 7V4.8h5V7"), Part("M6.5 7l.9 12.2a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5L17.5 7"), Part("M10.2 10.8v6M13.8 10.8v6")),
     "eraser" to listOf(Part("M5.2 14.2l6.4-6.4 7.2 7.2-4.2 4.2H8.2z"), Part("M9.4 10l4.8 4.8")),
     "bubble" to listOf(Part("M 5.4 6.2 h 13.2 A 2 2 0 0 1 20.6 8.2 v 6.2 A 2 2 0 0 1 18.6 16.4 h -3.6 v 3.8 l -4.6 -3.8 H 5.4 A 2 2 0 0 1 3.4 14.4 V 8.2 A 2 2 0 0 1 5.4 6.2 z")),
     "braces" to listOf(Part("M 9.2 5.5 H 7.4 A 2 2 0 0 0 5.4 7.5 v 3.2 L 4 12 l 1.4 1.3 v 3.2 a 2 2 0 0 0 2 2 h 1.8"), Part("M 14.8 5.5 h 1.8 a 2 2 0 0 1 2 2 v 3.2 L 20 12 l -1.4 1.3 v 3.2 a 2 2 0 0 1 -2 2 h -1.8")),
@@ -301,6 +314,142 @@ fun AgentCubeAvatar(size: Dp, modifier: Modifier = Modifier, badge: Dp = 0.dp, r
                 Modifier.offset(c - badge / 2, c - badge / 2).size(badge).clip(CircleShape).background(Mint),
                 contentAlignment = Alignment.Center,
             ) { AgentIcon("glyph", badge * 0.62f, TileInk, strokeWidth = 1.5f) }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Per-agent identity — every agent reuses these screens with its id + name
+// ---------------------------------------------------------------------------
+
+/** Chat id prefix of an agent the user made with Agent home's Create Agent. */
+const val MADE_AGENT_PREFIX = "made_agent_"
+
+/**
+ * Built-in agent threads. Groups, people (David Park, Family, Design Team, the
+ * guild) and Dua threads are NOT agents, so they keep the plain chat header.
+ */
+internal val BUILT_IN_AGENT_IDS: Set<String> = buildSet {
+    add(AGENT_CHAT_ID)
+    add(PERSONAL_AGENT_CHAT_ID)
+    agentHomeChats.forEach { if (it.chatId != FULL_STACK_GUILD_CHAT_ID) add(it.chatId) }
+    add("chat_webpage_developer")
+    add("chat_slides_assistant")
+    add("chat_market_research")
+    add("chat_accounting_assistant")
+}
+
+/** True for an agent's thread (built-in or user-made). */
+fun isAgentChatId(chatId: String): Boolean =
+    chatId.startsWith(MADE_AGENT_PREFIX) || chatId in BUILT_IN_AGENT_IDS
+
+/** Only agents the user made can be deleted; built-in agents cannot. */
+fun isUserMadeAgent(agentId: String): Boolean = agentId.startsWith(MADE_AGENT_PREFIX)
+
+/** The 3D character art Agent home already uses for these five agents. */
+private val AGENT_AVATAR_RES = mapOf(
+    "chat_code_reviewer" to R.drawable.avatar_code_reviewer,
+    "chat_backend_architect" to R.drawable.avatar_backend_architect,
+    "chat_devops_automator" to R.drawable.avatar_devops_automator,
+    "chat_api_tester" to R.drawable.avatar_api_tester,
+    "chat_frontend_developer" to R.drawable.avatar_frontend_developer,
+)
+
+/**
+ * One agent's avatar, circular: the bot art for Dua Agent / Personal Agent,
+ * the 3D character for Agent home's five, otherwise that thread's own cube
+ * (the same `CubeCatalog.forEntity` the chat bubbles use).
+ */
+@Composable
+internal fun AgentAvatar(agentId: String, name: String, size: Dp, modifier: Modifier = Modifier) {
+    val res = when (agentId) {
+        AGENT_CHAT_ID, PERSONAL_AGENT_CHAT_ID -> R.drawable.dua_bot_badge
+        else -> AGENT_AVATAR_RES[agentId]
+    }
+    if (res != null) {
+        Image(
+            painter = painterResource(res),
+            contentDescription = "$name avatar",
+            contentScale = ContentScale.Crop,
+            modifier = modifier.size(size).clip(CircleShape),
+        )
+    } else {
+        val cube = CubeCatalog.forEntity(agentId)
+        CubeAvatar(
+            cubeId = cube,
+            size = size,
+            shape = CircleShape,
+            contentDescription = "$name avatar, ${CubeIds.label(cube)}",
+            modifier = modifier,
+        )
+    }
+}
+
+/** Small green agent badge on an avatar's bottom-right, ringed in [ring]. */
+@Composable
+private fun AgentBadgeDot(size: Dp, ring: Color, modifier: Modifier = Modifier) {
+    Box(modifier.size(size + 3.dp).clip(CircleShape).background(ring), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(size).clip(CircleShape).background(Mint), contentAlignment = Alignment.Center) {
+            AgentIcon("robot", size * 0.7f, TileInk, strokeWidth = 2f)
+        }
+    }
+}
+
+/**
+ * An agent thread's header (reference: Teamily chat): one rounded pill with
+ * back · avatar + green badge · name, and an "Invite" text button. Tapping the
+ * avatar or name opens that agent's profile; Invite opens its New Group.
+ */
+@Composable
+fun AgentChatHeaderPill(
+    agentId: String,
+    name: String,
+    onBack: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onInvite: () -> Unit,
+    modifier: Modifier = Modifier,
+    verified: Boolean = agentId == AGENT_CHAT_ID,
+) {
+    val c = rememberAgentColors()
+    Row(
+        modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
+            .height(60.dp)
+            .clip(RoundedCornerShape(30.dp))
+            .background(c.chrome),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.padding(start = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
+                .semantics { contentDescription = "Back"; role = Role.Button },
+            contentAlignment = Alignment.Center,
+        ) { AgentIcon("back", 24.dp, c.ink) }
+        Row(
+            Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(24.dp))
+                .clickable(onClickLabel = "Open $name profile", role = Role.Button, onClick = onOpenProfile)
+                .padding(vertical = 6.dp, horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(42.dp)) {
+                AgentAvatar(agentId, name, 40.dp)
+                AgentBadgeDot(13.dp, c.chrome, Modifier.align(Alignment.BottomEnd))
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                name, style = t(18, 24, true), color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (verified) {
+                Spacer(Modifier.width(4.dp))
+                VerifiedCheck()
+            }
+        }
+        TextButton(onClick = onInvite, modifier = Modifier.padding(end = 6.dp)) {
+            Text(stringResource(R.string.agent_invite), style = t(16, 22, true), color = c.ink)
         }
     }
 }
@@ -514,12 +663,17 @@ private fun ProfileRow(
 }
 
 /**
- * Dua Agent profile — SVG 01 (top), 02 (scrolled), 03 (more-sheet), 04 (Skills
- * open) and 05 (Connectors open). The `initial*` parameters exist so previews
- * and tests can open each frame directly; the app passes none of them.
+ * Agent profile — SVG 01 (top), 02 (scrolled), 03 (more-sheet), 04 (Skills
+ * open) and 05 (Connectors open). ONE screen for every agent: [agentId] picks
+ * the avatar and [agentName] the title. The `initial*` parameters exist so
+ * previews and tests can open each frame directly; the app passes none of them.
  *
- * Action bar: robot (no destination in the design, inert) · id card → Agent
- * workspace · person+ → New Group · ⋯ → more-sheet.
+ * Action pill (reference order): robot → Agent workspace · id card → Overview
+ * (the full profile) · person+ → New Group · ⋯ → more-sheet (Share, Clear Chat
+ * History, Delete agent).
+ *
+ * Mute / Pin are hoisted when the caller passes their handlers (the nav host
+ * keeps them per agent); otherwise the screen keeps its own copy (previews).
  */
 @Composable
 fun DuaAgentProfileScreen(
@@ -528,7 +682,18 @@ fun DuaAgentProfileScreen(
     onOpenNewGroup: () -> Unit = {},
     onOpenConnectApp: () -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = "Dua Agent",
+    agentName: String = DUA_AGENT_TITLE,
+    agentId: String = AGENT_CHAT_ID,
+    onOpenOverview: () -> Unit = {},
+    muted: Boolean = false,
+    onMutedChange: ((Boolean) -> Unit)? = null,
+    pinned: Boolean = false,
+    onPinnedChange: ((Boolean) -> Unit)? = null,
+    /** Clear Chat History, after the confirm dialog. */
+    onClearHistory: () -> Unit = {},
+    /** Delete agent, after the confirm dialog. Only called when [canDelete]. */
+    canDelete: Boolean = isUserMadeAgent(agentId),
+    onDelete: () -> Unit = {},
     initialSkillsExpanded: Boolean = false,
     initialConnectorsExpanded: Boolean = false,
     initialSheetOpen: Boolean = false,
@@ -539,8 +704,27 @@ fun DuaAgentProfileScreen(
     var skills by rememberSaveable { mutableStateOf(initialSkillsExpanded) }
     var connectors by rememberSaveable { mutableStateOf(initialConnectorsExpanded) }
     var sheet by rememberSaveable { mutableStateOf(initialSheetOpen) }
+    // "clear" / "delete" while its confirm dialog is up.
+    var confirm by rememberSaveable { mutableStateOf<String?>(null) }
     val toggles = remember { mutableStateMapOf<String, Boolean>() }
     fun on(key: String) = toggles[key] == true
+    val isMuted = if (onMutedChange != null) muted else on("mute")
+    val setMuted: (Boolean) -> Unit = onMutedChange ?: { toggles["mute"] = it }
+    val isPinned = if (onPinnedChange != null) pinned else on("pin")
+    val setPinned: (Boolean) -> Unit = onPinnedChange ?: { toggles["pin"] = it }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val builtInMsg = stringResource(R.string.agent_builtin_no_delete)
+    val clearedMsg = stringResource(R.string.agent_history_cleared)
+    val shareText = stringResource(R.string.agent_share_text, agentName)
+    val shareTitle = stringResource(R.string.agent_share)
+    fun toast(msg: String) {
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(msg)
+        }
+    }
     if (initialScrollToEnd) LaunchedEffect(Unit) { scrollState.scrollTo(scrollState.maxValue) }
     val titleInk = if (sheet) c.dim else c.ink
 
@@ -550,18 +734,22 @@ fun DuaAgentProfileScreen(
             Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 // Hero — top-bar colour down to content.
                 Box(Modifier.fillMaxWidth().height(230.dp).background(c.topbar)) {
-                    Image(
-                        painter = painterResource(R.drawable.dua_bot_badge),
-                        contentDescription = "Dua Agent avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = 20.dp)
-                            .size(80.dp)
-                            .clip(CircleShape),
-                    )
+                    Box(Modifier.align(Alignment.TopCenter).offset(y = 12.dp).size(96.dp)) {
+                        AgentAvatar(agentId, agentName, 92.dp, Modifier.align(Alignment.TopStart))
+                        // Edit pencil on the avatar (reference). Display only:
+                        // agent avatars have no editor yet.
+                        Box(
+                            Modifier.align(Alignment.BottomEnd).size(30.dp).clip(CircleShape).background(c.topbar),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(
+                                Modifier.size(26.dp).clip(CircleShape).background(c.aiFill),
+                                contentAlignment = Alignment.Center,
+                            ) { AgentIcon("pencil", 14.dp, c.aiInk) }
+                        }
+                    }
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 112.dp).height(24.dp),
+                        Modifier.align(Alignment.TopCenter).offset(y = 116.dp).height(24.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -572,22 +760,19 @@ fun DuaAgentProfileScreen(
                         ) { Text("AI", style = t(10, 12, true), color = c.aiInk) }
                     }
                     Row(
-                        Modifier.align(Alignment.TopCenter).offset(y = 150.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.body),
+                        Modifier.align(Alignment.TopCenter).offset(y = 152.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.body),
                     ) {
-                        val actions = listOf<Triple<String, String, (() -> Unit)?>>(
-                            Triple("workspace", "Open agent workspace", onOpenWorkspace),
-                            Triple("robot", "View full profile", null),
+                        val actions = listOf<Triple<String, String, () -> Unit>>(
+                            Triple("robot", "Open agent workspace", onOpenWorkspace),
+                            Triple("idcard", "View full profile", onOpenOverview),
                             Triple("person_plus", "Create New Group", onOpenNewGroup),
                             Triple("more", "More", { sheet = true }),
                         )
                         for ((icon, label, action) in actions) {
                             Box(
                                 Modifier.weight(1f).fillMaxSize()
-                                    .then(
-                                        if (action != null) Modifier.clickable(onClick = action)
-                                            .semantics { contentDescription = label; role = Role.Button }
-                                        else Modifier,
-                                    ),
+                                    .clickable(onClick = action)
+                                    .semantics { contentDescription = label; role = Role.Button },
                                 contentAlignment = Alignment.Center,
                             ) { AgentIcon(icon, 20.dp, c.ink) }
                         }
@@ -645,12 +830,12 @@ fun DuaAgentProfileScreen(
                         Spacer(Modifier.height(40.dp))
                     }
                     ProfileRow(
-                        c, 70.dp, "bell", "Mute Notifications", c.wellMute, c.wellMuteInk,
-                        trail = Trail.Toggle, checked = on("mute"), onToggle = { toggles["mute"] = it }, hairlineAt = 52.dp,
+                        c, 70.dp, "bell", stringResource(R.string.agent_mute), c.wellMute, c.wellMuteInk,
+                        trail = Trail.Toggle, checked = isMuted, onToggle = setMuted, hairlineAt = 52.dp,
                     )
                     ProfileRow(
-                        c, 103.dp, "pin", "Pin to Top", c.wellPin, c.wellPinInk,
-                        trail = Trail.Toggle, checked = on("pin"), onToggle = { toggles["pin"] = it },
+                        c, 103.dp, "pin", stringResource(R.string.agent_pin), c.wellPin, c.wellPinInk,
+                        trail = Trail.Toggle, checked = isPinned, onToggle = setPinned,
                     )
                 }
             }
@@ -658,8 +843,9 @@ fun DuaAgentProfileScreen(
         if (sheet) {
             Box(Modifier.fillMaxSize().background(c.scrim).clickable { sheet = false })
             Column(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(156.dp)
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.sheet),
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(c.sheet)
+                    .padding(bottom = 24.dp),
             ) {
                 Box(Modifier.fillMaxWidth().height(32.dp)) {
                     Box(
@@ -667,15 +853,69 @@ fun DuaAgentProfileScreen(
                             .clip(RoundedCornerShape(2.dp)).background(c.handle),
                     )
                 }
-                // Share and Clear Chat History only — no Delete agent.
-                for ((icon, label, ink) in listOf(Triple("share", "Share", c.ink), Triple("eraser", "Clear Chat History", c.dangerInk))) {
-                    Box(Modifier.fillMaxWidth().height(52.dp).clickable { sheet = false }) {
-                        AgentIcon(icon, 22.dp, ink, Modifier.offset(24.dp, 14.dp))
-                        Text(label, style = t(16, 24), color = ink, modifier = Modifier.offset(56.dp, 14.dp))
+                val items = listOf<Triple<String, String, Color>>(
+                    Triple("share", stringResource(R.string.agent_share), c.ink),
+                    Triple("eraser", stringResource(R.string.agent_clear_history), c.dangerInk),
+                    Triple("trash", stringResource(R.string.agent_delete), c.dangerInk),
+                )
+                items.forEachIndexed { i, (icon, label, ink) ->
+                    Box(
+                        Modifier.fillMaxWidth().height(56.dp).clickable {
+                            sheet = false
+                            when (i) {
+                                0 -> runCatching {
+                                    val send = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                    }
+                                    context.startActivity(
+                                        Intent.createChooser(send, shareTitle).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    )
+                                }
+                                1 -> confirm = "clear"
+                                else -> if (canDelete) confirm = "delete" else toast(builtInMsg)
+                            }
+                        },
+                    ) {
+                        AgentIcon(icon, 22.dp, ink, Modifier.offset(24.dp, 16.dp))
+                        Text(label, style = t(16, 24), color = ink, modifier = Modifier.offset(60.dp, 15.dp))
                     }
                 }
             }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
+    }
+
+    when (confirm) {
+        "clear" -> AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(stringResource(R.string.agent_clear_confirm_title)) },
+            text = { Text(stringResource(R.string.agent_clear_confirm_body, agentName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirm = null
+                    onClearHistory()
+                    toast(clearedMsg)
+                }) { Text(stringResource(R.string.agent_clear_confirm), color = c.dangerInk) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.profile_cancel)) }
+            },
+        )
+        "delete" -> AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(stringResource(R.string.agent_delete_confirm_title, agentName)) },
+            text = { Text(stringResource(R.string.agent_delete_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirm = null
+                    onDelete()
+                }) { Text(stringResource(R.string.agent_delete_confirm), color = c.dangerInk) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.profile_cancel)) }
+            },
+        )
     }
 }
 
@@ -927,7 +1167,8 @@ fun DuaAgentWorkspaceScreen(
     onBack: () -> Unit = {},
     onOpen: (AgentWorkspaceDestination) -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = "Dua Agent",
+    agentName: String = DUA_AGENT_TITLE,
+    agentId: String = AGENT_CHAT_ID,
     onAgentHome: () -> Unit = onBack,
     userAvatar: (@Composable () -> Unit)? = null,
 ) {
@@ -937,15 +1178,7 @@ fun DuaAgentWorkspaceScreen(
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(10.dp))
             Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(54.dp).clip(RoundedCornerShape(14.dp)).background(c.body)) {
-                Image(
-                    painter = painterResource(R.drawable.dua_bot_badge),
-                    contentDescription = "Dua Agent avatar",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .offset(14.dp, 9.dp)
-                        .size(36.dp)
-                        .clip(CircleShape),
-                )
+                AgentAvatar(agentId, agentName, 36.dp, Modifier.offset(14.dp, 9.dp))
                 Text(agentName, style = t(15, 20, true), color = c.ink, modifier = Modifier.offset(58.dp, 8.dp))
                 Row(
                     Modifier.offset(58.dp, 28.dp).clickable(onClick = onAgentHome),
@@ -1015,7 +1248,7 @@ fun DuaAgentWorkspaceScreen(
             )
             ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Code Reviewer: [Custom Message]", "Sun", unread = "4")
             ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Frontend Developer: PR ready hai: https://github.com/KRFbrothers/teamily-android-ui/pull/9", "Sun")
-            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Dua Agent: [Custom Message]", "11/03/26", unread = "4")
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] $agentName: [Custom Message]", "11/03/26", unread = "4")
             ConversationRow(c, "AI Feature Build Room", "Prompt Engineer, Data Engineer, Frontend Developer were invited to", "10/17/26", unread = "1")
         }
     }
@@ -1025,9 +1258,22 @@ fun DuaAgentWorkspaceScreen(
 // 08  Overview
 // ---------------------------------------------------------------------------
 
-/** SVG 08 — Overview (unchanged from the approved design). */
+/**
+ * SVG 08 — Overview, for any agent: [agentId] picks the avatar and
+ * [agentName] fills the card and "Pick up where … left off".
+ */
 @Composable
-fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun DuaAgentOverviewScreen(
+    onBack: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    agentName: String = DUA_AGENT_TITLE,
+    agentId: String = AGENT_CHAT_ID,
+) {
+    val description = if (agentId == AGENT_CHAT_ID) {
+        DUA_AGENT_SUBTITLE
+    } else {
+        "$agentName \u2014 your AI agent"
+    }
     val c = rememberAgentColors()
     Column(modifier.fillMaxSize().background(c.body)) {
         AgentTop(c, subtitle = "Attention, recent work, and original conversations") {
@@ -1039,11 +1285,14 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
                 Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(208.dp).clip(RoundedCornerShape(20.dp))
                     .background(c.chrome).border(1.dp, c.border, RoundedCornerShape(20.dp)),
             ) {
-                AgentCubeAvatar(52.dp, Modifier.offset(16.dp, 16.dp))
+                AgentAvatar(agentId, agentName, 52.dp, Modifier.offset(16.dp, 16.dp))
                 Text("Agent ID: Not set", style = t(12, 16), color = c.ink2, modifier = Modifier.offset(80.dp, 14.dp))
-                Text("Dua Agent", style = t(18, 26, true), color = c.ink, modifier = Modifier.offset(80.dp, 36.dp))
                 Text(
-                    "I'm Dua Agent — the official agent of Dua Gen AI", style = t(14, 20), color = c.ink2,
+                    agentName, style = t(18, 26, true), color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.offset(80.dp, 36.dp).padding(end = 96.dp),
+                )
+                Text(
+                    description, style = t(14, 20), color = c.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.offset(16.dp, 80.dp).width(326.dp),
                 )
                 Row(Modifier.offset(16.dp, 116.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1085,10 +1334,19 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
                 }
             }
             Spacer(Modifier.height(20.dp))
-            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                Text("Pick up where Dua Agent left off", style = t(20, 26, true), color = c.ink, modifier = Modifier.width(254.dp))
+            // The heading takes the space LEFT of the chip and wraps there,
+            // so a long agent name can never run under "Channels".
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    "Pick up where $agentName left off", style = t(20, 26, true), color = c.ink,
+                    modifier = Modifier.weight(1f),
+                )
                 Box(
-                    Modifier.align(Alignment.TopEnd).tap48(
+                    Modifier.padding(top = 4.dp).tap48(
                         {},
                         Modifier.size(112.dp, 36.dp).clip(RoundedCornerShape(18.dp)).background(c.chrome)
                             .border(1.dp, c.border, RoundedCornerShape(18.dp)),
@@ -1112,7 +1370,7 @@ fun DuaAgentOverviewScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifie
             Text("Unread or waiting for a decision", style = t(12, 16), color = c.ink2, modifier = Modifier.padding(start = 16.dp))
             Spacer(Modifier.height(12.dp))
             ConversationRow(c, "Full-Stack Delivery Guild", "Frontend Developer, Backend Archite…", "Wed", unread = "1")
-            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] Dua Agent: [Cust…", "11/03/26", unread = "2")
+            ConversationRow(c, "Full-Stack Delivery Guild", "[Someone @you] $agentName: [Cust…", "11/03/26", unread = "2")
         }
     }
 }
@@ -1171,13 +1429,13 @@ private fun ApiCard(c: AgentColors, icon: String, title: String, body: String, c
 
 /** SVG 10 — Agent API, Setup tab. */
 @Composable
-fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_AGENT_TITLE) {
     val c = rememberAgentColors()
     val toggles = remember { mutableStateMapOf<String, Boolean>() }
     Column(modifier.fillMaxSize().background(c.body)) {
         AgentTop(
             c,
-            subtitle = "How websites, programs and other agents reach Dua Agent, and what happened there",
+            subtitle = "How websites, programs and other agents reach $agentName, and what happened there",
             below = {
                 Row(Modifier.padding(start = 16.dp, top = 11.dp).height(28.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     listOf("Setup", "Conversations", "Call log", "Keys", "Site access").forEachIndexed { i, tab ->
@@ -1195,7 +1453,7 @@ fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
             Text("On a website", style = t(18, 26, true), color = c.ink, modifier = Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(2.dp))
             Text(
-                "A chat bubble on your own site, answered by Dua Agent.", style = t(13, 18), color = c.ink2,
+                "A chat bubble on your own site, answered by $agentName.", style = t(13, 18), color = c.ink2,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             Spacer(Modifier.height(10.dp))
@@ -1209,13 +1467,13 @@ fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(10.dp))
             ApiCard(
-                c, "braces", "RESTful API for servers", "Call Dua Agent over HTTPS from your own backend.",
+                c, "braces", "RESTful API for servers", "Call $agentName over HTTPS from your own backend.",
                 toggles["rest"] == true,
             ) { toggles["rest"] = it }
             Spacer(Modifier.height(10.dp))
             ApiCard(
                 c, "robot", "API for other Agents",
-                "Let Codex, Claude Code and other Agents discover and call Dua Agent over MCP.", toggles["mcp"] == true,
+                "Let Codex, Claude Code and other Agents discover and call $agentName over MCP.", toggles["mcp"] == true,
             ) { toggles["mcp"] = it }
             Spacer(Modifier.height(24.dp))
         }
@@ -1228,10 +1486,10 @@ fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
 
 /** SVG 11 — Live Sites empty state. */
 @Composable
-fun DuaAgentLiveSitesScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun DuaAgentLiveSitesScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_AGENT_TITLE) {
     val c = rememberAgentColors()
     Column(modifier.fillMaxSize().background(c.body)) {
-        AgentTop(c, subtitle = "Built, connected, and operated by Dua Agent's Agent Team") {
+        AgentTop(c, subtitle = "Built, connected, and operated by $agentName's Agent Team") {
             AgentAppBar("Live Sites", c, onBack, center = true, icon = "window")
         }
         Box(Modifier.fillMaxSize()) {
@@ -1241,7 +1499,7 @@ fun DuaAgentLiveSitesScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifi
             ) { AgentIcon("window", 28.dp, c.wellInk) }
             Text("No live sites yet", style = t(18, 26, true), color = c.ink, modifier = Modifier.align(Alignment.TopCenter).offset(y = 296.dp))
             Text(
-                "Sites Dua Agent builds and publishes appear here, each with its Web admin one click away.",
+                "Sites $agentName builds and publishes appear here, each with its Web admin one click away.",
                 style = t(14, 20), color = c.ink2, textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.TopCenter).offset(y = 328.dp).width(300.dp),
             )
@@ -1300,7 +1558,14 @@ private val GROUP_AGENTS = listOf(
 
 /** SVG 13 — New Group (Custom Group selected, Agents tab, Members Pay). */
 @Composable
-fun DuaAgentNewGroupScreen(onClose: () -> Unit = {}, onCreate: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun DuaAgentNewGroupScreen(
+    onClose: () -> Unit = {},
+    onCreate: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    /** The agent the group starts with ("Selected 1"). */
+    agentId: String = AGENT_CHAT_ID,
+    agentName: String = DUA_AGENT_TITLE,
+) {
     val c = rememberAgentColors()
     val selectedInk = if (c.isDark) c.ink else c.navSelectedInk
     Box(modifier.fillMaxSize().agentAtmosphere(c.body, c)) {
@@ -1341,7 +1606,10 @@ fun DuaAgentNewGroupScreen(onClose: () -> Unit = {}, onCreate: () -> Unit = {}, 
             Spacer(Modifier.height(5.dp))
             Row(Modifier.padding(start = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Selected 1", style = t(13, 18), color = c.ink2, modifier = Modifier.padding(top = 6.dp))
-                AgentCubeAvatar(28.dp, badge = 10.dp, ring = c.body)
+                Box(Modifier.size(30.dp)) {
+                    AgentAvatar(agentId, agentName, 28.dp)
+                    AgentBadgeDot(9.dp, c.body, Modifier.align(Alignment.BottomEnd))
+                }
             }
             Spacer(Modifier.height(18.dp))
             SearchField(c, "Search")
@@ -1361,7 +1629,7 @@ fun DuaAgentNewGroupScreen(onClose: () -> Unit = {}, onCreate: () -> Unit = {}, 
                 }
             }
             Spacer(Modifier.height(8.dp))
-            for ((fill, name) in GROUP_AGENTS) {
+            for ((fill, name) in GROUP_AGENTS.filter { it.second != agentName }) {
                 Box(Modifier.fillMaxWidth().height(52.dp)) {
                     Box(Modifier.offset(23.dp, 10.dp).size(20.dp).border(1.5.dp, c.ink2, CircleShape))
                     Box(Modifier.offset(48.dp, 4.dp)) { ColoredAgentAvatar(fill, c.body) }

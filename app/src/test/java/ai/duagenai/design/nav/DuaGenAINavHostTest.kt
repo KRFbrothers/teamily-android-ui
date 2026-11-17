@@ -2,6 +2,8 @@ package ai.duagenai.design.nav
 
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
@@ -201,16 +203,22 @@ import org.robolectric.annotation.Config
  * that recomputes them with the production expression cannot detect a change to
  * that expression.
  */
-private data class ChatCase(val chatId: String, val title: String, val cubeId: String)
+private data class ChatCase(
+    val chatId: String,
+    val title: String,
+    val cubeId: String,
+    /** Agent threads get the agent header pill and "Type a message...". */
+    val agent: Boolean,
+)
 
 private val CHATS = listOf(
-    ChatCase("chat_webpage_developer", "Webpage Developer", "cube_34"),
-    ChatCase("chat_design_team", "Design Team \u00b7 5", "cube_08"),
-    ChatCase("chat_slides_assistant", "Slides Assistant", "cube_11"),
-    ChatCase("chat_david_park", "David Park", "cube_35"),
-    ChatCase("chat_market_research", "Market Research", "cube_06"),
-    ChatCase("chat_accounting_assistant", "Accounting Assistant", "cube_32"),
-    ChatCase("chat_family", "Family \u00b7 8", "cube_12"),
+    ChatCase("chat_webpage_developer", "Webpage Developer", "cube_34", agent = true),
+    ChatCase("chat_design_team", "Design Team \u00b7 5", "cube_08", agent = false),
+    ChatCase("chat_slides_assistant", "Slides Assistant", "cube_11", agent = true),
+    ChatCase("chat_david_park", "David Park", "cube_35", agent = false),
+    ChatCase("chat_market_research", "Market Research", "cube_06", agent = true),
+    ChatCase("chat_accounting_assistant", "Accounting Assistant", "cube_32", agent = true),
+    ChatCase("chat_family", "Family \u00b7 8", "cube_12", agent = false),
 )
 
 /**
@@ -238,7 +246,7 @@ private const val COMPOSER_PLACEHOLDER = "Type a message"
  * `ChatScreen` passes `"Message $chatTitle..."`, and the pinned row opens
  * [DUA_AGENT_TITLE], so this is the exact string the pill renders.
  */
-private const val AGENT_COMPOSER_HINT = "Message $DUA_AGENT_TITLE\u2026"
+private const val AGENT_COMPOSER_HINT = "Type a message..."
 
 /**
  * The Agent-home hero card's title (the user's personal agent).
@@ -867,6 +875,7 @@ class DuaGenAINavHostTest {
      */
     private fun assertComposer(placeholder: String) {
         assertVisible(placeholder)
+        if (placeholder != AGENT_COMPOSER_HINT) assertNotVisible(AGENT_COMPOSER_HINT)
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 1)
         assertEquals(
@@ -919,6 +928,18 @@ class DuaGenAINavHostTest {
 
     private fun currentRoute(): String? =
         navController.currentBackStackEntry?.destination?.route
+
+    /**
+     * ChatScreen is on top. Agent threads have the header pill and no status
+     * line, so the marker is the route, not [CHAT_MARKER].
+     */
+    private fun assertOnChat() {
+        assertEquals("a chat thread must be open", DuaGenAIRoutes.CHAT, currentRoute())
+    }
+
+    private fun assertNotOnChat() {
+        assertTrue("no chat thread may be open", currentRoute() != DuaGenAIRoutes.CHAT)
+    }
 
     /**
      * Opens the sidebar drawer: Dua home's hamburger or Agent home's avatar —
@@ -2850,11 +2871,11 @@ class DuaGenAINavHostTest {
             openChatFromDrawer(chat)
 
             // ChatScreen is open…
-            assertVisible(CHAT_MARKER)
+            assertOnChat()
 
-            // …with the shared composer under the conversation, its hint naming
-            // THIS thread.
-            assertComposer(threadComposerHint(chat.title))
+            // …with the shared composer under the conversation: an agent's
+            // hint is "Type a message...", any other thread's names it.
+            assertComposer(threadComposerHint(chat))
 
             // …and it is drawing the SAME cube the row drew: once in the header,
             // four times beside the messages.
@@ -2917,7 +2938,7 @@ class DuaGenAINavHostTest {
         launch()
 
         openChatFromDrawer(CHATS.first { it.chatId == "chat_slides_assistant" })
-        assertVisible(CHAT_MARKER)
+        assertOnChat()
 
         // The TopAppBar's navigationIcon.
         compose.onNodeWithContentDescription("Back").performClick()
@@ -2925,7 +2946,7 @@ class DuaGenAINavHostTest {
 
         // Home is back: the thread's status line is gone and Dua home (the
         // launch home) is visible again.
-        assertNotVisible(CHAT_MARKER)
+        assertNotOnChat()
         assertVisible(DUA_GREETING)
         assertVisible(DUA_ASK_HINT)
         assertEquals(
@@ -2940,7 +2961,7 @@ class DuaGenAINavHostTest {
         launch()
 
         openChatFromDrawer(CHATS.first { it.chatId == "chat_family" })
-        assertVisible(CHAT_MARKER)
+        assertOnChat()
 
         // NavHost installs a BackHandler; dispatch through the activity so the
         // real system-back path is exercised, not just the toolbar button.
@@ -2949,7 +2970,7 @@ class DuaGenAINavHostTest {
         }
         compose.waitForIdle()
 
-        assertNotVisible(CHAT_MARKER)
+        assertNotOnChat()
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
@@ -2984,7 +3005,7 @@ class DuaGenAINavHostTest {
             }
             compose.waitForIdle()
 
-            assertVisible(CHAT_MARKER)
+            assertOnChat()
             assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
             assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
 
@@ -3652,7 +3673,7 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         // The thread is open\u2026
-        assertVisible(CHAT_MARKER)
+        assertOnChat()
 
         // \u2026it is Dua Agent's, so its top bar carries that name\u2026
         assertVisible(DUA_AGENT_TITLE)
@@ -3822,7 +3843,7 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
         compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
-        assertVisible(CHAT_MARKER)
+        assertOnChat()
 
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
@@ -4826,14 +4847,172 @@ class DuaGenAINavHostTest {
         }
     }
 
-    /** Dua Agent's thread header: verified check and a Workspace capsule that opens the workspace. */
+    /**
+     * Dua Agent's thread header pill: verified check; avatar/name open Dua
+     * Agent's profile, whose robot action opens the workspace.
+     */
     @Test
     fun duaAgentThreadHeaderWorkspaceOpensTheWorkspace() {
         openAgentThread()
         assertVisibleDescCount("Verified", 1)
-        compose.onNodeWithText("Workspace").performClick()
+        assertVisible("Invite")
+        clickVisibleText(DUA_AGENT_TITLE)
+        assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
+        assertEquals(AGENT_CHAT_ID, navController.currentBackStackEntry?.arguments?.getString("agentId"))
+        compose.onNodeWithContentDescription("Open agent workspace").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.AGENT_WORKSPACE, currentRoute())
+        assertVisible("Agent workspace")
+        assertVisible(DUA_AGENT_TITLE)
+    }
+
+    // ------------------------------------- every agent: profile & workspace
+
+    /** Clicks the one ON-SCREEN node showing [text] (the closed drawer also composes rows). */
+    private fun clickVisibleText(text: String) {
+        val matches = compose.onAllNodesWithText(text)
+        val i = matches.fetchSemanticsNodes().indexOfFirst { isOnScreen(it) }
+        assertTrue("expected \"$text\" on screen", i >= 0)
+        matches[i].performClick()
+        compose.waitForIdle()
+    }
+
+    /** Opens Webpage Developer's thread and taps its header pill. */
+    private fun openWebpageDeveloperProfile() {
+        launch()
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_webpage_developer" })
+        clickVisibleText("Webpage Developer")
+    }
+
+    /** A regular agent's header pill opens THAT agent's profile, not Dua Agent's. */
+    @Test
+    fun aRegularAgentsHeaderOpensItsOwnProfile() {
+        launch()
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_webpage_developer" })
+        assertVisible("Invite")
+        assertVisible(AGENT_COMPOSER_HINT)
+        clickVisibleText("Webpage Developer")
+
+        assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals("chat_webpage_developer", args?.getString("agentId"))
+        assertEquals("Webpage Developer", args?.getString("name"))
+        assertTrue(compose.onAllNodesWithText("Webpage Developer").fetchSemanticsNodes().count { isOnScreen(it) } >= 2)
+        assertNotVisible(DUA_AGENT_TITLE)
+        assertVisible("AI")
+    }
+
+    /** A person's or group's thread keeps the plain header: no pill, no Invite. */
+    @Test
+    fun aPersonsThreadHasNoAgentPill() {
+        launch()
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_david_park" })
+        assertVisible(CHAT_MARKER)
+        assertNotVisible("Invite")
+    }
+
+    /** Invite in the pill opens New Group with that agent selected. */
+    @Test
+    fun theHeaderInviteOpensThatAgentsNewGroup() {
+        launch()
+        openChatFromDrawer(CHATS.first { it.chatId == "chat_webpage_developer" })
+        compose.onNodeWithText("Invite").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.AGENT_NEW_GROUP, currentRoute())
+        assertEquals("chat_webpage_developer", navController.currentBackStackEntry?.arguments?.getString("agentId"))
+        assertVisible("New Group")
+        assertVisibleDescCount(avatarLabel("Webpage Developer", "cube_34"), 1)
+    }
+
+    /** The more-sheet has exactly Share, Clear Chat History and Delete agent. */
+    @Test
+    fun theProfileMoreSheetShowsThreeItems() {
+        openWebpageDeveloperProfile()
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.waitForIdle()
+        assertVisible("Share")
+        assertVisible("Clear Chat History")
+        assertVisible("Delete agent")
+
+        // Built-in agents cannot be deleted: a snackbar says so, no dialog.
+        compose.onNodeWithText("Delete agent").performClick()
+        compose.waitForIdle()
+        assertVisible("Built-in agents can't be deleted")
+        assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
+    }
+
+    /** Clear Chat History asks first, then empties that agent's thread. */
+    @Test
+    fun clearChatHistoryEmptiesThatAgentsThread() {
+        openWebpageDeveloperProfile()
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Clear Chat History").performClick()
+        compose.waitForIdle()
+        assertVisible("Clear chat history?")
+        compose.onNodeWithText("Clear").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitForIdle()
+        assertOnChat()
+        assertVisibleDescCount(bubbleLabel("Webpage Developer", "cube_34"), 0)
+    }
+
+    /** Mute and Pin are real toggles on every agent's profile. */
+    @Test
+    fun muteAndPinToggleOnAnAgentsProfile() {
+        openWebpageDeveloperProfile()
+        val mute = compose.onNodeWithContentDescription("Mute Notifications")
+        mute.performScrollTo()
+        mute.assertIsOff()
+        mute.performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOn()
+        val pin = compose.onNodeWithContentDescription("Pin to Top")
+        pin.assertIsOff()
+        pin.performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Pin to Top").assertIsOn()
+    }
+
+    /** The agent's workspace and Overview carry its name, not "Dua Agent". */
+    @Test
+    fun workspaceAndOverviewShowTheAgentsName() {
+        openWebpageDeveloperProfile()
+        compose.onNodeWithContentDescription("Open agent workspace").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.AGENT_WORKSPACE, currentRoute())
+        assertVisible("Agent workspace")
+        assertVisible("Webpage Developer")
+        assertNotVisible(DUA_AGENT_TITLE)
+
+        compose.onNodeWithText("Overview").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.AGENT_OVERVIEW, currentRoute())
+        assertVisible("Pick up where Webpage Developer left off")
+        assertVisible("Webpage Developer")
+        assertNotVisible("Pick up where Dua Agent left off")
+    }
+
+    /** A made agent can be deleted from its profile (after a confirm). */
+    @Test
+    fun aMadeAgentCanBeDeleted() {
+        launch()
+        compose.runOnUiThread {
+            navController.navigate(
+                DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, "made_agent_0", "Helper"),
+            )
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("More").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Delete agent").performClick()
+        compose.waitForIdle()
+        assertVisible("Delete Helper?")
+        compose.onNodeWithText("Delete").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
     /** An Agents card opens that agent's own thread on the shared chat route. */
@@ -4853,7 +5032,7 @@ class DuaGenAINavHostTest {
             "chat_slides_assistant",
             navController.currentBackStackEntry?.arguments?.getString("chatId"),
         )
-        assertVisible(CHAT_MARKER)
+        assertOnChat()
     }
 
     /** A Discover card starts a NEW thread carrying the card as its first message. */
@@ -4955,7 +5134,8 @@ class DuaGenAINavHostTest {
      * Duplicated on purpose, like the two label helpers above: if the screen
      * changes its hint, the test must fail rather than silently keep matching.
      */
-    private fun threadComposerHint(title: String) = "Message $title\u2026"
+    private fun threadComposerHint(chat: ChatCase) =
+        if (chat.agent) AGENT_COMPOSER_HINT else "Message ${chat.title}\u2026"
 }
 
 /** Create Agent strings, as in res/values/strings.xml. */

@@ -104,10 +104,11 @@ import ai.duagenai.design.theme.teamilyPalette
  *
  *  HEADERS — the two pinned agents
  *  -------------------------------
- *  [PERSONAL_AGENT_CHAT_ID]: BotBadge avatar + the Personal Agent quick-action
- *  chips (shared with PersonalAgentDemoScreen). [AGENT_CHAT_ID]: SignalBotBadge
- *  + VerifiedCheck + the "Workspace" capsule (shared with DuaAgentDemoScreen).
- *  Every other thread keeps its own cube avatar.
+ *  EVERY agent thread (built-in or made, see [isAgentChatId]) gets the agent
+ *  header pill ([AgentChatHeaderPill]): back · avatar + badge · name · Invite.
+ *  Avatar / name open that agent's profile, Invite its New Group; the
+ *  workspace is one tap further, on the profile's robot action. Dua threads,
+ *  people and groups keep the plain top bar with their own cube avatar.
  *
  *  The composer sits in `Scaffold`'s `bottomBar`, so the `inner` padding the
  *  LazyColumn consumes already includes its height — the last message can never
@@ -288,13 +289,14 @@ fun ChatScreen(
     onToggleSkill: ((String) -> Unit)? = null,
     mcpEnabled: Boolean = true,
     onToggleMcp: ((Boolean) -> Unit)? = null,
-    // Agent chat only: tapping the header title or avatar opens the Dua Agent
-    // profile. Null (the default) leaves the header exactly as before.
+    // Agent threads only (every agent, built-in or made): non-null swaps the
+    // top bar for the agent header pill, whose avatar / name open THIS agent's
+    // profile. Null (Dua threads, people, groups) keeps the plain top bar.
     onOpenAgentProfile: (() -> Unit)? = null,
     /** Create tiles in the composer + sheet. */
     onOpenCreate: ((String) -> Unit)? = null,
-    /** Dua Agent's thread only: the header "Workspace" capsule. Null hides it. */
-    onOpenWorkspace: (() -> Unit)? = null,
+    /** The agent header pill's "Invite": this agent's New Group. */
+    onInvite: () -> Unit = {},
     // Where the transcript LIVES. A ViewModel, not `rememberSaveable`: see
     // ChatTranscriptStore for why a whole conversation must never go into the
     // saved-instance Bundle. Hoisted by the nav host so every thread shares one
@@ -311,11 +313,7 @@ fun ChatScreen(
      */
     initialMessage: String? = null,
 ) {
-    val profileClick = if (onOpenAgentProfile != null) {
-        Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
-    } else {
-        Modifier
-    }
+    val agentHeader = onOpenAgentProfile != null
     // Agent's own thread is the one conversation whose content is not the
     // generic sample: it is Agent reporting on the agents it controls. Every
     // other id keeps the sample thread, so nothing else changes.
@@ -460,9 +458,18 @@ fun ChatScreen(
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
+            if (onOpenAgentProfile != null) {
+                // Every agent's thread: back · avatar + badge · name · Invite.
+                AgentChatHeaderPill(
+                    agentId = chatId,
+                    name = chatTitle,
+                    onBack = onBack,
+                    onOpenProfile = onOpenAgentProfile,
+                    onInvite = onInvite,
+                )
+            } else TopAppBar(
                 title = {
-                    Row(modifier = profileClick, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         // The two pinned agents carry their own badge in front of
                         // the title (Personal: BotBadge, Dua Agent: SignalBotBadge).
                         if (isPersonal) {
@@ -508,11 +515,6 @@ fun ChatScreen(
                 },
                 actions = {
                     when {
-                        // Dua Agent: the "Workspace" capsule (opens the workspace).
-                        isDuaAgent && onOpenWorkspace != null -> WorkspaceHeaderButton(
-                            onOpenWorkspace = onOpenWorkspace,
-                            modifier = Modifier.padding(end = spacing.sm),
-                        )
                         // Personal Agent: its badge is already in the title.
                         isPersonal || isDuaAgent -> Unit
                         // 32dp header avatar — this conversation's cube, untinted.
@@ -521,7 +523,7 @@ fun ChatScreen(
                             size = 32.dp,
                             shape = DuaGenAITheme.shapes.avatarMessage,
                             contentDescription = "$chatTitle avatar, ${CubeIds.label(cubeId)}",
-                            modifier = Modifier.padding(end = spacing.gutter).then(profileClick),
+                            modifier = Modifier.padding(end = spacing.gutter),
                         )
                     }
                 },
@@ -544,7 +546,13 @@ fun ChatScreen(
                     value = draft,
                     onValueChange = { draft = it },
                     onSend = { send() },
-                    placeholder = "Message $chatTitle…",
+                    // Agent threads read "Type a message..." (reference);
+                    // other threads name the conversation.
+                    placeholder = if (agentHeader) {
+                        stringResource(R.string.chat_agent_placeholder)
+                    } else {
+                        "Message $chatTitle…"
+                    },
                     selectedMode = chatMode,
                     onModeChange = { chatMode = it },
                     onAttachClick = { sheet = ComposerSheet.Plus },

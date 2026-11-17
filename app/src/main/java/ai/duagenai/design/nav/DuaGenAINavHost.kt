@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -63,6 +65,10 @@ import ai.duagenai.design.screens.DuaAgentOverviewScreen
 import ai.duagenai.design.screens.DuaAgentProfileScreen
 import ai.duagenai.design.screens.DuaAgentWorkspaceScreen
 import ai.duagenai.design.screens.DuaAgentSkills
+import ai.duagenai.design.screens.ChatTranscriptStore
+import ai.duagenai.design.screens.MADE_AGENT_PREFIX
+import ai.duagenai.design.screens.isAgentChatId
+import ai.duagenai.design.screens.isUserMadeAgent
 import ai.duagenai.design.screens.HomeMode
 import ai.duagenai.design.screens.HomeScreen
 import ai.duagenai.design.screens.HomeTab
@@ -190,16 +196,26 @@ object DuaGenAIRoutes {
 
     fun create(kind: String): String = "create/${Uri.encode(kind)}"
 
-    // Dua Agent profile & workspace (approved SVG set dua-agent-01..13).
-    const val AGENT_PROFILE = "agent/profile"
-    const val AGENT_CONNECT_APP = "agent/connect_app"
-    const val AGENT_WORKSPACE = "agent/workspace"
-    const val AGENT_OVERVIEW = "agent/overview"
-    const val AGENT_ARTIFACTS = "agent/artifacts"
-    const val AGENT_API = "agent/api"
-    const val AGENT_LIVE_SITES = "agent/live_sites"
-    const val AGENT_MAIL = "agent/mail"
-    const val AGENT_NEW_GROUP = "agent/new_group"
+    // Agent profile & workspace (approved SVG set dua-agent-01..13), reused
+    // for EVERY agent: each route carries the agent's chat id and display
+    // name. Both default to Dua Agent, so Dua Agent behaves exactly as before.
+    private const val AGENT_ARGS = "?agentId={agentId}&name={name}"
+    const val AGENT_PROFILE = "agent/profile$AGENT_ARGS"
+    const val AGENT_CONNECT_APP = "agent/connect_app$AGENT_ARGS"
+    const val AGENT_WORKSPACE = "agent/workspace$AGENT_ARGS"
+    const val AGENT_OVERVIEW = "agent/overview$AGENT_ARGS"
+    const val AGENT_ARTIFACTS = "agent/artifacts$AGENT_ARGS"
+    const val AGENT_API = "agent/api$AGENT_ARGS"
+    const val AGENT_LIVE_SITES = "agent/live_sites$AGENT_ARGS"
+    const val AGENT_MAIL = "agent/mail$AGENT_ARGS"
+    const val AGENT_NEW_GROUP = "agent/new_group$AGENT_ARGS"
+
+    /**
+     * Builds one of the AGENT_* routes for [agentId] / [name]. Both are
+     * URL-encoded, like [chat], because a name can hold `/`, `?` or `&`.
+     */
+    fun agent(route: String, agentId: String = AGENT_CHAT_ID, name: String = DUA_AGENT_TITLE): String =
+        route.substringBefore('?') + "?agentId=${Uri.encode(agentId)}&name=${Uri.encode(name)}"
     /** Create Agent: opened only from Agent home's plus menu. */
     const val CREATE_AGENT = "agent/create"
     const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
@@ -229,6 +245,30 @@ object DuaGenAIRoutes {
 
     /** A fresh, never-reused chat id for a new Dua thread. */
     fun newDuaChatId(): String = "dua-${java.util.UUID.randomUUID()}"
+}
+
+/** The `agentId` / `name` arguments every AGENT_* route declares (Dua Agent by default). */
+private val agentArguments = listOf(
+    navArgument("agentId") {
+        type = NavType.StringType
+        defaultValue = AGENT_CHAT_ID
+    },
+    navArgument("name") {
+        type = NavType.StringType
+        defaultValue = DUA_AGENT_TITLE
+    },
+)
+
+private fun NavBackStackEntry.agentId(): String =
+    arguments?.getString("agentId").orEmpty().ifBlank { AGENT_CHAT_ID }
+
+private fun NavBackStackEntry.agentName(): String =
+    arguments?.getString("name").orEmpty().ifBlank { DUA_AGENT_TITLE }
+
+/** Newline-set helpers for the per-agent Mute / Pin flags. */
+private fun withLine(raw: String, line: String, on: Boolean): String {
+    val rest = linesOf(raw).filter { it != line }
+    return (if (on) rest + line else rest).joinToString("\n")
 }
 
 /**
@@ -330,6 +370,10 @@ fun DuaGenAINavHost(
         )
     }
     val scope = rememberCoroutineScope()
+    // ONE transcript store for every thread, scoped to the host (not to a
+    // chat's back-stack entry), so an agent profile's "Clear Chat History"
+    // clears the same transcript the thread shows.
+    val transcriptStore: ChatTranscriptStore = viewModel()
 
     // The one and only read of the saved cube in the whole app.
     //
@@ -394,6 +438,9 @@ fun DuaGenAINavHost(
     // Header menu creates. Newline-separated so rememberSaveable can keep them.
     var madeAgents by rememberSaveable { mutableStateOf("") }
     var madeArtifacts by rememberSaveable { mutableStateOf("") }
+    // Agent profile toggles, per agent id (newline sets, like madeAgents).
+    var mutedAgents by rememberSaveable { mutableStateOf("") }
+    var pinnedAgents by rememberSaveable { mutableStateOf("") }
     var connectorState by rememberSaveable { mutableStateOf(DEFAULT_CONNECTOR_STATE) }
     var recentConnectors by rememberSaveable { mutableStateOf("") }
     var channelState by rememberSaveable { mutableStateOf(DEFAULT_CHANNEL_STATE) }
@@ -519,7 +566,7 @@ fun DuaGenAINavHost(
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
                     onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
-                    onNewGroup = { navController.navigate(DuaGenAIRoutes.AGENT_NEW_GROUP) },
+                    onNewGroup = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP)) },
                     onCreateArtifact = {
                         val name = "New artifact ${linesOf(madeArtifacts).size + 1}"
                         madeArtifacts = plusLine(madeArtifacts, name)
@@ -700,17 +747,18 @@ fun DuaGenAINavHost(
                     },
                     mcpEnabled = mcpEnabled,
                     onToggleMcp = { mcpEnabled = it },
-                    // Agent chats have a profile: header avatar and title open the Agent profile.
-                    onOpenAgentProfile = if (chatId == AGENT_CHAT_ID) {
-                        { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) }
+                    transcriptStore = transcriptStore,
+                    // EVERY agent thread has a profile: the header pill's avatar
+                    // and name open THIS agent's profile; Invite its New Group.
+                    onOpenAgentProfile = if (isAgentChatId(chatId)) {
+                        { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, chatId, title.ifBlank { "Chat" })) }
                     } else null,
+                    onInvite = {
+                        navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP, chatId, title.ifBlank { "Chat" }))
+                    },
                     onOpenCreate = { kind ->
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
-                    // Dua Agent's thread header: the "Workspace" capsule.
-                    onOpenWorkspace = if (chatId == AGENT_CHAT_ID) {
-                        { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) }
-                    } else null,
                 )
             }
 
@@ -723,49 +771,99 @@ fun DuaGenAINavHost(
             composable(DuaGenAIRoutes.DUA_AGENT_DEMO) {
                 DuaAgentDemoScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
-                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.AGENT_PROFILE) },
+                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_WORKSPACE)) },
+                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE)) },
                 )
             }
 
-            // --- Dua Agent profile & workspace ---------------------------------
-            composable(DuaGenAIRoutes.AGENT_PROFILE) {
+            // --- Agent profile & workspace (any agent: id + name in the route) ---
+            composable(DuaGenAIRoutes.AGENT_PROFILE, arguments = agentArguments) { entry ->
+                val id = entry.agentId()
+                val name = entry.agentName()
+                fun go(route: String) = navController.navigate(DuaGenAIRoutes.agent(route, id, name))
                 // 02 (scrolled), 03 (more sheet), 04/05 (expanded) are states of
                 // this one screen, not separate routes.
                 DuaAgentProfileScreen(
+                    agentId = id,
+                    agentName = name,
                     onBack = { navController.popBackStack() },
-                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.AGENT_WORKSPACE) },
-                    onOpenNewGroup = { navController.navigate(DuaGenAIRoutes.AGENT_NEW_GROUP) },
-                    onOpenConnectApp = { navController.navigate(DuaGenAIRoutes.AGENT_CONNECT_APP) },
+                    onOpenWorkspace = { go(DuaGenAIRoutes.AGENT_WORKSPACE) },
+                    onOpenOverview = { go(DuaGenAIRoutes.AGENT_OVERVIEW) },
+                    onOpenNewGroup = { go(DuaGenAIRoutes.AGENT_NEW_GROUP) },
+                    onOpenConnectApp = { go(DuaGenAIRoutes.AGENT_CONNECT_APP) },
+                    muted = id in linesOf(mutedAgents),
+                    onMutedChange = { on -> mutedAgents = withLine(mutedAgents, id, on) },
+                    pinned = id in linesOf(pinnedAgents),
+                    onPinnedChange = { on -> pinnedAgents = withLine(pinnedAgents, id, on) },
+                    onClearHistory = { transcriptStore.clear(id) },
+                    canDelete = isUserMadeAgent(id),
+                    onDelete = {
+                        // Only made agents reach here: drop its line, its
+                        // transcript and its flags, then return to Home.
+                        val index = id.removePrefix(MADE_AGENT_PREFIX).toIntOrNull()
+                        if (index != null) {
+                            madeAgents = linesOf(madeAgents)
+                                .filterIndexed { i, _ -> i != index }
+                                .joinToString("\n")
+                        }
+                        transcriptStore.clear(id)
+                        mutedAgents = withLine(mutedAgents, id, false)
+                        pinnedAgents = withLine(pinnedAgents, id, false)
+                        navController.popBackStack(DuaGenAIRoutes.HOME, inclusive = false)
+                    },
                 )
             }
-            composable(DuaGenAIRoutes.AGENT_CONNECT_APP) {
+            composable(DuaGenAIRoutes.AGENT_CONNECT_APP, arguments = agentArguments) {
                 DuaAgentConnectAppScreen(onClose = { navController.popBackStack() })
             }
-            composable(DuaGenAIRoutes.AGENT_WORKSPACE) {
+            composable(DuaGenAIRoutes.AGENT_WORKSPACE, arguments = agentArguments) { entry ->
+                val id = entry.agentId()
+                val name = entry.agentName()
                 DuaAgentWorkspaceScreen(
+                    agentId = id,
+                    agentName = name,
                     onBack = { navController.popBackStack() },
                     onOpen = { dest ->
                         navController.navigate(
-                            when (dest) {
-                                AgentWorkspaceDestination.Overview -> DuaGenAIRoutes.AGENT_OVERVIEW
-                                AgentWorkspaceDestination.Channels -> DuaGenAIRoutes.AGENT_CONNECT_APP
-                                AgentWorkspaceDestination.LiveSites -> DuaGenAIRoutes.AGENT_LIVE_SITES
-                                AgentWorkspaceDestination.Mail -> DuaGenAIRoutes.AGENT_MAIL
-                                AgentWorkspaceDestination.Artifacts -> DuaGenAIRoutes.AGENT_ARTIFACTS
-                                AgentWorkspaceDestination.AgentApi -> DuaGenAIRoutes.AGENT_API
-                            },
+                            DuaGenAIRoutes.agent(
+                                when (dest) {
+                                    AgentWorkspaceDestination.Overview -> DuaGenAIRoutes.AGENT_OVERVIEW
+                                    AgentWorkspaceDestination.Channels -> DuaGenAIRoutes.AGENT_CONNECT_APP
+                                    AgentWorkspaceDestination.LiveSites -> DuaGenAIRoutes.AGENT_LIVE_SITES
+                                    AgentWorkspaceDestination.Mail -> DuaGenAIRoutes.AGENT_MAIL
+                                    AgentWorkspaceDestination.Artifacts -> DuaGenAIRoutes.AGENT_ARTIFACTS
+                                    AgentWorkspaceDestination.AgentApi -> DuaGenAIRoutes.AGENT_API
+                                },
+                                id,
+                                name,
+                            ),
                         )
                     },
                 )
             }
-            composable(DuaGenAIRoutes.AGENT_OVERVIEW) { DuaAgentOverviewScreen(onBack = { navController.popBackStack() }) }
-            composable(DuaGenAIRoutes.AGENT_ARTIFACTS) { DuaAgentArtifactsScreen(onBack = { navController.popBackStack() }) }
-            composable(DuaGenAIRoutes.AGENT_API) { DuaAgentApiScreen(onBack = { navController.popBackStack() }) }
-            composable(DuaGenAIRoutes.AGENT_LIVE_SITES) { DuaAgentLiveSitesScreen(onBack = { navController.popBackStack() }) }
-            composable(DuaGenAIRoutes.AGENT_MAIL) { DuaAgentMailScreen(onBack = { navController.popBackStack() }) }
-            composable(DuaGenAIRoutes.AGENT_NEW_GROUP) {
+            composable(DuaGenAIRoutes.AGENT_OVERVIEW, arguments = agentArguments) { entry ->
+                DuaAgentOverviewScreen(
+                    agentId = entry.agentId(),
+                    agentName = entry.agentName(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.AGENT_ARTIFACTS, arguments = agentArguments) {
+                DuaAgentArtifactsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.AGENT_API, arguments = agentArguments) { entry ->
+                DuaAgentApiScreen(agentName = entry.agentName(), onBack = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.AGENT_LIVE_SITES, arguments = agentArguments) { entry ->
+                DuaAgentLiveSitesScreen(agentName = entry.agentName(), onBack = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.AGENT_MAIL, arguments = agentArguments) {
+                DuaAgentMailScreen(onBack = { navController.popBackStack() })
+            }
+            composable(DuaGenAIRoutes.AGENT_NEW_GROUP, arguments = agentArguments) { entry ->
                 DuaAgentNewGroupScreen(
+                    agentId = entry.agentId(),
+                    agentName = entry.agentName(),
                     onClose = { navController.popBackStack() },
                     onCreate = { navController.popBackStack() },
                 )
@@ -829,7 +927,7 @@ fun DuaGenAINavHost(
                     onOpenSkills = { navController.navigate(DuaGenAIRoutes.SETTINGS_SKILLS) },
                     onOpenLanguage = { navController.navigate(DuaGenAIRoutes.SETTINGS_LANGUAGE) },
                     onOpenChannels = { navController.navigate(DuaGenAIRoutes.SETTINGS_CHANNELS) },
-                    onOpenAgentApi = { navController.navigate(DuaGenAIRoutes.AGENT_API) },
+                    onOpenAgentApi = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_API)) },
                     onOpenAppearance = { navController.navigate(DuaGenAIRoutes.APPEARANCE) },
                     onOpenStorage = { navController.navigate(DuaGenAIRoutes.STORAGE) },
                     onOpenNotifications = { navController.navigate(DuaGenAIRoutes.NOTIFICATIONS) },
