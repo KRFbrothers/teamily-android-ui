@@ -919,8 +919,8 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * Switches mode the way a user does: both homes carry the Dua | Agent
-     * toggle. The drawer's "Dua" / "Agent" rows remain the fallback.
+     * Switches mode the way a user does. Dua home has the toggle; Agent home
+     * has none, so going back to Dua uses the drawer's "Dua" row.
      */
     private fun switchTo(mode: HomeMode) {
         if (visibleDescCount("${mode.label} mode") > 0) {
@@ -1121,7 +1121,9 @@ class DuaGenAINavHostTest {
         assertVisible(APP_NAME_TEXT)
         assertVisible(PINNED_HEADER)
         assertNotVisible(DUA_ASK_HINT)
-        assertVisibleDescCount("Agent mode", 1)
+        // Agent home carries no Dua | Agent toggle (only Dua home does).
+        assertVisibleDescCount("Agent mode", 0)
+        assertVisibleDescCount("Dua mode", 0)
     }
 
     // ------------------------------------------- Agent mode is the agent surface
@@ -1160,9 +1162,9 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Settings", 0)
     }
 
-    /** Agent home's header: avatar (opens the drawer) · "Dua Gen AI" · plus, then the Dua | Agent toggle. */
+    /** Agent home's header: avatar (opens the drawer) · "Dua Gen AI" · plus. No toggle. */
     @Test
-    fun agentHomeHeaderIsAvatarBrandPlusAndTheModeToggle() {
+    fun agentHomeHeaderIsAvatarBrandAndPlusWithNoToggle() {
         launch()
         switchTo(HomeMode.Agent)
 
@@ -1170,9 +1172,8 @@ class DuaGenAINavHostTest {
         assertNotVisible("Teamily AI")
         assertVisibleDescCount("Open menu", 1)
         assertVisibleDescCount("New chat", 1)
-        assertVisibleDescCount("Dua mode", 1)
-        assertVisibleDescCount("Agent mode", 1)
-        compose.onNode(hasContentDescription("Agent mode") and isSelected()).assertExists()
+        assertVisibleDescCount("Dua mode", 0)
+        assertVisibleDescCount("Agent mode", 0)
 
         // The avatar opens the existing drawer.
         openDrawer()
@@ -1296,12 +1297,17 @@ class DuaGenAINavHostTest {
     fun theModeSwitchesBothWays() {
         launch()
 
-        // Launch is Agent home. Agent -> Dua, through Agent home's toggle.
+        // Launch is Agent home, which has no toggle. Agent -> Dua goes through
+        // the drawer: avatar ("Open menu") -> the "Dua" row.
         assertVisible(CHATS_HEADER)
-        compose.onNodeWithContentDescription("Dua mode").performClick()
+        assertVisibleDescCount("Dua mode", 0)
+        openDrawer()
+        compose.onNode(hasText(HomeMode.Dua.label) and hasClickAction()).performClick()
         compose.waitForIdle()
         assertVisible(DUA_ASK_HINT)
         assertNotVisible(CHATS_HEADER)
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertVisibleDescCount("Dua mode", 1)
 
         // Dua -> Agent, through Dua home's toggle.
         compose.onNodeWithContentDescription("Agent mode").performClick()

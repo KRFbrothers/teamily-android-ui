@@ -254,8 +254,8 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit = {},
     /**
      * Current assistant mode. Hoisted so it survives configuration changes.
-     * The app launches into Agent home; both top bars carry the Dua | Agent
-     * switch, so neither mode is a dead end.
+     * The app launches into Agent home. Only Dua home draws the Dua | Agent
+     * switch; from Agent home the drawer's "Dua" row switches to Dua.
      */
     mode: HomeMode = HomeMode.Agent,
     onModeChange: (HomeMode) -> Unit = {},
@@ -412,8 +412,6 @@ fun HomeScreen(
                  * card, Pinned, Chats) with the floating dock drawn OVER it.
                  * No composer. */
                 AgentHomeTopBar(
-                    mode = mode,
-                    onModeChange = onModeChange,
                     onOpenDrawer = onOpenDrawer,
                     onCreateAgent = onCreateAgent,
                     onNewGroup = onNewGroup,
@@ -1118,8 +1116,6 @@ private val HEADER_MENU = listOf(
 
 @Composable
 private fun AgentHomeTopBar(
-    mode: HomeMode,
-    onModeChange: (HomeMode) -> Unit,
     onOpenDrawer: () -> Unit,
     onCreateAgent: () -> Unit,
     onNewGroup: () -> Unit,
@@ -1129,117 +1125,104 @@ private fun AgentHomeTopBar(
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
 
-    Column(Modifier.fillMaxWidth()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
+    ) {
+        // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
+        // accessibility label stays "Open menu". The clip stays on the photo
+        // so the online dot can sit on the circle's top-right rim.
+        val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
+                .align(Alignment.CenterStart)
+                .size(40.dp),
         ) {
-            // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
-            // accessibility label stays "Open menu". The clip stays on the photo
-            // so the online dot can sit on the circle's top-right rim.
-            val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
             Box(
                 modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(40.dp),
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(palette.chromeFill)
+                    .clickable(role = Role.Button, onClick = onOpenDrawer)
+                    .semantics { contentDescription = "Open menu" },
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(palette.chromeFill)
-                        .clickable(role = Role.Button, onClick = onOpenDrawer)
-                        .semantics { contentDescription = "Open menu" },
-                ) {
-                    Image(
-                        painter = photo,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-                // 8.dp #42D982 fill, 2.dp #1D2220 ring.
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(palette.avatarOnlineRing)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(palette.logoMint),
+                Image(
+                    painter = photo,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
+            // 8.dp #42D982 fill, 2.dp #1D2220 ring.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(palette.avatarOnlineRing)
+                    .padding(2.dp)
+                    .clip(CircleShape)
+                    .background(palette.logoMint),
+            )
+        }
 
-            // CENTER — badge + app name.
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                verticalAlignment = Alignment.CenterVertically,
+        // CENTER — badge + app name.
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
+            Spacer(Modifier.width(spacing.sm))
+            Text(
+                text = APP_NAME,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 21.sp,
+                    lineHeight = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.01).em,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
+
+        // RIGHT — plus. The accessible name stays "New chat" (one node). The
+        // tap opens the header menu instead of starting a blank thread.
+        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+            var menuOpen by remember { mutableStateOf(false) }
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(palette.plusFill)
+                    .clickable(role = Role.Button) { menuOpen = true }
+                    .semantics { contentDescription = "New chat" },
+                contentAlignment = Alignment.Center,
             ) {
-                AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
-                Spacer(Modifier.width(spacing.sm))
-                Text(
-                    text = APP_NAME,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontSize = 21.sp,
-                        lineHeight = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.01).em,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = null,
+                    tint = palette.plusIcon,
+                    modifier = Modifier.size(20.dp),
                 )
             }
-
-            // RIGHT — plus. The accessible name stays "New chat" (one node). The
-            // tap opens the header menu instead of starting a blank thread.
-            Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-                var menuOpen by remember { mutableStateOf(false) }
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(palette.plusFill)
-                        .clickable(role = Role.Button) { menuOpen = true }
-                        .semantics { contentDescription = "New chat" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.Add,
-                        contentDescription = null,
-                        tint = palette.plusIcon,
-                        modifier = Modifier.size(20.dp),
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                for (item in HEADER_MENU) {
+                    DropdownMenuItem(
+                        text = { Text(item.label) },
+                        onClick = {
+                            menuOpen = false
+                            when (item.kind) {
+                                "agent" -> onCreateAgent()
+                                "group" -> onNewGroup()
+                                "artifact" -> onCreateArtifact()
+                            }
+                        },
                     )
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    for (item in HEADER_MENU) {
-                        DropdownMenuItem(
-                            text = { Text(item.label) },
-                            onClick = {
-                                menuOpen = false
-                                when (item.kind) {
-                                    "agent" -> onCreateAgent()
-                                    "group" -> onNewGroup()
-                                    "artifact" -> onCreateArtifact()
-                                }
-                            },
-                        )
-                    }
                 }
             }
         }
-        // The same Dua | Agent switch Dua home's top bar draws, so Agent home is
-        // never a one-way door back to Dua.
-        ModeToggle(
-            mode = mode,
-            onModeChange = onModeChange,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .widthIn(max = 240.dp)
-                .fillMaxWidth()
-                .padding(horizontal = spacing.gutter, vertical = 4.dp),
-        )
     }
 }
 
