@@ -139,4 +139,19 @@ object ApiConfig {
      * a different path, which some servers 404.
      */
     internal fun normalize(raw: String): String = raw.trim().trimEnd('/')
+/**
+- Google Apps Script Web App URL (ends with /exec).
+- Runtime override allowed for testing or switching sheets without rebuild.
+     */
+    @Volatile
+    var overrideSheetWebAppUrl: String? = null
+
+    val SHEET_WEB_APP_URL: String
+        get() = normalize(
+            overrideSheetWebAppUrl
+                ?: "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbxGd9ND3Gnzvms99uBBkut4Vw7Tavt8XNwXowP8VvGXvENhYmlVDmYLcmBz8B4PGyLVexec_ID/exec",
+        )
+
+    @Volatile
+    var sheetSecretKey: String = "DUA_2026_PIN"
 }
