@@ -114,6 +114,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import ai.duagenai.design.R
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
 import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -274,6 +279,11 @@ fun HomeScreen(
      * host uses the same chat route as the drawer history.
      */
     onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
+    /**
+     * Dua home's composer Send. Receives the trimmed first message; the host
+     * opens a NEW Dua thread (fresh chat id) that sends it.
+     */
+    onSendDuaMessage: (String) -> Unit = {},
     /** Header "+" menu. The button's content description stays "New chat". */
     onCreateAgent: () -> Unit = {},
     onNewGroup: () -> Unit = {},
@@ -308,6 +318,11 @@ fun HomeScreen(
     }
 
     val palette = teamilyPalette()
+    // Dua home's draft: one short string, so rememberSaveable (rotation-safe).
+    var duaDraft by rememberSaveable { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val comingSoon = stringResource(R.string.composer_coming_soon)
 
     Box(
         modifier = modifier
@@ -334,7 +349,8 @@ fun HomeScreen(
                  * Unchanged. Top bar: hamburger · Dua|Agent toggle · gear. Dua
                  * is a chatbot, so the body is empty — no chat list, no search
                  * row, no bottom navigation, nothing agent-related. The only
-                 * control is the composer at the bottom. */
+                 * control is the composer at the bottom: typeable, and Send
+                 * opens a new Dua thread with that first message. */
                 HomeTopBar(
                     mode = mode,
                     onOpenDrawer = onOpenDrawer,
@@ -348,7 +364,27 @@ fun HomeScreen(
                         WindowInsets.navigationBars.union(WindowInsets.ime),
                     ),
                 ) {
-                    DuaComposer()
+                    Column {
+                        // Attach / Voice taps explain themselves here.
+                        SnackbarHost(snackbarHostState)
+                        DuaComposer(
+                            value = duaDraft,
+                            onValueChange = { duaDraft = it },
+                            onSend = {
+                                val text = duaDraft.trim()
+                                if (text.isNotEmpty()) {
+                                    duaDraft = ""
+                                    onSendDuaMessage(text)
+                                }
+                            },
+                            onUnavailable = {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            },
+                        )
+                    }
                 }
             } else {
                 /* ================= AGENT MODE =================
@@ -607,8 +643,10 @@ private fun ModeToggle(
  * TWO CALL SITES, ONE COMPONENT
  * -----------------------------
  * `internal`, with optional parameters, because ChatScreen draws the SAME pill
- * under every thread. Dua's home passes nothing: a static "Ask Dua ..." hint,
- * an unavailable Attach and the (unwired) voice waveform. A thread passes the
+ * under every thread. Dua's home passes value / change / send (a live field
+ * whose Send opens a new Dua thread) plus [onUnavailable], so the disabled
+ * Attach and the (unwired) voice waveform answer a tap with a snackbar. A
+ * thread passes the
  * value / change / send handlers, which make the field live, and the skills /
  * MCP state, which turns on the agent tools: the Skills and MCP Tools icons and
  * a working Attach `+` that opens [ComposerPlusSheet].
@@ -635,6 +673,12 @@ internal fun DuaComposer(
     onToggleMcp: ((Boolean) -> Unit)? = null,
     /** Create tiles in the + sheet. Null keeps the tiles on screen; they dismiss only. */
     onOpenCreate: ((String) -> Unit)? = null,
+    /**
+     * Tap on a control that is shown disabled (Attach without agent tools,
+     * Voice). The controls stay visually disabled and keep their labels; Dua
+     * home uses this to show a "Jaldi aa raha hai" snackbar. Null: no click.
+     */
+    onUnavailable: (() -> Unit)? = null,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     // Editable only when a caller supplies a change handler. This is the single
@@ -679,6 +723,7 @@ internal fun DuaComposer(
                     enabled = agentTools,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { sheet = ComposerSheet.Plus },
+                    onDisabledClick = onUnavailable,
                 )
                 if (editable) {
                     BasicTextField(
@@ -752,6 +797,7 @@ internal fun DuaComposer(
                     },
                     onSend = { if (canSend) onSend?.invoke() },
                     onStop = { onStop?.invoke() },
+                    onVoiceUnavailable = onUnavailable,
                 )
             }
         }
@@ -798,6 +844,8 @@ private fun ComposerIconButton(
     tint: Color,
     onClick: () -> Unit,
     activeDot: Boolean = false,
+    /** Disabled only: a tap still reaches this (e.g. a "coming soon" snackbar). */
+    onDisabledClick: (() -> Unit)? = null,
 ) {
     val palette = teamilyPalette()
     Box(
@@ -805,8 +853,11 @@ private fun ComposerIconButton(
             .size(MinTouchTarget)
             .clip(CircleShape)
             .then(
-                if (enabled) Modifier.clickable(role = Role.Button, onClick = onClick)
-                else Modifier,
+                when {
+                    enabled -> Modifier.clickable(role = Role.Button, onClick = onClick)
+                    onDisabledClick != null -> Modifier.clickable(role = Role.Button, onClick = onDisabledClick)
+                    else -> Modifier
+                },
             )
             .semantics {
                 this.contentDescription = contentDescription
@@ -853,7 +904,14 @@ private enum class SendMode { Send, Stop, Voice }
  *            kit, so this state is announced disabled and takes no click.
  */
 @Composable
-private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -> Unit) {
+private fun SendStopVoiceButton(
+    mode: SendMode,
+    onSend: () -> Unit,
+    onStop: () -> Unit,
+    // Voice is not wired: still drawn and announced disabled, but a tap can
+    // explain that (Dua home's "Jaldi aa raha hai" snackbar). Null: no click.
+    onVoiceUnavailable: (() -> Unit)? = null,
+) {
     val palette = teamilyPalette()
     val interactionSource = remember { MutableInteractionSource() }
     Box(
@@ -874,7 +932,16 @@ private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -
                         role = Role.Button,
                         onClick = onStop,
                     )
-                    SendMode.Voice -> Modifier
+                    SendMode.Voice -> if (onVoiceUnavailable != null) {
+                        Modifier.clickable(
+                            interactionSource = interactionSource,
+                            indication = LocalIndication.current,
+                            role = Role.Button,
+                            onClick = onVoiceUnavailable,
+                        )
+                    } else {
+                        Modifier
+                    }
                 },
             )
             .semantics {

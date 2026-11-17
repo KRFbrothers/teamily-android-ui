@@ -275,6 +275,9 @@ private val BUILT_IN_TOOLS = listOf(
 /** Dua mode's collapsed composer placeholder — the marker for "this is Dua home". */
 private const val DUA_ASK_HINT = "Ask Dua ..."
 
+/** res/values/strings.xml composer_coming_soon. */
+private const val COMING_SOON = "Jaldi aa raha hai"
+
 /**
  * The Memory placeholder screen's markers (`MemoryScreen.kt`).
  *
@@ -975,6 +978,69 @@ class DuaGenAINavHostTest {
         assertEquals(
             1,
             compose.onAllNodes(hasContentDescription(VOICE_LABEL) and isNotEnabled())
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+    }
+
+    /**
+     * Dua home's composer is typeable; Send opens a NEW Dua thread (fresh chat
+     * id, no sample seed) carrying that first message, and the reply lands
+     * there. A second Send from home opens another new thread.
+     */
+    @Test
+    fun duaHomeSendOpensANewDuaThreadWithTheFirstMessage() {
+        TokenStore.token = null
+        launch()
+
+        compose.onNode(hasSetTextAction()).performTextInput("Plan my week")
+        compose.waitForIdle()
+        assertVisibleDescCount(VOICE_LABEL, 0)
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
+        compose.waitForIdle()
+
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val firstId = navController.currentBackStackEntry?.arguments?.getString("chatId").orEmpty()
+        assertTrue("a fresh Dua chat id", firstId.startsWith("dua-"))
+        assertVisible(DuaGenAIRoutes.DUA_THREAD_TITLE)
+        assertVisibleSubstring("Plan my week")
+        // A new thread, not the sample conversation.
+        assertNotVisible("Can we integrate our team skills and MCP tools here?")
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
+        }
+
+        // Back to home: the draft was cleared; a second Send is a new thread.
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertVisible(DUA_ASK_HINT)
+        compose.onNode(hasSetTextAction()).performTextInput("Second")
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
+        compose.waitForIdle()
+        val secondId = navController.currentBackStackEntry?.arguments?.getString("chatId").orEmpty()
+        assertTrue(secondId.startsWith("dua-") && secondId != firstId)
+        assertNotVisible("Plan my week")
+    }
+
+    /** Dua home's Attach and Voice stay disabled but a tap shows "Jaldi aa raha hai". */
+    @Test
+    fun duaHomeAttachAndVoiceTapShowComingSoon() {
+        launch()
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText(COMING_SOON).fetchSemanticsNodes().isNotEmpty()
+        }
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        compose.onNodeWithContentDescription(VOICE_LABEL).performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText(COMING_SOON).fetchSemanticsNodes().isNotEmpty()
+        }
+        // Still announced as disabled for TalkBack, labels unchanged.
+        assertEquals(
+            1,
+            compose.onAllNodes(hasContentDescription(ATTACH_LABEL) and isNotEnabled())
                 .fetchSemanticsNodes().count { isOnScreen(it) },
         )
     }

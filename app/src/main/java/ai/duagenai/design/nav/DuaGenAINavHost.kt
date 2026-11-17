@@ -205,8 +205,12 @@ object DuaGenAIRoutes {
     const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
     const val DUA_AGENT_DEMO = "agent/dua_demo"
 
-    /** `chat/{chatId}?title={title}` — the title is optional and display-only. */
-    const val CHAT = "chat/{chatId}?title={title}"
+    /**
+     * `chat/{chatId}?title={title}&message={message}` — the title is optional
+     * and display-only; `message` is a NEW thread's first message (Dua home's
+     * composer), sent once by ChatScreen.
+     */
+    const val CHAT = "chat/{chatId}?title={title}&message={message}"
 
     /**
      * Builds a chat route.
@@ -216,8 +220,15 @@ object DuaGenAIRoutes {
      * The cube is never derived from the title — only from [chatId] — so a
      * rename cannot change a conversation's avatar.
      */
-    fun chat(chatId: String, title: String): String =
-        "chat/${Uri.encode(chatId)}?title=${Uri.encode(title)}"
+    fun chat(chatId: String, title: String, message: String? = null): String =
+        "chat/${Uri.encode(chatId)}?title=${Uri.encode(title)}" +
+            if (message.isNullOrBlank()) "" else "&message=${Uri.encode(message)}"
+
+    /** Title of a new Dua thread started from Dua home's composer. */
+    const val DUA_THREAD_TITLE = "Dua"
+
+    /** A fresh, never-reused chat id for a new Dua thread. */
+    fun newDuaChatId(): String = "dua-${java.util.UUID.randomUUID()}"
 }
 
 /**
@@ -467,6 +478,17 @@ fun DuaGenAINavHost(
                     // in Agent mode, so the two callbacks are separate.
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
+                    // Dua home's composer: every Send starts a NEW Dua thread
+                    // (fresh chat id) carrying that first message.
+                    onSendDuaMessage = { text ->
+                        navController.navigate(
+                            DuaGenAIRoutes.chat(
+                                DuaGenAIRoutes.newDuaChatId(),
+                                DuaGenAIRoutes.DUA_THREAD_TITLE,
+                                message = text,
+                            ),
+                        )
+                    },
                     // Every tab has a destination. `HomeTab.Managed` is shown
                     // as "Agents" (the reference dock's label) and still opens
                     // the agents route. Memory and Artifacts open their own
@@ -662,12 +684,18 @@ fun DuaGenAINavHost(
                         type = NavType.StringType
                         defaultValue = ""
                     },
+                    navArgument("message") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
                 ),
             ) { entry ->
                 val chatId = entry.arguments?.getString("chatId").orEmpty()
                 val title = entry.arguments?.getString("title").orEmpty()
+                val firstMessage = entry.arguments?.getString("message").orEmpty()
                 ChatScreen(
                     chatId = chatId,
+                    initialMessage = firstMessage.ifBlank { null },
                     chatTitle = title.ifBlank { "Chat" },
                     // Back returns to whatever opened the thread — Home, in the
                     // normal flow. popBackStack() is a no-op if the stack is
