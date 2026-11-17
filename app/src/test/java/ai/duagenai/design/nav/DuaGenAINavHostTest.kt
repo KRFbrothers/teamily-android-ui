@@ -100,6 +100,7 @@ import ai.duagenai.design.screens.PERSONAL_AGENT_TITLE
 import ai.duagenai.design.theme.DuaGenAITheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch as coroutineLaunch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.junit.After
@@ -724,6 +725,12 @@ class DuaGenAINavHostTest {
      */
     @After
     fun resetSessionAndHostOverrides() {
+        // Mute / Pin now persist in the process-wide DataStore: a test that
+        // toggles a built-in agent must not leak it into the next one.
+        runBlocking {
+            val settings = ai.duagenai.design.screens.SettingsStore(compose.activity.applicationContext)
+            BUILT_IN_FLAG_IDS.forEach { settings.forgetAgent(it) }
+        }
         TokenStore.token = null
         ApiConfig.overrideBaseUrl = null
         ApiConfig.overrideEngineBaseUrl = null
@@ -4934,10 +4941,14 @@ class DuaGenAINavHostTest {
         assertVisible("Clear Chat History")
         assertVisible("Delete agent")
 
-        // Built-in agents cannot be deleted: a snackbar says so, no dialog.
+        // Built-in agents cannot be deleted: the row is shown disabled, and a
+        // tap opens no dialog.
+        compose.onNodeWithText("Delete agent").assertIsNotEnabled()
+        compose.onNodeWithText("Share").assertIsEnabled()
+        compose.onNodeWithText("Clear Chat History").assertIsEnabled()
         compose.onNodeWithText("Delete agent").performClick()
         compose.waitForIdle()
-        assertVisible("Built-in agents can't be deleted")
+        assertNotVisible("Delete Webpage Developer?")
         assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
     }
 
@@ -4967,12 +4978,13 @@ class DuaGenAINavHostTest {
         mute.performScrollTo()
         mute.assertIsOff()
         mute.performClick()
-        compose.waitForIdle()
+        // The flag round-trips through DataStore (off the main thread).
+        waitUntilToggledOn("Mute Notifications")
         compose.onNodeWithContentDescription("Mute Notifications").assertIsOn()
         val pin = compose.onNodeWithContentDescription("Pin to Top")
         pin.assertIsOff()
         pin.performClick()
-        compose.waitForIdle()
+        waitUntilToggledOn("Pin to Top")
         compose.onNodeWithContentDescription("Pin to Top").assertIsOn()
     }
 
@@ -4995,24 +5007,273 @@ class DuaGenAINavHostTest {
         assertNotVisible("Pick up where Dua Agent left off")
     }
 
-    /** A made agent can be deleted from its profile (after a confirm). */
+    /** Waits for the switch labelled [label] to read On (Mute / Pin persist asynchronously). */
+    private fun waitUntilToggledOn(label: String) {
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithContentDescription(label).fetchSemanticsNodes().any {
+                it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.ToggleableState) ==
+                    androidx.compose.ui.state.ToggleableState.On
+            }
+        }
+    }
+
+    /** Creates one agent through the real Create Agent form; lands on Profile -> Agents. */
+    private fun createAgentNamed(name: String) {
+        if (currentRoute() != DuaGenAIRoutes.CREATE_AGENT) {
+            compose.runOnUiThread { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) }
+            compose.waitForIdle()
+        }
+        compose.onNode(hasSetTextAction()).performTextInput(name)
+        compose.waitForIdle()
+        createButton().performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.PROFILE_AGENTS, currentRoute())
+    }
+
+    /** The chat id the Agents list row [name] opens (then back to the list). */
+    private fun madeAgentIdOf(name: String): String {
+        assertEquals(DuaGenAIRoutes.PROFILE_AGENTS, currentRoute())
+        clickVisibleText(name)
+        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
+        val id = navController.currentBackStackEntry?.arguments?.getString("chatId").orEmpty()
+        compose.runOnUiThread { navController.popBackStack() }
+        compose.waitForIdle()
+        return id
+    }
+
+    /**
+     * Deleting the MIDDLE of three made agents removes only it: the others keep
+     * their names, their stable ids, their own transcript and their own
+     * Mute / Pin (ids used to be list positions, so the third agent inherited
+     * the second one's data).
+     */
     @Test
     fun aMadeAgentCanBeDeleted() {
-        launch()
+        openCreateAgent()
+        createAgentNamed("Alpha")
+        createAgentNamed("Beta")
+        createAgentNamed("Gamma")
+        val alpha = madeAgentIdOf("Alpha")
+        val beta = madeAgentIdOf("Beta")
+        val gamma = madeAgentIdOf("Gamma")
+        assertEquals(3, setOf(alpha, beta, gamma).size)
+        assertTrue(listOf(alpha, beta, gamma).all { ai.duagenai.design.screens.isUserMadeAgent(it) })
+
+        // Each agent's own data: a transcript line and its flags.
+        val transcripts = androidx.lifecycle.ViewModelProvider(compose.activity)[
+            ai.duagenai.design.screens.ChatTranscriptStore::class.java,
+        ]
         compose.runOnUiThread {
-            navController.navigate(
-                DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, "made_agent_0", "Helper"),
-            )
+            transcripts.append(beta, ai.duagenai.design.screens.SavedMessage(ai.duagenai.design.screens.SavedMessage.USER, "beta-only", "now"))
+            transcripts.append(gamma, ai.duagenai.design.screens.SavedMessage(ai.duagenai.design.screens.SavedMessage.USER, "gamma-only", "now"))
+        }
+        val settings = ai.duagenai.design.screens.SettingsStore(compose.activity.applicationContext)
+        runBlocking {
+            settings.setAgentMuted(beta, true)
+            settings.setAgentPinned(beta, true)
+            settings.setAgentMuted(gamma, true)
+            settings.setAgentPinned(gamma, true)
+        }
+
+        // Delete Beta from its profile.
+        compose.runOnUiThread {
+            navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, beta, "Beta"))
         }
         compose.waitForIdle()
         compose.onNodeWithContentDescription("More").performClick()
         compose.waitForIdle()
+        compose.onNodeWithText("Delete agent").assertIsEnabled()
         compose.onNodeWithText("Delete agent").performClick()
         compose.waitForIdle()
-        assertVisible("Delete Helper?")
+        assertVisible("Delete Beta?")
         compose.onNodeWithText("Delete").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+
+        // Beta's flags are dropped; Gamma's are still its own.
+        compose.waitUntil(timeoutMillis = 5_000) {
+            runBlocking { beta !in settings.mutedAgents.first() && beta !in settings.pinnedAgents.first() }
+        }
+        runBlocking {
+            assertTrue(gamma in settings.mutedAgents.first())
+            assertTrue(gamma in settings.pinnedAgents.first())
+            assertFalse(alpha in settings.mutedAgents.first())
+        }
+        // Transcripts: Beta's is gone, Gamma's still ends with its own line.
+        assertTrue(transcripts.threads.value[beta].orEmpty().isEmpty())
+        assertEquals("gamma-only", transcripts.threads.value[gamma]?.lastOrNull()?.text)
+        assertTrue(transcripts.threads.value[alpha].orEmpty().none { it.text == "beta-only" || it.text == "gamma-only" })
+
+        // The list keeps Alpha and Gamma, with the SAME ids as before.
+        compose.runOnUiThread { navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS) }
+        compose.waitForIdle()
+        assertVisible("Alpha")
+        assertVisible("Gamma")
+        assertNotVisible("Beta")
+        assertEquals(alpha, madeAgentIdOf("Alpha"))
+        assertEquals(gamma, madeAgentIdOf("Gamma"))
+
+        // Gamma's profile shows its own Mute / Pin, Alpha's shows none.
+        compose.runOnUiThread {
+            navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, gamma, "Gamma"))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Mute Notifications").performScrollTo()
+        waitUntilToggledOn("Pin to Top")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOn()
+        compose.onNodeWithContentDescription("Pin to Top").assertIsOn()
+        compose.runOnUiThread {
+            navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, alpha, "Alpha"))
+        }
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Mute Notifications").performScrollTo()
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOff()
+        compose.onNodeWithContentDescription("Pin to Top").assertIsOff()
+    }
+
+    /** Legacy madeAgents lines get their old index id written in once; delete never shifts ids. */
+    @Test
+    fun madeAgentIdsAreStableAndLegacyLinesMigrate() {
+        val legacy = "Old One\nOld Two\tStar\tPink\nOld Three"
+        val migrated = ai.duagenai.design.screens.withMadeAgentIds(legacy)
+        val lines = linesOf(migrated)
+        assertEquals(
+            listOf("made_agent_0", "made_agent_1", "made_agent_2"),
+            lines.mapIndexed { i, l -> ai.duagenai.design.screens.madeAgentId(l, i) },
+        )
+        assertEquals(listOf("Old One", "Old Two", "Old Three"), lines.map { madeAgentName(it) })
+        assertEquals(AgentSilhouette.Star, AgentSilhouette.fromKey(madeAgentShapeKey(lines[1])))
+        // Idempotent.
+        assertEquals(migrated, ai.duagenai.design.screens.withMadeAgentIds(migrated))
+        // Deleting the middle keeps the third agent's id.
+        val after = linesOf(ai.duagenai.design.screens.withoutMadeAgent(legacy, "made_agent_1"))
+        assertEquals(
+            listOf("made_agent_0", "made_agent_2"),
+            after.mapIndexed { i, l -> ai.duagenai.design.screens.madeAgentId(l, i) },
+        )
+        // New lines get a fresh id that can never look like a legacy index.
+        val fresh = madeAgentLine("New", AgentSilhouette.Star.name, AgentSwatch.Pink.name)
+        val id = ai.duagenai.design.screens.madeAgentId(fresh, 0)
+        assertTrue(id.startsWith("made_agent_u"))
+        assertTrue(id != ai.duagenai.design.screens.madeAgentId(madeAgentLine("New", "", ""), 0))
+    }
+
+    /** An agent name with & ? / + survives the route encoding into its profile title. */
+    @Test
+    fun anAgentNameWithSpecialCharactersRoundTripsToItsProfile() {
+        val name = "R&D ? Ops / A+B"
+        launch()
+        compose.runOnUiThread { navController.navigate(DuaGenAIRoutes.chat("made_agent_uspecial", name)) }
+        compose.waitForIdle()
+        assertEquals(name, navController.currentBackStackEntry?.arguments?.getString("title"))
+        clickVisibleText(name)
+        assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
+        val args = navController.currentBackStackEntry?.arguments
+        assertEquals("made_agent_uspecial", args?.getString("agentId"))
+        assertEquals(name, args?.getString("name"))
+        assertTrue(compose.onAllNodesWithText(name).fetchSemanticsNodes().count { isOnScreen(it) } >= 1)
+    }
+
+    /**
+     * Mute / Pin are per agent and persisted: muting Webpage Developer leaves
+     * Slides Assistant alone, and the choice survives the host being torn
+     * down and restored.
+     */
+    @Test
+    fun muteAndPinStayPerAgentAndSurviveHostRecreation() {
+        val settings = ai.duagenai.design.screens.SettingsStore(compose.activity.applicationContext)
+        runBlocking { BUILT_IN_FLAG_IDS.forEach { settings.forgetAgent(it) } }
+        navController = TestNavHostController(compose.activity).apply {
+            navigatorProvider.addNavigator(ComposeNavigator())
+        }
+        val restorer = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+        restorer.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                DuaGenAINavHost(
+                    navController = navController,
+                    signedOutArtifacts = demoArtifacts,
+                    signedOutMemories = sampleMemories,
+                )
+            }
+        }
+        compose.waitForIdle()
+        fun openProfile(id: String, name: String) {
+            compose.runOnUiThread {
+                navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, id, name))
+            }
+            compose.waitForIdle()
+            compose.onNodeWithContentDescription("Mute Notifications").performScrollTo()
+        }
+        openProfile("chat_webpage_developer", "Webpage Developer")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOff()
+        compose.onNodeWithContentDescription("Mute Notifications").performClick()
+        compose.onNodeWithContentDescription("Pin to Top").performClick()
+        waitUntilToggledOn("Pin to Top")
+        waitUntilToggledOn("Mute Notifications")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOn()
+
+        // Another agent is untouched.
+        openProfile("chat_slides_assistant", "Slides Assistant")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOff()
+        compose.onNodeWithContentDescription("Pin to Top").assertIsOff()
+
+        // Tear the host down and restore it: the flags come back from DataStore.
+        restorer.emulateSavedInstanceStateRestore()
+        compose.waitForIdle()
+        openProfile("chat_webpage_developer", "Webpage Developer")
+        waitUntilToggledOn("Mute Notifications")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOn()
+        compose.onNodeWithContentDescription("Pin to Top").assertIsOn()
+        openProfile("chat_slides_assistant", "Slides Assistant")
+        compose.onNodeWithContentDescription("Mute Notifications").assertIsOff()
+    }
+
+    /** Saving, replacing and clearing the photo bump the version and move the path; old files go. */
+    @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun theProfilePhotoSaveReplaceAndClearUpdateVersionAndPath() {
+        val context = compose.activity.applicationContext
+        val settings = ai.duagenai.design.screens.SettingsStore(context)
+        runBlocking {
+            settings.clearProfilePhoto()
+            val v0 = settings.profilePhotoVersion.first()
+            assertEquals(null, settings.profilePhotoPath.first())
+
+            // Save (camera path): a big bitmap is stored at most 512px.
+            val big = android.graphics.Bitmap.createBitmap(2000, 1000, android.graphics.Bitmap.Config.ARGB_8888)
+            val p1 = settings.saveProfilePhoto(big)
+            val v1 = settings.profilePhotoVersion.first()
+            assertTrue(v1 > v0)
+            assertEquals(p1, settings.profilePhotoPath.first())
+            val shown = ai.duagenai.design.screens.SettingsStore.decodeSampledFile(p1)
+            assertTrue("decoded=${shown?.width}x${shown?.height} file=${java.io.File(p1).length()}", shown != null && maxOf(shown.width, shown.height) <= 512)
+
+            // Replace (gallery path): a NEW file, a higher version, the old file gone.
+            val src = java.io.File(context.cacheDir, "big-gallery.jpg")
+            src.outputStream().use { big.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }
+            val p2 = settings.saveProfilePhotoFromUri(android.net.Uri.fromFile(src))
+            assertTrue(p2 != null && p2 != p1)
+            val v2 = settings.profilePhotoVersion.first()
+            assertTrue(v2 > v1)
+            assertEquals(p2, settings.profilePhotoPath.first())
+            assertFalse(java.io.File(p1).exists())
+            val replaced = ai.duagenai.design.screens.SettingsStore.decodeSampledFile(p2!!)
+            assertTrue(replaced != null && maxOf(replaced.width, replaced.height) <= 1024)
+
+            // An unreadable uri saves nothing.
+            assertEquals(null, settings.saveProfilePhotoFromUri(android.net.Uri.fromFile(java.io.File(context.cacheDir, "missing.jpg"))))
+            assertEquals(p2, settings.profilePhotoPath.first())
+
+            // Clear: no path, file gone, version bumped again.
+            settings.clearProfilePhoto()
+            assertEquals(null, settings.profilePhotoPath.first())
+            assertFalse(java.io.File(p2).exists())
+            assertTrue(settings.profilePhotoVersion.first() > v2)
+        }
+        // The sample size keeps the longest side at or above the target.
+        assertEquals(1, ai.duagenai.design.screens.SettingsStore.sampleSizeFor(500, 300, 512))
+        assertEquals(2, ai.duagenai.design.screens.SettingsStore.sampleSizeFor(1500, 800, 512))
+        assertEquals(8, ai.duagenai.design.screens.SettingsStore.sampleSizeFor(4096, 3072, 512))
     }
 
     /** An Agents card opens that agent's own thread on the shared chat route. */
@@ -5140,5 +5401,8 @@ class DuaGenAINavHostTest {
 
 /** Create Agent strings, as in res/values/strings.xml. */
 private const val CREATE_AGENT_TITLE = "Create Agent"
+
+/** Built-in agents whose persisted Mute / Pin the tests reset after each run. */
+private val BUILT_IN_FLAG_IDS = listOf("chat_webpage_developer", "chat_slides_assistant")
 private const val CREATE_AGENT_NAME_HINT = "Name your Agent"
 private const val CREATE_AGENT_ACTION = "Create"

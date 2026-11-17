@@ -12,6 +12,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -22,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import ai.duagenai.design.R
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -66,7 +69,6 @@ import ai.duagenai.design.screens.DuaAgentProfileScreen
 import ai.duagenai.design.screens.DuaAgentWorkspaceScreen
 import ai.duagenai.design.screens.DuaAgentSkills
 import ai.duagenai.design.screens.ChatTranscriptStore
-import ai.duagenai.design.screens.MADE_AGENT_PREFIX
 import ai.duagenai.design.screens.isAgentChatId
 import ai.duagenai.design.screens.isUserMadeAgent
 import ai.duagenai.design.screens.HomeMode
@@ -100,6 +102,8 @@ import ai.duagenai.design.screens.encodeChannels
 import ai.duagenai.design.screens.encodeConnectors
 import ai.duagenai.design.screens.linesOf
 import ai.duagenai.design.screens.madeAgentLine
+import ai.duagenai.design.screens.withMadeAgentIds
+import ai.duagenai.design.screens.withoutMadeAgent
 import ai.duagenai.design.screens.plusLine
 import ai.duagenai.design.screens.profileAgentRows
 import ai.duagenai.design.screens.profileArtifactRows
@@ -265,12 +269,6 @@ private fun NavBackStackEntry.agentId(): String =
 private fun NavBackStackEntry.agentName(): String =
     arguments?.getString("name").orEmpty().ifBlank { DUA_AGENT_TITLE }
 
-/** Newline-set helpers for the per-agent Mute / Pin flags. */
-private fun withLine(raw: String, line: String, on: Boolean): String {
-    val rest = linesOf(raw).filter { it != line }
-    return (if (on) rest + line else rest).joinToString("\n")
-}
-
 /**
  * The dock tab a route belongs to, or null when the route is not one of the
  * five tab destinations. Home is the Chats tab.
@@ -397,6 +395,10 @@ fun DuaGenAINavHost(
     val notifications by settings.notifications
         .collectAsStateWithLifecycle(defaultNotificationState)
     val profilePhotoPath by settings.profilePhotoPath.collectAsStateWithLifecycle(null)
+    val profilePhotoVersion by settings.profilePhotoVersion.collectAsStateWithLifecycle(0L)
+    // Agent profile Mute / Pin, persisted per STABLE agent id.
+    val mutedAgents by settings.mutedAgents.collectAsStateWithLifecycle(emptySet())
+    val pinnedAgents by settings.pinnedAgents.collectAsStateWithLifecycle(emptySet())
     val profileName by settings.profileName.collectAsStateWithLifecycle("")
     val profileAbout by settings.profileAbout.collectAsStateWithLifecycle("")
     val profileUsername by settings.profileUsername.collectAsStateWithLifecycle("")
@@ -437,10 +439,13 @@ fun DuaGenAINavHost(
     var publicProfileOpen by rememberSaveable { mutableStateOf(false) }
     // Header menu creates. Newline-separated so rememberSaveable can keep them.
     var madeAgents by rememberSaveable { mutableStateOf("") }
+    // A madeAgents string restored from an older build has lines without a
+    // stable id: write their derived ids in once, so they never shift again.
+    LaunchedEffect(madeAgents) {
+        val migrated = withMadeAgentIds(madeAgents)
+        if (migrated != madeAgents) madeAgents = migrated
+    }
     var madeArtifacts by rememberSaveable { mutableStateOf("") }
-    // Agent profile toggles, per agent id (newline sets, like madeAgents).
-    var mutedAgents by rememberSaveable { mutableStateOf("") }
-    var pinnedAgents by rememberSaveable { mutableStateOf("") }
     var connectorState by rememberSaveable { mutableStateOf(DEFAULT_CONNECTOR_STATE) }
     var recentConnectors by rememberSaveable { mutableStateOf("") }
     var channelState by rememberSaveable { mutableStateOf(DEFAULT_CHANNEL_STATE) }
@@ -582,6 +587,7 @@ fun DuaGenAINavHost(
                 ProfileScreen(
                     cubeId = savedCubeId,
                     photoPath = profilePhotoPath,
+                    photoVersion = profilePhotoVersion,
                     displayName = profileName,
                     about = profileAbout,
                     username = profileUsername,
@@ -590,6 +596,8 @@ fun DuaGenAINavHost(
                     onChangeCube = { navController.navigate(DuaGenAIRoutes.CUBE_PICKER) },
                     onBack = { navController.popBackStack() },
                     onPhotoChosen = { bitmap -> scope.launch { settings.saveProfilePhoto(bitmap) } },
+                    // Decoded + downsampled on IO inside the store.
+                    onPhotoUriChosen = { uri -> settings.saveProfilePhotoFromUri(uri) != null },
                     onClearPhoto = { scope.launch { settings.clearProfilePhoto() } },
                     onSaveName = { value -> scope.launch { settings.setProfileName(value) } },
                     onSaveAbout = { value -> scope.launch { settings.setProfileAbout(value) } },
@@ -679,7 +687,7 @@ fun DuaGenAINavHost(
                 CreateAgentScreen(
                     onCreate = { name, silhouette, swatch ->
                         madeAgents = plusLine(
-                            madeAgents,
+                            withMadeAgentIds(madeAgents),
                             madeAgentLine(name, silhouette.name, swatch.name),
                         )
                         // Land on the Agents list; Back from there returns to
@@ -732,10 +740,11 @@ fun DuaGenAINavHost(
                 val chatId = entry.arguments?.getString("chatId").orEmpty()
                 val title = entry.arguments?.getString("title").orEmpty()
                 val firstMessage = entry.arguments?.getString("message").orEmpty()
+                val shownTitle = title.ifBlank { stringResource(R.string.chat_default_title) }
                 ChatScreen(
                     chatId = chatId,
                     initialMessage = firstMessage.ifBlank { null },
-                    chatTitle = title.ifBlank { "Chat" },
+                    chatTitle = shownTitle,
                     // Back returns to whatever opened the thread — Home, in the
                     // normal flow. popBackStack() is a no-op if the stack is
                     // empty, so a deep link into a chat cannot crash on back.
@@ -751,10 +760,10 @@ fun DuaGenAINavHost(
                     // EVERY agent thread has a profile: the header pill's avatar
                     // and name open THIS agent's profile; Invite its New Group.
                     onOpenAgentProfile = if (isAgentChatId(chatId)) {
-                        { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, chatId, title.ifBlank { "Chat" })) }
+                        { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE, chatId, shownTitle)) }
                     } else null,
                     onInvite = {
-                        navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP, chatId, title.ifBlank { "Chat" }))
+                        navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP, chatId, shownTitle))
                     },
                     onOpenCreate = { kind ->
                         navController.navigate(DuaGenAIRoutes.create(kind))
@@ -791,24 +800,19 @@ fun DuaGenAINavHost(
                     onOpenOverview = { go(DuaGenAIRoutes.AGENT_OVERVIEW) },
                     onOpenNewGroup = { go(DuaGenAIRoutes.AGENT_NEW_GROUP) },
                     onOpenConnectApp = { go(DuaGenAIRoutes.AGENT_CONNECT_APP) },
-                    muted = id in linesOf(mutedAgents),
-                    onMutedChange = { on -> mutedAgents = withLine(mutedAgents, id, on) },
-                    pinned = id in linesOf(pinnedAgents),
-                    onPinnedChange = { on -> pinnedAgents = withLine(pinnedAgents, id, on) },
+                    muted = id in mutedAgents,
+                    onMutedChange = { on -> scope.launch { settings.setAgentMuted(id, on) } },
+                    pinned = id in pinnedAgents,
+                    onPinnedChange = { on -> scope.launch { settings.setAgentPinned(id, on) } },
                     onClearHistory = { transcriptStore.clear(id) },
                     canDelete = isUserMadeAgent(id),
                     onDelete = {
-                        // Only made agents reach here: drop its line, its
-                        // transcript and its flags, then return to Home.
-                        val index = id.removePrefix(MADE_AGENT_PREFIX).toIntOrNull()
-                        if (index != null) {
-                            madeAgents = linesOf(madeAgents)
-                                .filterIndexed { i, _ -> i != index }
-                                .joinToString("\n")
-                        }
+                        // Only made agents reach here: drop ITS line (by stable
+                        // id, so no other agent shifts), its transcript and its
+                        // flags, then return to Home.
+                        madeAgents = withoutMadeAgent(madeAgents, id)
                         transcriptStore.clear(id)
-                        mutedAgents = withLine(mutedAgents, id, false)
-                        pinnedAgents = withLine(pinnedAgents, id, false)
+                        scope.launch { settings.forgetAgent(id) }
                         navController.popBackStack(DuaGenAIRoutes.HOME, inclusive = false)
                     },
                 )
@@ -914,6 +918,7 @@ fun DuaGenAINavHost(
                 SettingsScreen(
                     cubeId = savedCubeId,
                     photoPath = profilePhotoPath,
+                    photoVersion = profilePhotoVersion,
                     displayName = profileName,
                     connectorSummary = "${connectors.count { it.connected }}/${connectors.size}",
                     languageLabel = languageLabel,

@@ -3,9 +3,10 @@ package ai.duagenai.design.screens
 import ai.duagenai.design.R
 import ai.duagenai.design.theme.DemoBadge
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,7 +21,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -49,6 +49,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,6 +61,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -86,7 +90,9 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
-import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /* ============================================================================
  *  Profile — identity only.
@@ -105,6 +111,7 @@ import java.io.File
 fun ProfileScreen(
     cubeId: String = CubeIds.DEFAULT,
     photoPath: String? = null,
+    photoVersion: Long = 0L,
     displayName: String = "",
     about: String = "",
     username: String = "",
@@ -113,6 +120,12 @@ fun ProfileScreen(
     onChangeCube: () -> Unit = {},
     onBack: () -> Unit = {},
     onPhotoChosen: (Bitmap) -> Unit = {},
+    /**
+     * A Photo Picker result. The caller decodes and saves it off the main
+     * thread (SettingsStore.saveProfilePhotoFromUri) and returns false when
+     * the image could not be read.
+     */
+    onPhotoUriChosen: suspend (Uri) -> Boolean = { true },
     onClearPhoto: () -> Unit = {},
     onSaveName: (String) -> Unit = {},
     onSaveAbout: (String) -> Unit = {},
@@ -134,6 +147,17 @@ fun ProfileScreen(
     val context = LocalContext.current
     var showPictureSheet by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val cameraDeniedMsg = stringResource(R.string.profile_camera_denied)
+    val cameraMissingMsg = stringResource(R.string.profile_camera_unavailable)
+    val photoFailedMsg = stringResource(R.string.profile_photo_failed)
+    fun toast(msg: String) {
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(msg)
+        }
+    }
 
     val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview(),
@@ -146,26 +170,37 @@ fun ProfileScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
-        if (granted) photoLauncher.launch(null)
+        if (!granted) {
+            toast(cameraDeniedMsg)
+            return@rememberLauncherForActivityResult
+        }
+        try {
+            photoLauncher.launch(null)
+        } catch (_: ActivityNotFoundException) {
+            toast(cameraMissingMsg)
+        }
     }
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val bitmap = context.contentResolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input)
-        }
-        if (bitmap != null) {
-            onPhotoChosen(bitmap)
-            showPictureSheet = false
+        showPictureSheet = false
+        scope.launch {
+            if (!onPhotoUriChosen(uri)) toast(photoFailedMsg)
         }
     }
 
     fun launchCamera() {
         val granted = context.checkSelfPermission(Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
-        if (granted) photoLauncher.launch(null) else {
+        if (!granted) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
+            return
+        }
+        try {
+            photoLauncher.launch(null)
+        } catch (_: ActivityNotFoundException) {
+            toast(cameraMissingMsg)
         }
     }
 
@@ -175,6 +210,7 @@ fun ProfileScreen(
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
@@ -221,11 +257,12 @@ fun ProfileScreen(
                     ProfileOrCubeAvatar(
                         cubeId = cubeId,
                         photoPath = photoPath,
+                        photoVersion = photoVersion,
                         size = 120.dp,
                         contentDescription = if (photoPath != null) {
                             stringResource(R.string.profile_photo_cd)
                         } else {
-                            "Your avatar, ${CubeIds.label(cubeId)}"
+                            stringResource(R.string.profile_avatar_cd, CubeIds.label(cubeId))
                         },
                     )
                     SmallFloatingActionButton(
@@ -301,7 +338,7 @@ fun ProfileScreen(
                             .padding(horizontal = 10.dp, vertical = 3.dp),
                     ) {
                         Text(
-                            text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
+                            text = stringResource(if (signedIn) R.string.profile_plan_pro else R.string.profile_plan_free),
                             style = DuaGenAITextStyles.eyebrow,
                             color = colors.onLogoMint,
                         )
@@ -312,9 +349,9 @@ fun ProfileScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                    StatTile(chatCount.toString(), "CHATS", Modifier.weight(1f), onOpenChats)
-                    StatTile(agentCount.toString(), "AGENTS", Modifier.weight(1f), onOpenAgents)
-                    StatTile(artifactCount.toString(), "ARTIFACTS", Modifier.weight(1f), onOpenArtifacts)
+                    StatTile(chatCount.toString(), stringResource(R.string.profile_stat_chats), Modifier.weight(1f), onOpenChats)
+                    StatTile(agentCount.toString(), stringResource(R.string.profile_stat_agents), Modifier.weight(1f), onOpenAgents)
+                    StatTile(artifactCount.toString(), stringResource(R.string.profile_stat_artifacts), Modifier.weight(1f), onOpenArtifacts)
                 }
             }
         }
@@ -486,7 +523,7 @@ internal fun ProfilePictureSheet(
             HorizontalDivider(color = colors.hairline)
             SettingsRow(
                 title = stringResource(R.string.profile_picture_choose_cube),
-                subtitle = "Avatar · ${CubeIds.label(cubeId)}",
+                subtitle = stringResource(R.string.profile_picture_cube_subtitle, CubeIds.label(cubeId)),
                 icon = null,
                 onClick = onChooseCube,
                 leading = {
@@ -513,15 +550,20 @@ internal fun ProfileOrCubeAvatar(
     size: Dp,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    /** Bumped on every photo save/clear, so a replaced file always reloads. */
+    photoVersion: Long = 0L,
 ) {
-    val photo = remember(photoPath) {
-        photoPath?.takeIf { File(it).isFile }?.let { path ->
-            BitmapFactory.decodeFile(path)
+    // Decoded off the main thread and downsampled (never full size in
+    // composition). Keyed on path AND version: a new photo always reloads.
+    val photo by produceState<Bitmap?>(initialValue = null, photoPath, photoVersion) {
+        value = photoPath?.let { path ->
+            withContext(Dispatchers.IO) { SettingsStore.decodeSampledFile(path) }
         }
     }
-    if (photo != null) {
+    val bitmap = photo
+    if (bitmap != null) {
         Image(
-            bitmap = photo.asImageBitmap(),
+            bitmap = bitmap.asImageBitmap(),
             contentDescription = contentDescription,
             modifier = modifier
                 .size(size)

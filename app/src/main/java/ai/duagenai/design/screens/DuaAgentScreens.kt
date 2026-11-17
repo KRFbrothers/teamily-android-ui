@@ -42,6 +42,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import ai.duagenai.design.cube.CubeAvatar
 import ai.duagenai.design.cube.CubeCatalog
@@ -133,6 +136,8 @@ data class AgentColors(
     val tabUnderline: Color, val focusRing: Color, val dashed: Color, val emptyIconBg: Color,
     val handle: Color, val navSelected: Color, val navSelectedInk: Color, val surface: Color,
     val notionMark: Color, val isDark: Boolean,
+    /** The agent badge on an avatar (theme accent; mint in dark) and its glyph ink. */
+    val badge: Color, val badgeInk: Color,
 )
 
 fun agentColors(p: TeamilyPalette, dark: Boolean): AgentColors = AgentColors(
@@ -168,6 +173,7 @@ fun agentColors(p: TeamilyPalette, dark: Boolean): AgentColors = AgentColors(
     handle = if (dark) Color(0xFF545B56) else Color(0xFFC9D5CD),
     navSelected = p.navSelected, navSelectedInk = p.navSelectedContent, surface = p.bgSurface,
     notionMark = if (dark) Color(0xFFFFFFFF) else Color(0xFF000000), isDark = dark,
+    badge = if (dark) p.logoMint else p.accent, badgeInk = p.accentContrast,
 )
 
 /** Follows the active theme the same way [teamilyPalette] does (dark palette = light ink). */
@@ -385,12 +391,19 @@ internal fun AgentAvatar(agentId: String, name: String, size: Dp, modifier: Modi
     }
 }
 
+/** The Activity behind [this] context, unwrapping ContextWrappers; null if none. */
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 /** Small green agent badge on an avatar's bottom-right, ringed in [ring]. */
 @Composable
-private fun AgentBadgeDot(size: Dp, ring: Color, modifier: Modifier = Modifier) {
+private fun AgentBadgeDot(size: Dp, c: AgentColors, ring: Color, modifier: Modifier = Modifier) {
     Box(modifier.size(size + 3.dp).clip(CircleShape).background(ring), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(size).clip(CircleShape).background(Mint), contentAlignment = Alignment.Center) {
-            AgentIcon("robot", size * 0.7f, TileInk, strokeWidth = 2f)
+        Box(Modifier.size(size).clip(CircleShape).background(c.badge), contentAlignment = Alignment.Center) {
+            AgentIcon("robot", size * 0.7f, c.badgeInk, strokeWidth = 2f)
         }
     }
 }
@@ -411,6 +424,7 @@ fun AgentChatHeaderPill(
     verified: Boolean = agentId == AGENT_CHAT_ID,
 ) {
     val c = rememberAgentColors()
+    val backLabel = stringResource(R.string.back)
     Row(
         modifier
             .fillMaxWidth()
@@ -423,20 +437,20 @@ fun AgentChatHeaderPill(
     ) {
         Box(
             Modifier.padding(start = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
-                .semantics { contentDescription = "Back"; role = Role.Button },
+                .semantics { contentDescription = backLabel; role = Role.Button },
             contentAlignment = Alignment.Center,
         ) { AgentIcon("back", 24.dp, c.ink) }
         Row(
             Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(24.dp))
-                .clickable(onClickLabel = "Open $name profile", role = Role.Button, onClick = onOpenProfile)
+                .clickable(onClickLabel = stringResource(R.string.agent_open_profile, name), role = Role.Button, onClick = onOpenProfile)
                 .padding(vertical = 6.dp, horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(42.dp)) {
                 AgentAvatar(agentId, name, 40.dp)
-                AgentBadgeDot(13.dp, c.chrome, Modifier.align(Alignment.BottomEnd))
+                AgentBadgeDot(13.dp, c, c.chrome, Modifier.align(Alignment.BottomEnd))
             }
             Spacer(Modifier.width(10.dp))
             Text(
@@ -715,7 +729,7 @@ fun DuaAgentProfileScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val builtInMsg = stringResource(R.string.agent_builtin_no_delete)
+    val shareFailedMsg = stringResource(R.string.agent_share_failed)
     val clearedMsg = stringResource(R.string.agent_history_cleared)
     val shareText = stringResource(R.string.agent_share_text, agentName)
     val shareTitle = stringResource(R.string.agent_share)
@@ -763,10 +777,10 @@ fun DuaAgentProfileScreen(
                         Modifier.align(Alignment.TopCenter).offset(y = 152.dp).size(260.dp, 52.dp).clip(RoundedCornerShape(26.dp)).background(c.body),
                     ) {
                         val actions = listOf<Triple<String, String, () -> Unit>>(
-                            Triple("robot", "Open agent workspace", onOpenWorkspace),
-                            Triple("idcard", "View full profile", onOpenOverview),
-                            Triple("person_plus", "Create New Group", onOpenNewGroup),
-                            Triple("more", "More", { sheet = true }),
+                            Triple("robot", stringResource(R.string.agent_action_workspace), onOpenWorkspace),
+                            Triple("idcard", stringResource(R.string.agent_action_full_profile), onOpenOverview),
+                            Triple("person_plus", stringResource(R.string.agent_action_new_group), onOpenNewGroup),
+                            Triple("more", stringResource(R.string.agent_action_more), { sheet = true }),
                         )
                         for ((icon, label, action) in actions) {
                             Box(
@@ -859,26 +873,33 @@ fun DuaAgentProfileScreen(
                     Triple("trash", stringResource(R.string.agent_delete), c.dangerInk),
                 )
                 items.forEachIndexed { i, (icon, label, ink) ->
+                    // Built-in agents cannot be deleted: their Delete row is
+                    // shown dimmed and disabled instead of answering a tap.
+                    val enabled = i != 2 || canDelete
+                    val rowInk = if (enabled) ink else ink.copy(alpha = 0.38f)
                     Box(
-                        Modifier.fillMaxWidth().height(56.dp).clickable {
+                        Modifier.fillMaxWidth().height(56.dp).clickable(enabled = enabled, role = Role.Button) {
+                            if (!enabled) return@clickable
                             sheet = false
                             when (i) {
-                                0 -> runCatching {
+                                0 -> {
                                     val send = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT, shareText)
                                     }
-                                    context.startActivity(
-                                        Intent.createChooser(send, shareTitle).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                    )
+                                    val chooser = Intent.createChooser(send, shareTitle)
+                                    // Only a non-Activity context needs a new task.
+                                    if (context.findActivity() == null) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    val ok = runCatching { context.startActivity(chooser) }.isSuccess
+                                    if (!ok) toast(shareFailedMsg)
                                 }
                                 1 -> confirm = "clear"
-                                else -> if (canDelete) confirm = "delete" else toast(builtInMsg)
+                                else -> confirm = "delete"
                             }
                         },
                     ) {
-                        AgentIcon(icon, 22.dp, ink, Modifier.offset(24.dp, 16.dp))
-                        Text(label, style = t(16, 24), color = ink, modifier = Modifier.offset(60.dp, 15.dp))
+                        AgentIcon(icon, 22.dp, rowInk, Modifier.offset(24.dp, 16.dp))
+                        Text(label, style = t(16, 24), color = rowInk, modifier = Modifier.offset(60.dp, 15.dp))
                     }
                 }
             }
@@ -1272,7 +1293,7 @@ fun DuaAgentOverviewScreen(
     val description = if (agentId == AGENT_CHAT_ID) {
         DUA_AGENT_SUBTITLE
     } else {
-        "$agentName \u2014 your AI agent"
+        stringResource(R.string.agent_overview_description, agentName)
     }
     val c = rememberAgentColors()
     Column(modifier.fillMaxSize().background(c.body)) {
@@ -1608,7 +1629,7 @@ fun DuaAgentNewGroupScreen(
                 Text("Selected 1", style = t(13, 18), color = c.ink2, modifier = Modifier.padding(top = 6.dp))
                 Box(Modifier.size(30.dp)) {
                     AgentAvatar(agentId, agentName, 28.dp)
-                    AgentBadgeDot(9.dp, c.body, Modifier.align(Alignment.BottomEnd))
+                    AgentBadgeDot(9.dp, c, c.body, Modifier.align(Alignment.BottomEnd))
                 }
             }
             Spacer(Modifier.height(18.dp))
