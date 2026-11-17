@@ -27,8 +27,18 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Api
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +65,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -540,6 +553,8 @@ internal fun SettingsDirectory(
     signedIn: Boolean,
     /** Confirmed sign-out: the caller ends the server session and goes Home. */
     onSignOut: () -> Unit,
+    /** App-bar search icon focuses this field. */
+    searchFocusRequester: FocusRequester? = null,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     var query by rememberSaveable { mutableStateOf("") }
@@ -556,22 +571,23 @@ internal fun SettingsDirectory(
         val trailing: String = "",
         val danger: Boolean = false,
         val checked: Boolean? = null,
+        val icon: ImageVector? = null,
         val onClick: () -> Unit = {},
     )
 
     val rows = listOfNotNull(
-        DirRow("AI & Agent Setup", "App Connectors", "Third-party accounts your agents can use", connectorSummary, onClick = onOpenConnectors),
-        DirRow("AI & Agent Setup", "Runtimes", "Python 3.11, Node 20, Chromium", onClick = onOpenRuntimes),
-        DirRow("AI & Agent Setup", "Skill Configuration", onClick = onOpenSkills),
-        DirRow("AI & Agent Setup", "Language", trailing = languageLabel, onClick = onOpenLanguage),
-        DirRow("AI & Agent Setup", "Channels for Dua Agent", "Where Dua Agent can be reached", onClick = onOpenChannels),
-        DirRow("AI & Agent Setup", "Agent API", "Who can reach your agents from outside Dua Gen AI", onClick = onOpenAgentApi),
+        DirRow("AI & Agent Setup", "App Connectors", "Third-party accounts your agents can use", connectorSummary, icon = Icons.Outlined.Extension, onClick = onOpenConnectors),
+        DirRow("AI & Agent Setup", "Runtimes", "Python 3.11, Node 20, Chromium", icon = Icons.Outlined.Computer, onClick = onOpenRuntimes),
+        DirRow("AI & Agent Setup", "Skill Configuration", icon = Icons.Outlined.Build, onClick = onOpenSkills),
+        DirRow("AI & Agent Setup", "Language", trailing = languageLabel, icon = Icons.Outlined.Language, onClick = onOpenLanguage),
+        DirRow("AI & Agent Setup", "Channels for Dua Agent", "Where Dua Agent can be reached", icon = Icons.AutoMirrored.Outlined.Chat, onClick = onOpenChannels),
+        DirRow("AI & Agent Setup", "Agent API", "Who can reach your agents from outside Dua Gen AI", icon = Icons.Outlined.Api, onClick = onOpenAgentApi),
         DirRow("Preferences & Security", "Show Link Previews", checked = linkPreviews, onClick = { linkPreviews = !linkPreviews }),
         DirRow("Preferences & Security", "Task completion alerts", checked = taskAlerts, onClick = { taskAlerts = !taskAlerts }),
         DirRow("Preferences & Security", "Message folding", trailing = folding, onClick = { folding = if (folding == "Off") "On" else "Off" }),
-        DirRow("Profile & Device", "Appearance", trailing = themeLabel, onClick = onOpenAppearance),
-        DirRow("Profile & Device", "Storage", trailing = storageLabel, onClick = onOpenStorage),
-        DirRow("Profile & Device", "Notifications", trailing = notificationsLabel, onClick = onOpenNotifications),
+        DirRow("Profile & Device", "Appearance", trailing = themeLabel, icon = Icons.Filled.DarkMode, onClick = onOpenAppearance),
+        DirRow("Profile & Device", "Storage", trailing = storageLabel, icon = Icons.Outlined.Storage, onClick = onOpenStorage),
+        DirRow("Profile & Device", "Notifications", trailing = notificationsLabel, icon = Icons.Outlined.Notifications, onClick = onOpenNotifications),
         // THE one Sign out in the app. Signed out there is nothing to end,
         // so the row is absent and Settings → Sign in is the way in.
         if (signedIn) {
@@ -580,6 +596,7 @@ internal fun SettingsDirectory(
                 SETTINGS_SIGN_OUT_LABEL,
                 "Aap is device se sign out ho jayenge",
                 danger = true,
+                icon = Icons.AutoMirrored.Outlined.Logout,
                 onClick = { confirmSignOut = true },
             )
         } else {
@@ -598,6 +615,7 @@ internal fun SettingsDirectory(
         onValueChange = { query = it },
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (searchFocusRequester != null) Modifier.focusRequester(searchFocusRequester) else Modifier)
             .semantics { contentDescription = "Search settings" },
         singleLine = true,
         placeholder = { Text("Search settings") },
@@ -635,7 +653,7 @@ internal fun SettingsDirectory(
                     subtitle = if (trailing.isBlank()) row.subtitle.ifBlank { " " } else {
                         if (row.subtitle.isBlank()) trailing else "${row.subtitle} · $trailing"
                     },
-                    icon = null,
+                    icon = row.icon,
                     onClick = row.onClick,
                     titleColor = if (row.danger) MaterialTheme.colorScheme.error else Color.Unspecified,
                 )
