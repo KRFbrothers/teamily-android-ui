@@ -9,6 +9,11 @@
     <string name="create_agent_action">Create</string>
     <!-- Dua home composer: Attach / Voice are not wired yet -->
     <string name="composer_coming_soon">Jaldi aa raha hai</string>
+    <!-- Drawer mode row: short visible label; TalkBack hears the action. -->
+    <string name="drawer_switch_to_dua">Dua</string>
+    <string name="drawer_switch_to_agent">Agent</string>
+    <string name="drawer_switch_to_dua_talkback">Switch to Dua mode</string>
+    <string name="drawer_switch_to_agent_talkback">Switch to Agent mode</string>
     <!-- Dua home welcome: greeting and four quick starters (a tap sends it as a new Dua chat) -->
     <string name="dua_home_greeting">How can I help you today?</string>
     <string name="dua_home_starter_explain">💡 Explain a topic</string>

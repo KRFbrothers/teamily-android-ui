@@ -268,9 +268,13 @@ private const val VOICE_LABEL = "Voice input"
 private const val THREAD_VOICE_LABEL = "Voice message"
 private const val THREAD_MODE_PREFIX = "Mode: "
 
-/** Dua home's welcome: greeting and one of the four quick starters. */
+/** Dua home's welcome: greeting and the four quick starters. */
 private const val DUA_GREETING = "How can I help you today?"
+private const val DUA_STARTER_EXPLAIN = "\uD83D\uDCA1 Explain a topic"
+private const val DUA_STARTER_EMAIL = "\u270D\uFE0F Write an email"
+private const val DUA_STARTER_IDEAS = "\uD83E\uDDE0 Brainstorm ideas"
 private const val DUA_STARTER = "\uD83D\uDDD3\uFE0F Plan my day"
+private val DUA_STARTERS = listOf(DUA_STARTER_EXPLAIN, DUA_STARTER_EMAIL, DUA_STARTER_IDEAS, DUA_STARTER)
 
 /** The Skills sheet's rows — Dua-ai's `DuaAgentSkills` titles, in order. */
 private val DUA_AGENT_SKILL_TITLES = listOf(
@@ -933,8 +937,9 @@ class DuaGenAINavHostTest {
             compose.onNodeWithContentDescription("${mode.label} mode").performClick()
         } else {
             openDrawer()
-            if (visibleDescCount("Switch to ${mode.label} mode") > 0) {
-                compose.onNodeWithContentDescription("Switch to ${mode.label} mode").performClick()
+            val action = "Switch to ${mode.label} mode"
+            if (visibleDescCount(action) > 0) {
+                modeRow(mode.label).performClick()
             } else {
                 // Already in [mode]: the row offers the other mode. Just close.
                 compose.onNodeWithContentDescription(CLOSE_DRAWER).performClick()
@@ -1125,16 +1130,22 @@ class DuaGenAINavHostTest {
         assertEquals(DUA_STARTER, navController.currentBackStackEntry?.arguments?.getString("message"))
     }
 
-    /** The app launches straight into Agent home (the Teamily chat list). */
+    /** The app launches straight into Dua home. */
     @Test
-    fun theAppLaunchesIntoAgentHome() {
+    fun theAppLaunchesIntoDuaHome() {
         launch()
-        assertVisible(APP_NAME_TEXT)
-        assertVisible(PINNED_HEADER)
-        assertNotVisible(DUA_ASK_HINT)
-        // Agent home carries no Dua | Agent toggle (only Dua home does).
-        assertVisibleDescCount("Agent mode", 0)
-        assertVisibleDescCount("Dua mode", 0)
+        assertVisibleDescCount("Open menu", 1)
+        assertVisibleDescCount("Dua mode", 1)
+        assertVisibleDescCount("Agent mode", 1)
+        assertVisibleDescCount("Settings", 1)
+        assertVisible(DUA_GREETING)
+        for (starter in DUA_STARTERS) assertVisible(starter)
+        assertVisible(DUA_ASK_HINT)
+        // Dua home has no Agent chat list, brand title, or + button.
+        assertNotVisible(PINNED_HEADER)
+        assertNotVisible(CHATS_HEADER)
+        assertNotVisible(APP_NAME_TEXT)
+        assertVisibleDescCount("New chat", 0)
     }
 
     // ------------------------------------------- Agent mode is the agent surface
@@ -1308,25 +1319,44 @@ class DuaGenAINavHostTest {
     fun theModeSwitchesBothWays() {
         launch()
 
-        // Launch is Agent home, which has no toggle. Agent -> Dua goes through
-        // the drawer: avatar ("Open menu") -> the ONE mode row, which shows
-        // "Agent mode" and tells TalkBack "Switch to Dua mode".
-        assertVisible(CHATS_HEADER)
-        assertVisibleDescCount("Dua mode", 0)
-        openDrawer()
-        assertVisible("Agent mode")
-        compose.onNodeWithContentDescription("Switch to Dua mode").performClick()
-        compose.waitForIdle()
+        // Launch is Dua home. Dua -> Agent goes through the pill.
+        assertVisible(DUA_GREETING)
         assertVisible(DUA_ASK_HINT)
-        assertNotVisible(CHATS_HEADER)
-        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
         assertVisibleDescCount("Dua mode", 1)
-
-        // Dua -> Agent, through Dua home's toggle.
         compose.onNodeWithContentDescription("Agent mode").performClick()
         compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        // Agent home: avatar, brand, +, search, Personal Agent, Pinned, Chats, dock.
+        assertVisibleDescCount("Open menu", 1)
+        assertVisible(APP_NAME_TEXT)
+        assertVisibleDescCount("New chat", 1)
+        assertVisible("Search")
+        assertVisible(AGENT_ROLE_LINE)
+        assertVisible(PINNED_HEADER)
+        assertVisible(DUA_AGENT_ROW)
         assertVisible(CHATS_HEADER)
+        for (tab in HomeTab.entries) assertVisible(tab.label)
+        // Option D: no Dua | Agent pill on Agent home.
+        assertVisibleDescCount("Dua mode", 0)
+        assertVisibleDescCount("Agent mode", 0)
         assertNotVisible(DUA_ASK_HINT)
+        assertNotVisible(DUA_GREETING)
+
+        // Agent -> Dua goes through the drawer row labelled "Dua".
+        openDrawer()
+        assertVisible("Dua")
+        assertVisibleDescCount("Switch to Dua mode", 1)
+        modeRow("Dua").performClick()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        assertVisibleDescCount(CLOSE_DRAWER, 0)
+        assertVisible(DUA_GREETING)
+        for (starter in DUA_STARTERS) assertVisible(starter)
+        assertVisible(DUA_ASK_HINT)
+        assertVisibleDescCount("Dua mode", 1)
+        assertVisibleDescCount("Agent mode", 1)
+        assertNotVisible(CHATS_HEADER)
+        assertNotVisible(PINNED_HEADER)
     }
 
     /** The Pinned and Chats section headers collapse and expand their rows. */
@@ -2875,10 +2905,11 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
 
-        // Home is back: the thread's status line is gone and Agent home (the
+        // Home is back: the thread's status line is gone and Dua home (the
         // launch home) is visible again.
         assertNotVisible(CHAT_MARKER)
-        assertVisible(PINNED_HEADER)
+        assertVisible(DUA_GREETING)
+        assertVisible(DUA_ASK_HINT)
         assertEquals(
             "back must pop the chat entry, leaving Home on top",
             DuaGenAIRoutes.HOME,
@@ -2977,29 +3008,57 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription(CLOSE_DRAWER).performClick()
         compose.waitForIdle()
 
-        // Closed: the history section is off screen, Agent home is back.
+        // Closed: the history section is off screen, Dua home (launch) is back.
         assertNotVisible("HISTORY")
-        assertVisible(PINNED_HEADER)
+        assertVisible(DUA_GREETING)
+        assertVisible(DUA_ASK_HINT)
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
-    /** ChatGPT-style drawer: one mode row, no separate Dua / Agent rows. */
+    /** The drawer's clickable mode row, found by its TalkBack action. */
+    private fun modeRow(target: String) =
+        compose.onNode(hasContentDescription("Switch to $target mode") and hasClickAction())
+
+    /**
+     * ChatGPT-style drawer: one mode row whose visible text is the short
+     * target name. TalkBack hears the action ("Switch to Dua/Agent mode").
+     * A tap closes the drawer and opens that mode's home.
+     */
     @Test
     fun theDrawerHasOneModeRowThatFlipsBothWays() {
         launch()
         openDrawer()
-        assertVisible("Agent mode")
-        assertNotVisible("Dua mode")
-        compose.onNodeWithContentDescription("Switch to Dua mode").performClick()
+        // Launch is Dua home, so the row offers Agent.
+        assertVisibleDescCount("Switch to Agent mode", 1)
+        assertVisibleDescCount("Switch to Dua mode", 0)
+        modeRow("Agent").performClick()
         compose.waitForIdle()
-        assertVisible(DUA_ASK_HINT)
-        // Back in the drawer the row now reads "Dua mode" and flips to Agent.
-        openDrawer()
-        assertVisible("Dua mode")
-        compose.onNodeWithContentDescription("Switch to Agent mode").performClick()
-        compose.waitForIdle()
+        // Drawer closed, Agent home is showing.
+        assertVisibleDescCount(CLOSE_DRAWER, 0)
+        assertNotVisible("HISTORY")
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
         assertVisible(CHATS_HEADER)
+        assertVisible(PINNED_HEADER)
+        assertVisible(APP_NAME_TEXT)
+        assertVisibleDescCount("New chat", 1)
+        assertVisibleDescCount("Dua mode", 0)
+        assertVisibleDescCount("Agent mode", 0)
         assertNotVisible(DUA_ASK_HINT)
+
+        // Back in the drawer the row now reads "Dua" and returns to Dua home.
+        openDrawer()
+        assertVisible("Dua")
+        assertVisibleDescCount("Switch to Dua mode", 1)
+        modeRow("Dua").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(CLOSE_DRAWER, 0)
+        assertNotVisible("HISTORY")
+        assertVisible(DUA_GREETING)
+        for (starter in DUA_STARTERS) assertVisible(starter)
+        assertVisible(DUA_ASK_HINT)
+        assertVisibleDescCount("Dua mode", 1)
+        assertVisibleDescCount("Agent mode", 1)
+        assertNotVisible(CHATS_HEADER)
     }
 
     /** Library / Images / Computer / Videos: snackbar inside the open drawer. */
@@ -3058,6 +3117,31 @@ class DuaGenAINavHostTest {
         )
     }
 
+    /** Both mode-row texts fit the 280dp drawer on one line, unclipped. */
+    @Test
+    fun theModeRowTextFitsOnOneLine() {
+        launch()
+        // Launch is Dua home, so the first row is "Agent", then "Dua".
+        val density = compose.activity.resources.displayMetrics.density
+        for (text in listOf("Agent", "Dua")) {
+            openDrawer()
+            // Unmerged Text node inside the 280dp drawer (the Dua-home pill
+            // also draws "Agent"/"Dua" in the strip beside the sheet).
+            val node = compose.onAllNodesWithText(text, useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .first { isOnScreen(it) && it.boundsInRoot.left < 200f * density }
+            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+            assertEquals("\"$text\" must not wrap", 1, layouts.first().lineCount)
+            // (Pixel widths are not checked here: this class runs Robolectric's
+            // legacy graphics, which measures ~1px per glyph. The real-font fit
+            // is checked by the NATIVE-graphics render.)
+            assertFalse("\"$text\" must not be ellipsized", layouts.first().isLineEllipsized(0))
+            modeRow(text).performClick()
+            compose.waitForIdle()
+        }
+    }
+
     /** The round search button replaces the field; search is not built yet. */
     @Test
     fun theDrawerSearchButtonShowsComingSoon() {
@@ -3078,10 +3162,12 @@ class DuaGenAINavHostTest {
         assertVisible("HISTORY")
         compose.onNodeWithContentDescription("Start a new chat").performClick()
         compose.waitForIdle()
-        // The drawer closed and the home list is showing.
+        // The drawer closed and launch home (Dua) is showing. The Chat pill
+        // does not change mode.
         assertNotVisible("HISTORY")
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
-        assertVisible(PINNED_HEADER)
+        assertVisible(DUA_GREETING)
+        assertVisible(DUA_ASK_HINT)
     }
 
     private fun openDrawerIfClosed() {
@@ -3165,8 +3251,9 @@ class DuaGenAINavHostTest {
             DuaGenAIRoutes.HOME,
             currentRoute(),
         )
-        // Home is really back: Agent home (the launch home) is visible again.
-        assertVisible(PINNED_HEADER)
+        // Home is really back: Dua home (the launch home) is visible again.
+        assertVisible(DUA_GREETING)
+        assertVisible(DUA_ASK_HINT)
     }
 
     /**
@@ -4692,6 +4779,7 @@ class DuaGenAINavHostTest {
     fun personalAgentThreadShowsTheQuickActionChips() {
         TokenStore.token = null
         launch()
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
         compose.waitForIdle()
         assertEquals(
@@ -4721,6 +4809,7 @@ class DuaGenAINavHostTest {
     @Test
     fun anAgentsCardOpensThatAgentsThread() {
         launch()
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Managed.label).performClick()
         compose.waitForIdle()
         // The closed drawer also composes a "Slides Assistant" row: tap the card on screen.
@@ -4741,6 +4830,7 @@ class DuaGenAINavHostTest {
     fun aDiscoverCardStartsANewThread() {
         TokenStore.token = null
         launch()
+        switchTo(HomeMode.Agent)
         compose.onNodeWithText(HomeTab.Discover.label).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("Draft a landing page").performClick()
