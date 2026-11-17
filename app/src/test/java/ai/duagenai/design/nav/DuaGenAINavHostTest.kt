@@ -1425,6 +1425,44 @@ class DuaGenAINavHostTest {
         assertTabSelected(HomeTab.Chats.label)
     }
 
+    /**
+     * No real unread-memory source yet: by default the Memory tab draws no
+     * dot and announces just "Memory". With hasUnreadMemory = true the old
+     * "Memory, New updates" label comes back.
+     */
+    @Test
+    fun memoryTabHasNoUnreadDotUntilARealSourceSaysSo() {
+        val unread = androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                ai.duagenai.design.screens.HomeBottomNav(
+                    selected = HomeTab.Chats,
+                    onSelect = {},
+                    hasUnreadMemory = unread.value,
+                )
+            }
+        }
+        compose.waitForIdle()
+        assertEquals(1, compose.onAllNodes(hasContentDescription("Memory")).fetchSemanticsNodes().size)
+        assertEquals(
+            0,
+            compose.onAllNodes(hasContentDescription("Memory, New updates")).fetchSemanticsNodes().size,
+        )
+        val bounds = compose.onNode(hasContentDescription("Memory")).fetchSemanticsNode().boundsInRoot
+
+        compose.runOnIdle { unread.value = true }
+        compose.waitForIdle()
+        assertEquals(
+            1,
+            compose.onAllNodes(hasContentDescription("Memory, New updates")).fetchSemanticsNodes().size,
+        )
+        // Same tab size with or without the dot: the dock layout does not move.
+        assertEquals(
+            bounds,
+            compose.onNode(hasContentDescription("Memory, New updates")).fetchSemanticsNode().boundsInRoot,
+        )
+    }
+
     @Test
     fun homeTabForMapsTheFiveTabRoutesOnly() {
         assertEquals(HomeTab.Chats, homeTabFor(DuaGenAIRoutes.HOME))
