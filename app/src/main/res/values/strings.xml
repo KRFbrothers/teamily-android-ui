@@ -64,5 +64,29 @@
     <string name="agent_delete_confirm_title">Delete %1$s?</string>
     <string name="agent_delete_confirm_body">This agent and its chat will be removed.</string>
     <string name="agent_delete_confirm">Delete</string>
-    <string name="agent_builtin_no_delete">Built-in agents can\'t be deleted</string>
+    <!-- Profile / Settings photo + labels moved out of code -->
+    <string name="profile_avatar_cd">Your avatar, %1$s</string>
+    <string name="profile_plan_pro">DUA GEN AI PRO</string>
+    <string name="profile_plan_free">DUA GEN AI FREE</string>
+    <string name="profile_stat_chats">CHATS</string>
+    <string name="profile_stat_agents">AGENTS</string>
+    <string name="profile_stat_artifacts">ARTIFACTS</string>
+    <string name="profile_picture_cube_subtitle">Avatar · %1$s</string>
+    <string name="profile_camera_denied">Camera permission is needed to take a photo</string>
+    <string name="profile_camera_unavailable">No camera app found on this device</string>
+    <string name="profile_photo_failed">Couldn\'t load that photo</string>
+    <string name="settings_section_account">ACCOUNT</string>
+    <string name="settings_sign_in_subtitle">Use your Dua account email and password.</string>
+    <string name="settings_section_about">ABOUT</string>
+    <string name="settings_about_app_name">Dua Gen AI</string>
+    <string name="settings_about_kit">Design kit · Material 3</string>
+    <!-- Agent header pill / profile / overview -->
+    <string name="agent_open_profile">Open %1$s profile</string>
+    <string name="agent_action_workspace">Open agent workspace</string>
+    <string name="agent_action_full_profile">View full profile</string>
+    <string name="agent_action_new_group">Create New Group</string>
+    <string name="agent_action_more">More</string>
+    <string name="agent_overview_description">%1$s — your AI agent</string>
+    <string name="agent_share_failed">Couldn\'t open share</string>
+    <string name="chat_default_title">Chat</string>
 </resources>

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -94,6 +92,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     cubeId: String = CubeIds.DEFAULT,
     photoPath: String? = null,
+    photoVersion: Long = 0L,
     displayName: String = "",
     accountDataSource: RemoteAccountDataSource = RemoteAccountDataSource(),
     connectorSummary: String = "2/5",
@@ -134,7 +133,7 @@ fun SettingsScreen(
     val avatarCd = if (photoPath != null) {
         stringResource(R.string.profile_photo_cd)
     } else {
-        "Your avatar, ${CubeIds.label(cubeId)}"
+        stringResource(R.string.profile_avatar_cd, CubeIds.label(cubeId))
     }
 
     Scaffold(
@@ -204,6 +203,7 @@ fun SettingsScreen(
                         ProfileOrCubeAvatar(
                             cubeId = cubeId,
                             photoPath = photoPath,
+                            photoVersion = photoVersion,
                             size = 96.dp,
                             contentDescription = avatarCd,
                         )
@@ -229,7 +229,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(spacing.md),
                     ) {
                         Text(
-                            text = "ACCOUNT",
+                            text = stringResource(R.string.settings_section_account),
                             style = DuaGenAITextStyles.eyebrow,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -242,7 +242,7 @@ fun SettingsScreen(
                                 if (!signedIn) {
                                     SettingsRow(
                                         title = SETTINGS_SIGN_IN_LABEL,
-                                        subtitle = "Use your Dua account email and password.",
+                                        subtitle = stringResource(R.string.settings_sign_in_subtitle),
                                         icon = Icons.AutoMirrored.Outlined.Login,
                                         onClick = { showSignIn = true },
                                     )
@@ -258,7 +258,7 @@ fun SettingsScreen(
                         }
 
                         Text(
-                            text = "ABOUT",
+                            text = stringResource(R.string.settings_section_about),
                             style = DuaGenAITextStyles.eyebrow,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -269,12 +269,12 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.padding(spacing.lg)) {
                                 Text(
-                                    text = "Dua Gen AI",
+                                    text = stringResource(R.string.settings_about_app_name),
                                     style = DuaGenAITextStyles.rowTitle,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
-                                    text = "Design kit \u00b7 Material 3",
+                                    text = stringResource(R.string.settings_about_kit),
                                     style = DuaGenAITextStyles.snippet,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

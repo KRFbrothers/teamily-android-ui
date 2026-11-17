@@ -9,13 +9,16 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.InputStream
 
 /* ============================================================================
  *  Dua Gen AI — Profile settings persistence
@@ -56,6 +59,9 @@ class SettingsStore(private val context: Context) {
     private val usernameKey = stringPreferencesKey("profile_username")
     private val phoneKey = stringPreferencesKey("profile_phone")
     private val linksKey = stringPreferencesKey("profile_links")
+    private val photoVersionKey = longPreferencesKey("profile_photo_version")
+    private val mutedAgentsKey = stringSetPreferencesKey("agent_muted_ids")
+    private val pinnedAgentsKey = stringSetPreferencesKey("agent_pinned_ids")
 
     /** The saved theme mode. Unknown / missing values fall back to System. */
     val themeMode: Flow<ThemeMode> = context.settingsDataStore.data.map { prefs ->
@@ -140,7 +146,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setProfilePhone(value: String) = setProfileField(phoneKey, value)
     suspend fun setProfileLinks(value: String) = setProfileField(linksKey, value)
 
-    private suspend fun setProfileField(key: androidx.datastore.preferences.core.Preferences.Key<String>, value: String) {
+    private suspend fun setProfileField(key: Preferences.Key<String>, value: String) {
         context.settingsDataStore.edit { prefs ->
             val trimmed = value.trim()
             if (trimmed.isEmpty()) prefs.remove(key) else prefs[key] = trimmed
@@ -148,42 +154,153 @@ class SettingsStore(private val context: Context) {
     }
 
     /**
-     * Writes [bitmap] under app files and remembers the path. Replaces any
-     * previous photo file.
+     * Writes [bitmap] under app files and remembers the path. Each save gets a
+     * NEW file name (the save time), so anything keyed on the path reloads,
+     * and the previous photo file is deleted. The bitmap is scaled down to at
+     * most [PHOTO_MAX_SIDE_PX] on its longest side first.
      */
     suspend fun saveProfilePhoto(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
-        val file = photoFile()
-        file.parentFile?.mkdirs()
+        val version = nextPhotoVersion()
+        val dir = File(context.filesDir, PHOTO_DIR)
+        dir.mkdirs()
+        val file = File(dir, "avatar_$version.jpg")
+        val scaled = scaleToMaxSide(bitmap, PHOTO_MAX_SIDE_PX)
         file.outputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)
         }
+        if (scaled !== bitmap) scaled.recycle()
         val path = file.absolutePath
-        context.settingsDataStore.edit { prefs -> prefs[photoPathKey] = path }
+        context.settingsDataStore.edit { prefs ->
+            prefs[photoPathKey] = path
+            prefs[photoVersionKey] = version
+        }
+        deleteOldPhotos(keep = file)
         path
     }
 
     /**
-     * Decodes [uri] (the Photo Picker result) and stores it the same way as
+     * Decodes [uri] (the Photo Picker result) on the IO dispatcher, downsampled
+     * to about [PHOTO_MAX_SIDE_PX], and stores it the same way as
      * [saveProfilePhoto]. Returns null if the image cannot be read.
      */
     suspend fun saveProfilePhotoFromUri(uri: Uri): String? = withContext(Dispatchers.IO) {
-        val bitmap = context.contentResolver.openInputStream(uri)?.use { input ->
-            BitmapFactory.decodeStream(input)
-        } ?: return@withContext null
+        val bitmap = runCatching {
+            decodeSampled(PHOTO_MAX_SIDE_PX) { context.contentResolver.openInputStream(uri) }
+        }.getOrNull() ?: return@withContext null
         saveProfilePhoto(bitmap)
     }
 
-    /** Deletes the saved photo file and clears the stored path. */
+    /** Deletes the saved photo file(s) and clears the stored path and version. */
     suspend fun clearProfilePhoto() = withContext(Dispatchers.IO) {
-        photoFile().delete()
-        context.settingsDataStore.edit { prefs -> prefs.remove(photoPathKey) }
+        deleteOldPhotos(keep = null)
+        context.settingsDataStore.edit { prefs ->
+            prefs.remove(photoPathKey)
+            prefs[photoVersionKey] = nextPhotoVersion()
+        }
     }
 
-    private fun photoFile(): File = File(context.filesDir, PHOTO_RELATIVE_PATH)
+    /**
+     * Bumped on every photo save or clear (the save time in ms; 0 when the
+     * photo was never touched). The avatar loader is keyed on it.
+     */
+    val profilePhotoVersion: Flow<Long> = context.settingsDataStore.data.map { prefs ->
+        prefs[photoVersionKey] ?: 0L
+    }
+
+    private fun deleteOldPhotos(keep: File?) {
+        File(context.filesDir, PHOTO_DIR).listFiles()?.forEach { f ->
+            if (f.isFile && f != keep) f.delete()
+        }
+    }
+
+    /** Agent ids whose notifications are muted (agent profile "Mute"). */
+    val mutedAgents: Flow<Set<String>> = context.settingsDataStore.data.map { prefs ->
+        prefs[mutedAgentsKey].orEmpty()
+    }
+
+    /** Agent ids pinned to top (agent profile "Pin"). */
+    val pinnedAgents: Flow<Set<String>> = context.settingsDataStore.data.map { prefs ->
+        prefs[pinnedAgentsKey].orEmpty()
+    }
+
+    suspend fun setAgentMuted(agentId: String, on: Boolean) = setInSet(mutedAgentsKey, agentId, on)
+    suspend fun setAgentPinned(agentId: String, on: Boolean) = setInSet(pinnedAgentsKey, agentId, on)
+
+    /** Drops every per-agent flag of [agentId] (the agent was deleted). */
+    suspend fun forgetAgent(agentId: String) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[mutedAgentsKey] = prefs[mutedAgentsKey].orEmpty() - agentId
+            prefs[pinnedAgentsKey] = prefs[pinnedAgentsKey].orEmpty() - agentId
+        }
+    }
+
+    private suspend fun setInSet(key: Preferences.Key<Set<String>>, id: String, on: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            val now = prefs[key].orEmpty()
+            prefs[key] = if (on) now + id else now - id
+        }
+    }
 
     companion object {
-        /** Relative path under [Context.getFilesDir] for the profile photo. */
-        const val PHOTO_RELATIVE_PATH = "profile/avatar.jpg"
+        /** Folder under [Context.getFilesDir] holding the one profile photo. */
+        const val PHOTO_DIR = "profile"
+
+        /** Longest side, in px, a saved or displayed profile photo is decoded to. */
+        const val PHOTO_MAX_SIDE_PX = 512
+
+        /**
+         * Decodes the stream [open] returns, downsampled with inSampleSize so
+         * its longest side is about [maxSide] (never below it). Opens the
+         * stream twice: once for bounds, once for pixels. Call off the main
+         * thread. Null when the data is not an image.
+         */
+        fun decodeSampled(maxSide: Int, open: () -> InputStream?): Bitmap? {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            // decodeStream returns null in bounds-only mode; only the stream matters.
+            val stream = open() ?: return null
+            stream.use { BitmapFactory.decodeStream(it, null, bounds) }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            val opts = BitmapFactory.Options().apply {
+                inSampleSize = sampleSizeFor(bounds.outWidth, bounds.outHeight, maxSide)
+            }
+            return open()?.use { BitmapFactory.decodeStream(it, null, opts) }
+        }
+
+        /** [decodeSampled] for a file path; null if the file is missing. */
+        fun decodeSampledFile(path: String, maxSide: Int = PHOTO_MAX_SIDE_PX): Bitmap? {
+            val file = File(path)
+            if (!file.isFile) return null
+            return runCatching { decodeSampled(maxSide) { file.inputStream() } }.getOrNull()
+        }
+
+        private var lastPhotoVersion = 0L
+
+        /** The save time in ms, strictly increasing even for two saves in one ms. */
+        @Synchronized
+        private fun nextPhotoVersion(): Long {
+            lastPhotoVersion = maxOf(System.currentTimeMillis(), lastPhotoVersion + 1)
+            return lastPhotoVersion
+        }
+
+        /** Largest power-of-two sample size that keeps the longest side >= [maxSide]. */
+        fun sampleSizeFor(width: Int, height: Int, maxSide: Int): Int {
+            var sample = 1
+            val longest = maxOf(width, height)
+            while (longest / (sample * 2) >= maxSide) sample *= 2
+            return sample
+        }
+
+        private fun scaleToMaxSide(bitmap: Bitmap, maxSide: Int): Bitmap {
+            val longest = maxOf(bitmap.width, bitmap.height)
+            if (longest <= maxSide) return bitmap
+            val ratio = maxSide.toFloat() / longest
+            return Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * ratio).toInt().coerceAtLeast(1),
+                (bitmap.height * ratio).toInt().coerceAtLeast(1),
+                true,
+            )
+        }
 
         /** The demo values the kit ships with, so the first frame matches. */
         const val DEFAULT_STORAGE_USED_GB = 3.2

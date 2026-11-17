@@ -50,7 +50,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -108,19 +107,67 @@ internal fun profileAgentRows(created: List<String>): List<ProfileListRow> = bui
         add(ProfileListRow(chat.chatId, chat.title, chat.subtitle, chat.time))
     }
     created.forEachIndexed { index, line ->
-        add(ProfileListRow("made_agent_$index", madeAgentName(line), "Header menu se bana"))
+        add(ProfileListRow(madeAgentId(line, index), madeAgentName(line), "Header menu se bana"))
     }
 }
 
 /**
- * One `madeAgents` line: `name<TAB>shape<TAB>color`. The list stays a
+ * One `madeAgents` line: `name<TAB>shape<TAB>color<TAB>id`. The list stays a
  * newline-separated String so rememberSaveable keeps it as before; a line from
  * before Create Agent (a bare name) still reads back as that name.
+ *
+ * The id is STABLE: it is chosen once when the agent is made and never
+ * depends on the line's position, so deleting one agent cannot hand its
+ * transcript / Mute / Pin to the next one. [id] defaults to a fresh one.
  */
-internal fun madeAgentLine(name: String, shapeKey: String, colorKey: String): String {
+internal fun madeAgentLine(
+    name: String,
+    shapeKey: String,
+    colorKey: String,
+    id: String = newMadeAgentId(),
+): String {
     val clean = name.replace('\t', ' ').replace('\n', ' ').trim()
-    return "$clean\t$shapeKey\t$colorKey"
+    return "$clean\t$shapeKey\t$colorKey\t$id"
 }
+
+/** A fresh made-agent id. The `u` keeps it apart from legacy `made_agent_<index>` ids. */
+internal fun newMadeAgentId(): String =
+    MADE_AGENT_PREFIX + "u" + java.util.UUID.randomUUID().toString().replace("-", "").take(12)
+
+/**
+ * The stable id of a `madeAgents` line. A line saved before ids existed has
+ * none, so it gets the id it always had (`made_agent_<index>`) — deterministic,
+ * and [withMadeAgentIds] writes it into the line once, so it never shifts.
+ */
+internal fun madeAgentId(line: String, index: Int): String =
+    line.split('\t').getOrNull(3)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: "$MADE_AGENT_PREFIX$index"
+
+/**
+ * Migrates a `madeAgents` string: every line without an id gets its derived
+ * [madeAgentId] written in. Lines that already carry one are unchanged, so
+ * this is idempotent. Run it before any edit that could reorder lines.
+ */
+internal fun withMadeAgentIds(raw: String): String =
+    linesOf(raw).mapIndexed { index, line ->
+        val parts = line.split('\t')
+        if (parts.getOrNull(3)?.trim().isNullOrEmpty()) {
+            madeAgentLine(
+                madeAgentName(line),
+                madeAgentShapeKey(line).orEmpty(),
+                madeAgentColorKey(line).orEmpty(),
+                madeAgentId(line, index),
+            )
+        } else {
+            line
+        }
+    }.joinToString("\n")
+
+/** [raw] without the made agent whose stable id is [id]; other lines untouched. */
+internal fun withoutMadeAgent(raw: String, id: String): String =
+    linesOf(withMadeAgentIds(raw))
+        .filterIndexed { index, line -> madeAgentId(line, index) != id }
+        .joinToString("\n")
 
 /** The display name of a `madeAgents` line. */
 internal fun madeAgentName(line: String): String = line.substringBefore('\t').trim()
