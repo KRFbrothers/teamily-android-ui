@@ -16,11 +16,11 @@ import ai.duagenai.design.theme.DemoBadge
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
-import ai.duagenai.design.theme.TeamilyStroke
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,7 +41,6 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -56,23 +55,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlinx.coroutines.launch
 
 /* ============================================================================
@@ -90,14 +85,10 @@ import kotlinx.coroutines.launch
  *      that conversation's own cube in ChatScreen.
  *
  *  Layout follows the ChatGPT Android drawer in Dua colours. Every nav row
- *  leads with an outline icon. The mode row's visible label is the target
- *  ("Agent" or "Dua"). "Agent" uses a WIREFRAME nav icon (hexagon + Y seam,
- *  stroke only, no fill); "Dua" uses a front-facing
- *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
- *  and from Library's isometric box in the HTML preview. Neither is a cube
- *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
- *  solid charcoal/orange fills, and these are 1.75dp (`--nv-icon-stroke`) outlines. Keeping them
- *  separate is what stops the two from being confused later.
+ *  leads with an outline icon. The Dua | Agent mode switch is NOT a nav row:
+ *  it is a segmented toggle ([DrawerModeToggle]) directly under the title,
+ *  in the same pill language as Dua home's header toggle, with the active
+ *  mode filled Dua green.
  *
  *  Colours are the kit's own green tokens — no purple anywhere. The mockup's
  *  #7C3AED voice button and #2563EB avatar ring are NOT carried over.
@@ -119,13 +110,6 @@ enum class DrawerDestination(val label: String, val comingSoon: Boolean = false)
     Images("Images", comingSoon = true),
     Computer("Computer", comingSoon = true),
     Videos("Videos", comingSoon = true),
-    /**
-     * ONE row for the Dua | Agent mode. Visible label is the target ("Dua"
-     * on Agent home, "Agent" on Dua home) with that mode's glyph. TalkBack
-     * hears "Switch to Dua/Agent mode". Agent home has no toggle, so this
-     * is its way back to Dua.
-     */
-    ModeSwitch("Mode"),
 }
 
 /** The drawer's one width cap (ChatGPT-like; leaves a home strip beside it). */
@@ -138,7 +122,8 @@ internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
  * The drawer sheet, laid out like the ChatGPT Android drawer in Dua colours:
  *
  *   "Dua Gen AI" title · round search button
- *   Library / Images / Computer / Videos / mode row  (icon + label, no highlight)
+ *   [ Dua | Agent ] segmented toggle (active mode filled green)
+ *   Library / Images / Computer / Videos  (icon + label, no highlight)
  *   thin divider
  *   HISTORY [Demo] · plain chat titles · "See all"
  *   green "Chat" pill (new chat)            round avatar (Profile)
@@ -152,10 +137,13 @@ internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
  * @param cubeId the USER's saved cube, for the footer avatar only.
  * @param signedIn whether a session exists; read out on the avatar
  *   ("Profile, Signed in" / "Profile, Not signed in").
- * @param mode the current Home mode, shown by the [DrawerDestination.ModeSwitch] row.
+ * @param mode the current Home mode, shown as the active segment of the toggle.
  * @param history the same [ChatRow] list Home renders, so the two cannot drift.
- * @param onSelect fired by the mode row and the Chat pill. The host decides
- *   what each one does. Coming-soon rows never reach it.
+ * @param onSelect fired by the Chat pill. The host decides what it does.
+ *   Coming-soon rows never reach it.
+ * @param onModeChange fired by a toggle segment with THAT segment's mode. The
+ *   host closes the drawer and opens that mode's home (also when it is the
+ *   active one).
  * @param onOpenChat fired by a history row, with that row's own id and title.
  * @param onOpenProfile fired by the footer avatar: the `profile` route.
  */
@@ -166,6 +154,7 @@ fun SidebarDrawer(
     mode: HomeMode,
     history: List<ChatRow>,
     onSelect: (DrawerDestination) -> Unit,
+    onModeChange: (HomeMode) -> Unit,
     onOpenChat: (chatId: String, title: String) -> Unit,
     onOpenProfile: () -> Unit,
     modifier: Modifier = Modifier,
@@ -243,6 +232,15 @@ fun SidebarDrawer(
                     }
                 }
 
+                /* ---------- Dua | Agent toggle ---------- */
+                DrawerModeToggle(
+                    mode = mode,
+                    onModeChange = onModeChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.lg, vertical = spacing.xs),
+                )
+
                 /* ---------- nav rows ---------- */
                 Column(Modifier.padding(vertical = spacing.xs)) {
                     DrawerDestination.entries
@@ -250,7 +248,6 @@ fun SidebarDrawer(
                         .forEach { destination ->
                             DrawerNavItem(
                                 destination = destination,
-                                mode = mode,
                                 onClick = {
                                     if (destination.comingSoon) showComingSoon() else onSelect(destination)
                                 },
@@ -379,47 +376,83 @@ private fun drawerRowText() = MaterialTheme.typography.bodyLarge.copy(
 )
 
 /**
- * One nav row: a 22dp outline icon, then the label, 56dp tall, no highlight.
- * The [DrawerDestination.ModeSwitch] row shows the target mode's short
- * label ("Dua" on Agent, "Agent" on Dua) with the OTHER mode's glyph
- * and a small trailing swap arrow. TalkBack hears "Switch to Dua/Agent mode".
+ * The Dua | Agent segmented control, under the drawer title.
+ *
+ * Same pill language as Dua home's header toggle (`surfaceVariant` track,
+ * 3dp inset, pill cells, Lato label, Role.Tab + selected) — that composable is
+ * private to the frozen HomeScreen.kt, so it is not shared from here. In the
+ * drawer the ACTIVE cell is filled with the theme primary (Dua green #087C45)
+ * and carries `onPrimary` text, so the current mode reads at a glance.
+ *
+ * Each cell is at least 48dp tall. TalkBack hears "Switch to Dua/Agent mode,
+ * Tab, selected/not selected"; a tap reports THAT cell's mode.
  */
+@Composable
+private fun DrawerModeToggle(
+    mode: HomeMode,
+    onModeChange: (HomeMode) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .clip(DuaGenAITheme.shapes.pill)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        HomeMode.entries.forEach { entry ->
+            val active = entry == mode
+            val label = stringResource(
+                if (entry == HomeMode.Dua) R.string.drawer_switch_to_dua else R.string.drawer_switch_to_agent,
+            )
+            val talkback = stringResource(
+                if (entry == HomeMode.Dua) {
+                    R.string.drawer_switch_to_dua_talkback
+                } else {
+                    R.string.drawer_switch_to_agent_talkback
+                },
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(DuaGenAITheme.shapes.pill)
+                    .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clickable { onModeChange(entry) }
+                    .semantics {
+                        contentDescription = talkback
+                        role = Role.Tab
+                        selected = active
+                    }
+                    .sizeIn(minHeight = 48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    style = drawerRowText().copy(
+                        fontSize = 15.sp,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    ),
+                    color = if (active) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** One nav row: a 22dp outline icon, then the label, 56dp tall, no highlight. */
 @Composable
 private fun DrawerNavItem(
     destination: DrawerDestination,
-    mode: HomeMode,
     onClick: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val iconTint = MaterialTheme.colorScheme.onSurface
-    val isModeRow = destination == DrawerDestination.ModeSwitch
-    val other = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
-    val label = if (isModeRow) {
-        stringResource(
-            if (other == HomeMode.Dua) R.string.drawer_switch_to_dua else R.string.drawer_switch_to_agent,
-        )
-    } else {
-        destination.label
-    }
-    val talkback = if (isModeRow) {
-        stringResource(
-            if (other == HomeMode.Dua) {
-                R.string.drawer_switch_to_dua_talkback
-            } else {
-                R.string.drawer_switch_to_agent_talkback
-            },
-        )
-    } else {
-        null
-    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(
-                if (talkback != null) Modifier.semantics { contentDescription = talkback }
-                else Modifier
-            )
             .clickable(role = Role.Button, onClick = onClick)
             .sizeIn(minHeight = 56.dp)
             .padding(horizontal = spacing.lg),
@@ -432,18 +465,12 @@ private fun DrawerNavItem(
             DrawerDestination.Images -> Icon(Icons.Outlined.Image, null, iconModifier, tint = iconTint)
             DrawerDestination.Computer -> Icon(Icons.Outlined.Computer, null, iconModifier, tint = iconTint)
             DrawerDestination.Videos -> Icon(Icons.Outlined.VideoLibrary, null, iconModifier, tint = iconTint)
-            // Wireframe glyphs, NOT cube avatars — see the file header.
-            // The mode the tap goes TO.
-            DrawerDestination.ModeSwitch -> when (other) {
-                HomeMode.Dua -> DuaCubeGlyph(tint = iconTint, modifier = iconModifier)
-                HomeMode.Agent -> AgentCubeGlyph(tint = iconTint, modifier = iconModifier)
-            }
             // Not listed as a row (it is the Chat pill).
             DrawerDestination.NewChat -> Unit
         }
         Spacer(Modifier.width(spacing.lg))
         Text(
-            text = label,
+            text = destination.label,
             style = drawerRowText(),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
@@ -451,16 +478,6 @@ private fun DrawerNavItem(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
-        if (isModeRow) {
-            Spacer(Modifier.width(spacing.sm))
-            // Decorative: TalkBack already hears the action from the row.
-            Icon(
-                Icons.Outlined.SwapHoriz,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-        }
     }
 }
 
@@ -480,105 +497,4 @@ private fun DrawerHistoryRow(row: ChatRow, onClick: () -> Unit) {
             .sizeIn(minHeight = 52.dp)
             .padding(horizontal = spacing.lg, vertical = 14.dp),
     )
-}
-
-/**
- * The "Dua" nav glyph: a front-facing cube outline (square face, top and
- * right planes), stroke only. Drawn with [Canvas] for the same reason as
- * [AgentCubeGlyph] — it is a 1.75dp wireframe nav icon, not a catalogue avatar.
- */
-@Composable
-internal fun DuaCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
-        val stroke = Stroke(
-            width = TeamilyStroke.icon.toPx(),
-            cap = StrokeCap.Round,
-            join = StrokeJoin.Round,
-        )
-        val fl = size.width * 0.20f
-        val ft = size.height * 0.34f
-        val fr = size.width * 0.68f
-        val fb = size.height * 0.82f
-        val dx = size.width * 0.16f
-        val dy = size.height * 0.20f
-
-        val front = Path().apply {
-            moveTo(fl, ft)
-            lineTo(fr, ft)
-            lineTo(fr, fb)
-            lineTo(fl, fb)
-            close()
-        }
-        drawPath(front, color = tint, style = stroke)
-
-        val top = Path().apply {
-            moveTo(fl, ft)
-            lineTo(fl + dx, ft - dy)
-            lineTo(fr + dx, ft - dy)
-            lineTo(fr, ft)
-            close()
-        }
-        drawPath(top, color = tint, style = stroke)
-
-        val side = Path().apply {
-            moveTo(fr, ft)
-            lineTo(fr + dx, ft - dy)
-            lineTo(fr + dx, fb - dy)
-            lineTo(fr, fb)
-            close()
-        }
-        drawPath(side, color = tint, style = stroke)
-    }
-}
-
-/**
- * The "Agent" nav glyph: a hexagon outline with a Y seam, stroke only.
- *
- * Drawn with [Canvas] rather than added to `CubeIcons` on purpose. `CubeIcons`
- * is a generated catalogue of 42 solid-colour 24×24 cube avatars; this is a
- * 1.75dp wireframe nav icon. Putting it in the catalogue would break that
- * contract (and, because `CubeCatalog.forEntity` uses `h % COUNT`, changing
- * COUNT would silently re-map every entity's cube).
- */
-@Composable
-internal fun AgentCubeGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
-        val cx = size.width / 2f
-        val cy = size.height / 2f
-        val r = size.minDimension * 0.44f
-
-        fun at(deg: Double) = Offset(
-            cx + (r * cos(Math.toRadians(deg))).toFloat(),
-            cy + (r * sin(Math.toRadians(deg))).toFloat(),
-        )
-
-        val top = at(-90.0)
-        val upperRight = at(-30.0)
-        val lowerRight = at(30.0)
-        val bottom = at(90.0)
-        val lowerLeft = at(150.0)
-        val upperLeft = at(210.0)
-
-        val hexagon = Path().apply {
-            moveTo(top.x, top.y)
-            lineTo(upperRight.x, upperRight.y)
-            lineTo(lowerRight.x, lowerRight.y)
-            lineTo(bottom.x, bottom.y)
-            lineTo(lowerLeft.x, lowerLeft.y)
-            lineTo(upperLeft.x, upperLeft.y)
-            close()
-        }
-        drawPath(hexagon, color = tint, style = Stroke(width = TeamilyStroke.icon.toPx()))
-
-        // The Y seam: centre to top, centre to lower-left, centre to lower-right.
-        val seam = Path().apply {
-            moveTo(cx, cy)
-            lineTo(top.x, top.y)
-            moveTo(cx, cy)
-            lineTo(lowerLeft.x, lowerLeft.y)
-            moveTo(cx, cy)
-            lineTo(lowerRight.x, lowerRight.y)
-        }
-        drawPath(seam, color = tint, style = Stroke(width = TeamilyStroke.icon.toPx()))
-    }
 }
