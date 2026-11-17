@@ -930,12 +930,21 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * Switches mode the way a user does. Dua home has the toggle; Agent home
-     * has none, so going to Dua uses the drawer's ONE mode row.
+     * Opens Settings the way a user does from the sidebar: the drawer footer
+     * avatar. Profile is reached only from Settings → Edit profile.
      */
-    private fun openProfileFromDrawer() {
+    private fun openSettingsFromDrawer() {
         openDrawer()
         compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
+        compose.waitForIdle()
+    }
+
+    /**
+     * Opens Profile the way a user does: drawer avatar → Settings → Edit profile.
+     */
+    private fun openProfileFromDrawer() {
+        openSettingsFromDrawer()
+        compose.onNodeWithText(SETTINGS_EDIT_PROFILE_LABEL).performClick()
         compose.waitForIdle()
     }
 
@@ -1422,10 +1431,19 @@ class DuaGenAINavHostTest {
         assertTrue("drawer history carries Demo", demoCount() >= 1)
         compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+        compose.onNodeWithText(SETTINGS_EDIT_PROFILE_LABEL).performClick()
+        compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
         assertTrue("profile plan carries Demo", demoCount() >= 1)
+        // Profile was opened from Settings, so one Back lands on Settings and
+        // a second Back returns to Home — the stack the rest of this test needs.
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+        compose.activity.onBackPressedDispatcher.onBackPressed()
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
 
         // Agent home chat list.
         switchTo(HomeMode.Agent)
@@ -3188,59 +3206,80 @@ class DuaGenAINavHostTest {
         compose.onNodeWithTag(ai.duagenai.design.screens.drawerAvatarTag(CubeIds.DEFAULT)).assertExists()
     }
 
-    // ------------------------------------------------- drawer gear -> Profile
+    // ------------------------------------------------- drawer avatar -> Settings
 
     /**
-     * The drawer footer's gear opens PROFILE.
+     * The drawer footer's avatar opens SETTINGS, not Profile.
      *
-     * The `profile` route and its `ProfileScreen` destination already existed;
-     * what was missing was a caller, so the screen was unreachable. The gear now
-     * navigates there through the same `navController.navigate(...)` every other
-     * destination uses — no new route, no new screen.
-     *
-     * The gear is found by its content description, which is "Profile" (it was
-     * "Settings" while it did nothing). That label is also what keeps this test
-     * honest: if the gear ever went back to a no-op, the click would leave the
-     * route on HOME and the assertion would fail.
+     * The avatar is found by its content description ("Profile, Not signed in"
+     * while signed out). That label is also what keeps this test honest: if the
+     * avatar ever went back to a no-op, the click would leave the route on HOME
+     * and the assertion would fail.
      */
     @Test
-    fun theDrawerGearOpensTheProfileScreen() {
+    fun theDrawerAvatarOpensTheSettingsScreen() {
         launch()
         openDrawer()
 
-        // The gear is in the drawer footer, on screen while the sheet is open.
+        // The avatar is in the drawer footer, on screen while the sheet is open.
         assertVisibleDescCount("Profile, Not signed in", 1)
 
         compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
         assertEquals(
-            "the drawer gear must open the existing profile route",
-            DuaGenAIRoutes.PROFILE,
+            "the drawer avatar must open Settings, not Profile",
+            DuaGenAIRoutes.SETTINGS,
             currentRoute(),
         )
 
-        // ProfileScreen is really on screen, not just the route: its own title
-        // and the identity rows are the screen's markers.
+        // SettingsScreen is really on screen, not just the route: its signed-out
+        // header and the Edit profile row are the screen's markers.
+        assertVisible("Not signed in")
+        assertVisible(SETTINGS_EDIT_PROFILE_LABEL)
+        assertVisible(SETTINGS_SIGN_IN_LABEL)
+    }
+
+    /**
+     * Settings → Edit profile still opens Profile.
+     *
+     * Profile is reached only this way (or from other Settings entry points),
+     * never from the drawer footer avatar.
+     */
+    @Test
+    fun settingsEditProfileOpensTheProfileScreen() {
+        launch()
+        openSettingsFromDrawer()
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+
+        compose.onNodeWithText(SETTINGS_EDIT_PROFILE_LABEL).performClick()
+        compose.waitForIdle()
+
+        assertEquals(
+            "Edit profile must open the existing profile route",
+            DuaGenAIRoutes.PROFILE,
+            currentRoute(),
+        )
         assertVisible("Profile")
         assertVisible("Name")
         assertVisible("Reserve username")
     }
 
     /**
-     * Back from Profile returns to the screen the drawer was opened from.
+     * Back from Settings (opened from the drawer avatar) returns to the screen
+     * the drawer was opened from.
      *
-     * The gear closes the drawer and pushes PROFILE, so the back stack is
-     * Home -> Profile and a pop lands on Home — the same behaviour every other
+     * The avatar closes the drawer and pushes SETTINGS, so the back stack is
+     * Home -> Settings and a pop lands on Home — the same behaviour every other
      * drawer destination has.
      */
     @Test
-    fun backFromProfileReturnsToHome() {
+    fun backFromSettingsOpenedFromDrawerReturnsToHome() {
         launch()
         openDrawer()
         compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
 
         compose.runOnUiThread {
             compose.activity.onBackPressedDispatcher.onBackPressed()
@@ -3248,7 +3287,7 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         assertEquals(
-            "back from Profile must land on Home",
+            "back from Settings must land on Home",
             DuaGenAIRoutes.HOME,
             currentRoute(),
         )
@@ -3258,13 +3297,13 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The gear is reachable from Agent's home too, and still opens Profile.
+     * The avatar is reachable from Agent's home too, and still opens Settings.
      *
      * The drawer is a sibling of the NavHost, so it is the same sheet in both
      * modes. This pins that the wiring is not Dua-only.
      */
     @Test
-    fun theDrawerGearOpensProfileFromAgentModeToo() {
+    fun theDrawerAvatarOpensSettingsFromAgentModeToo() {
         launch()
         switchTo(HomeMode.Agent)
         openDrawer()
@@ -3272,8 +3311,9 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
         compose.waitForIdle()
 
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
-        assertVisible("Name")
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+        assertVisible("Not signed in")
+        assertVisible(SETTINGS_EDIT_PROFILE_LABEL)
     }
 
     // ------------------------------------------- Profile -> cube picker
