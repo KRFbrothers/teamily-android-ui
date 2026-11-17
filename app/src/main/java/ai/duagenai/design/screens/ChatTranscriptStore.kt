@@ -91,9 +91,13 @@ class ChatTranscriptStore : ViewModel() {
         }
     }
 
-    /** Drops a thread's transcript (the "Clear chat history" action). */
+    /**
+     * Empties a thread's transcript (the agent profile's "Clear Chat History").
+     * The key stays, mapped to an empty list, so [ensure] does not re-seed
+     * the sample conversation the next time the thread opens.
+     */
     fun clear(chatId: String) {
-        _threads.update { current -> current - chatId }
+        _threads.update { current -> current + (chatId to emptyList()) }
     }
 
     /** `MutableStateFlow.update` without pulling in the coroutines `update` ext. */
