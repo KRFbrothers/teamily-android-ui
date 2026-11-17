@@ -1,16 +1,31 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.R
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -25,49 +40,43 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.MaxContentWidth
+import ai.duagenai.design.theme.teamilyCanvas
+import ai.duagenai.design.theme.teamilyPalette
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.Alignment
-import ai.duagenai.design.theme.MaxContentWidth
 
 /* ============================================================================
- *  Settings — the destination behind Home's gear.
+ *  Settings — the landing page behind Dua home's gear.
  *
- *  WHY THIS FILE EXISTS
- *  --------------------
- *  `DuaGenAINavHost` registered `composable(SETTINGS) { SettingsScreen() }`, but
- *  the composable was never shipped, so the nav graph could not compile and the
- *  gear led nowhere. This is that destination.
+ *  Soft atmosphere header (existing tokens, no new bitmap) with a large
+ *  round avatar and the profile name (or "Not signed in"). Tapping the
+ *  header opens Profile. The directory rows and groups are unchanged;
+ *  they sit in a rounded surface sheet under the header. The app bar has
+ *  a back arrow and a search icon that focuses the existing search field.
  *
- *  WHAT IT IS
- *  ----------
- *  The app-level settings that are NOT part of the Profile screen: the account
- *  controls (edit profile / sign out) and the build information. The Profile
- *  screen owns the personalisation rows (avatar, appearance, storage,
- *  notifications); this screen owns the account and the "about" block, so the
- *  two never duplicate a control.
- *
- *  HONESTY RULE
- *  ------------
- *  Profile editing is not implemented, so "Edit profile" stays disabled.
- *  "Sign in" is the ONE sign-in in the app: it asks for email and password and
- *  writes the session token (Profile's SESSION row opens this same dialog).
- *  "Sign out" exists once, in the directory's Profile & Device group, only
- *  while a session exists: confirm -> server logout -> Home.
+ *  Sign in / Sign out still live here, once.
  * ==========================================================================*/
 
-/** The label of the (disabled) account-edit control. */
+/** The label of the account-edit control (opens Profile). */
 const val SETTINGS_EDIT_PROFILE_LABEL = "Edit profile"
 
 /** The label of the sign-in control. */
@@ -76,20 +85,24 @@ const val SETTINGS_SIGN_IN_LABEL = "Sign in"
 /** The label of the one sign-out control (Settings → Profile & Device). */
 const val SETTINGS_SIGN_OUT_LABEL = "Sign out"
 
-/** Why the account controls are disabled. */
+/** Legacy helper — no longer shown; Edit profile is now the way into Profile. */
 const val SETTINGS_ACCOUNT_HELPER = "Account editing is not available in this build."
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    cubeId: String = CubeIds.DEFAULT,
+    photoPath: String? = null,
+    displayName: String = "",
     accountDataSource: RemoteAccountDataSource = RemoteAccountDataSource(),
     connectorSummary: String = "2/5",
     languageLabel: String = "English",
     themeModeLabel: String = "System default",
     storageLabel: String = "3.2 GB of 15 GB",
     notificationsLabel: String = "5 of 7 on",
+    onOpenProfile: () -> Unit = {},
+    onBack: () -> Unit = {},
     onOpenConnectors: () -> Unit = {},
     onOpenRuntimes: () -> Unit = {},
     onOpenSkills: () -> Unit = {},
@@ -108,25 +121,55 @@ fun SettingsScreen(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
     val sessionToken by TokenStore.state.collectAsStateWithLifecycle()
     val signedIn = sessionToken != null
     val scope = rememberCoroutineScope()
     var showSignIn by rememberSaveable { mutableStateOf(false) }
+    val searchFocus = remember { FocusRequester() }
+    val scroll = rememberScrollState()
+
+    val headerName = displayName.ifBlank { stringResource(R.string.profile_not_signed_in) }
+    val openProfileLabel = stringResource(R.string.profile_open)
+    val avatarCd = if (photoPath != null) {
+        stringResource(R.string.profile_photo_cd)
+    } else {
+        "Your avatar, ${CubeIds.label(cubeId)}"
+    }
 
     Scaffold(
         modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Settings",
+                        text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { searchFocus.requestFocus() }) {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.settings_search_action),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = palette.atmosphereBase,
+                    scrolledContainerColor = palette.atmosphereBase,
                 ),
             )
         },
@@ -137,98 +180,134 @@ fun SettingsScreen(
                 .padding(inner),
             contentAlignment = Alignment.TopCenter,
         ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = MaxContentWidth)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = spacing.gutter, vertical = spacing.md),
-            verticalArrangement = Arrangement.spacedBy(spacing.md),
-        ) {
-            Text(
-                text = "ACCOUNT",
-                style = DuaGenAITextStyles.eyebrow,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = DuaGenAITheme.shapes.card,
-                color = MaterialTheme.colorScheme.surface,
+            Column(
+                modifier = Modifier
+                    .widthIn(max = MaxContentWidth)
+                    .fillMaxSize()
+                    .verticalScroll(scroll),
             ) {
-                Column {
-                    // Signed out, this row is the way in. Signed in, it is gone:
-                    // the session already exists, and "Sign out" is the action.
-                    if (!signedIn) {
-                        SettingsRow(
-                            title = SETTINGS_SIGN_IN_LABEL,
-                            subtitle = "Use your Dua account email and password.",
-                            icon = null,
-                            onClick = { showSignIn = true },
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .teamilyCanvas(palette)
+                        .padding(horizontal = spacing.gutter, vertical = spacing.lg),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = openProfileLabel
+                            }
+                            .clickable(role = Role.Button, onClick = onOpenProfile),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        ProfileOrCubeAvatar(
+                            cubeId = cubeId,
+                            photoPath = photoPath,
+                            size = 96.dp,
+                            contentDescription = avatarCd,
                         )
-                        HorizontalDivider(color = colors.hairline)
+                        Spacer(Modifier.height(spacing.md))
+                        Text(
+                            text = headerName,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
                     }
-                    // Profile editing is not implemented. The row stays disabled
-                    // whether or not a session exists, with the same helper line.
-                    SettingsRow(
-                        title = SETTINGS_EDIT_PROFILE_LABEL,
-                        subtitle = SETTINGS_ACCOUNT_HELPER,
-                        icon = null,
-                        onClick = {},
-                        enabled = false,
-                    )
-                    // Sign out is not repeated here: the one Sign out row
-                    // lives in the directory below (Profile & Device).
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = spacing.gutter,
+                            vertical = spacing.md,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(spacing.md),
+                    ) {
+                        Text(
+                            text = "ACCOUNT",
+                            style = DuaGenAITextStyles.eyebrow,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = DuaGenAITheme.shapes.card,
+                            color = MaterialTheme.colorScheme.surface,
+                        ) {
+                            Column {
+                                if (!signedIn) {
+                                    SettingsRow(
+                                        title = SETTINGS_SIGN_IN_LABEL,
+                                        subtitle = "Use your Dua account email and password.",
+                                        icon = Icons.AutoMirrored.Outlined.Login,
+                                        onClick = { showSignIn = true },
+                                    )
+                                    HorizontalDivider(color = colors.hairline)
+                                }
+                                SettingsRow(
+                                    title = SETTINGS_EDIT_PROFILE_LABEL,
+                                    subtitle = stringResource(R.string.settings_edit_profile_subtitle),
+                                    icon = Icons.Outlined.Person,
+                                    onClick = onOpenProfile,
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "ABOUT",
+                            style = DuaGenAITextStyles.eyebrow,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = DuaGenAITheme.shapes.card,
+                            color = MaterialTheme.colorScheme.background,
+                        ) {
+                            Column(modifier = Modifier.padding(spacing.lg)) {
+                                Text(
+                                    text = "Dua Gen AI",
+                                    style = DuaGenAITextStyles.rowTitle,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "Design kit \u00b7 Material 3",
+                                    style = DuaGenAITextStyles.snippet,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        SettingsDirectory(
+                            connectorSummary = connectorSummary,
+                            languageLabel = languageLabel,
+                            themeLabel = themeModeLabel,
+                            storageLabel = storageLabel,
+                            notificationsLabel = notificationsLabel,
+                            onOpenConnectors = onOpenConnectors,
+                            onOpenRuntimes = onOpenRuntimes,
+                            onOpenSkills = onOpenSkills,
+                            onOpenLanguage = onOpenLanguage,
+                            onOpenChannels = onOpenChannels,
+                            onOpenAgentApi = onOpenAgentApi,
+                            onOpenAppearance = onOpenAppearance,
+                            onOpenStorage = onOpenStorage,
+                            onOpenNotifications = onOpenNotifications,
+                            signedIn = signedIn,
+                            onSignOut = {
+                                scope.launch {
+                                    accountDataSource.logout()
+                                    onSignedOut()
+                                }
+                            },
+                            searchFocusRequester = searchFocus,
+                        )
+                    }
                 }
             }
-
-            Text(
-                text = "ABOUT",
-                style = DuaGenAITextStyles.eyebrow,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = DuaGenAITheme.shapes.card,
-                color = MaterialTheme.colorScheme.surface,
-            ) {
-                Column(modifier = Modifier.padding(spacing.lg)) {
-                    Text(
-                        text = "Dua Gen AI",
-                        style = DuaGenAITextStyles.rowTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "Design kit \u00b7 Material 3",
-                        style = DuaGenAITextStyles.snippet,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            SettingsDirectory(
-                connectorSummary = connectorSummary,
-                languageLabel = languageLabel,
-                themeLabel = themeModeLabel,
-                storageLabel = storageLabel,
-                notificationsLabel = notificationsLabel,
-                onOpenConnectors = onOpenConnectors,
-                onOpenRuntimes = onOpenRuntimes,
-                onOpenSkills = onOpenSkills,
-                onOpenLanguage = onOpenLanguage,
-                onOpenChannels = onOpenChannels,
-                onOpenAgentApi = onOpenAgentApi,
-                onOpenAppearance = onOpenAppearance,
-                onOpenStorage = onOpenStorage,
-                onOpenNotifications = onOpenNotifications,
-                signedIn = signedIn,
-                onSignOut = {
-                    scope.launch {
-                        accountDataSource.logout()
-                        onSignedOut()
-                    }
-                },
-            )
-        }
         }
     }
 
@@ -243,8 +322,8 @@ fun SettingsScreen(
 /**
  * THE sign-in: email and password against [RemoteAccountDataSource.emailLogin].
  *
- * Settings → Sign in and Profile → SESSION both open this one dialog, so the
- * app has a single sign-in path. It closes itself after a successful login.
+ * Settings → Sign in is the one sign-in path. It closes itself after a
+ * successful login.
  */
 @Composable
 internal fun AccountSignInDialog(
@@ -287,7 +366,6 @@ private fun SignInDialog(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    // In-flight flag is remember-only: the coroutine dies with the composition.
     var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },

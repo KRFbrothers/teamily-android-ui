@@ -1,6 +1,15 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.R
 import ai.duagenai.design.theme.DemoBadge
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,123 +26,186 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.outlined.AlternateEmail
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ai.duagenai.design.cube.CubeAvatar
 import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
-import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
+import java.io.File
 
 /* ============================================================================
- *  Profile — M3 components used:
- *      Scaffold, TopAppBar, Card (stat tiles + quick actions), Button,
- *      OutlinedButton, HorizontalDivider, Surface, Icon
+ *  Profile — identity only.
  *
- *  The avatar is the saved cube (see CubePickerScreen / CubeStore), so the
- *  Profile header always agrees with the picker.
+ *  Settings is the landing page. This screen holds the photo, the five
+ *  identity rows (Name, About, Username, Phone, Links) and the existing
+ *  plan pill + stat tiles underneath. Appearance / Storage / Notifications
+ *  and Sign in live on Settings, once.
  *
- *  "Change cube" is the entry point to the picker: it shows the CURRENT cube as
- *  a thumbnail and, when tapped, calls [onChangeCube] — which the nav host wires
- *  to the `cube_picker` route. The picker's Save persists through CubeStore and
- *  the Flow re-emits, so this screen's `cubeId` updates on its own; Cancel
- *  writes nothing, so the header keeps the previously saved cube.
- *
- *  THE OTHER THREE ROWS
- *  --------------------
- *  Appearance, Storage and Notifications are wired the same way — each row is a
- *  real button that calls its own callback, and each shows the CURRENT value as
- *  its subtitle so the row itself says what is set:
- *
- *    • Appearance    -> [onOpenAppearance], subtitle = the saved theme mode
- *    • Storage       -> [onOpenStorage],    subtitle = used / total
- *    • Notifications -> [onOpenNotifications], subtitle = "N of M on"
- *
- *  The values are passed IN (the same plain-parameter pattern every other screen
- *  in this kit uses — no view-model, no new state library), so the nav host owns
- *  the single copy and the rows can never disagree with the screens they open.
+ *  The avatar is the locally saved photo when one exists, otherwise the
+ *  saved cube. The green camera FAB opens the Profile picture sheet.
  * ==========================================================================*/
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     cubeId: String = CubeIds.DEFAULT,
+    photoPath: String? = null,
+    displayName: String = "",
+    about: String = "",
+    username: String = "",
+    phone: String = "",
+    links: String = "",
     onChangeCube: () -> Unit = {},
-    onOpenAppearance: () -> Unit = {},
-    onOpenStorage: () -> Unit = {},
-    onOpenNotifications: () -> Unit = {},
-    /** The saved theme mode, shown as the Appearance row's subtitle. */
-    themeModeLabel: String = "System default",
-    /** The Storage row's subtitle, e.g. "3.2 GB of 15 GB". */
-    storageLabel: String = "3.2 GB of 15 GB",
-    /** The Notifications row's subtitle, e.g. "5 of 7 on". */
-    notificationsLabel: String = "5 of 7 on",
-    /**
-     * Whether a session token is present.
-     *
-     * Drives the SESSION card: signed out it is a "Sign in" row that opens the
-     * one email/password sign-in ([AccountSignInDialog], same as Settings);
-     * signed in it only states that the session is active. Sign out lives in
-     * Settings → Profile & Device, once. The nav host passes
-     * `TokenStore.session != null`.
-     */
+    onBack: () -> Unit = {},
+    onPhotoChosen: (Bitmap) -> Unit = {},
+    onClearPhoto: () -> Unit = {},
+    onSaveName: (String) -> Unit = {},
+    onSaveAbout: (String) -> Unit = {},
+    onSaveUsername: (String) -> Unit = {},
+    onSavePhone: (String) -> Unit = {},
+    onSaveLinks: (String) -> Unit = {},
+    /** Drives the plan pill only (FREE vs PRO). Sign in lives on Settings. */
     signedIn: Boolean = false,
-    /** Backs the shared sign-in dialog. */
-    accountDataSource: RemoteAccountDataSource = RemoteAccountDataSource(),
-    /** Live counts. The tiles open the lists that produce these numbers. */
     chatCount: Int = 128,
     agentCount: Int = 4,
     artifactCount: Int = 37,
     onOpenChats: () -> Unit = {},
     onOpenAgents: () -> Unit = {},
     onOpenArtifacts: () -> Unit = {},
-    /** Consolidated settings. Appearance, Storage and Notifications stay here too. */
-    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
-    var showSignIn by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    var showPictureSheet by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val photoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview(),
+    ) { bitmap ->
+        if (bitmap != null) {
+            onPhotoChosen(bitmap)
+            showPictureSheet = false
+        }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) photoLauncher.launch(null)
+    }
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { input ->
+            BitmapFactory.decodeStream(input)
+        }
+        if (bitmap != null) {
+            onPhotoChosen(bitmap)
+            showPictureSheet = false
+        }
+    }
+
+    fun launchCamera() {
+        val granted = context.checkSelfPermission(Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) photoLauncher.launch(null) else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    val comingSoon = stringResource(R.string.composer_coming_soon)
+    fun showComingSoon() {
+        scope.launch { snackbar.showSnackbar(comingSoon) }
+    }
+
+    val notSet = stringResource(R.string.profile_not_set)
+    val reserveUsername = stringResource(R.string.profile_reserve_username)
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Profile",
+                        text = stringResource(R.string.profile_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -150,95 +222,106 @@ fun ProfileScreen(
                 end = spacing.gutter,
                 bottom = spacing.xxl,
             ),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .padding(top = spacing.md)
+                        .size(148.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ProfileOrCubeAvatar(
+                        cubeId = cubeId,
+                        photoPath = photoPath,
+                        size = 120.dp,
+                        contentDescription = if (photoPath != null) {
+                            stringResource(R.string.profile_photo_cd)
+                        } else {
+                            "Your avatar, ${CubeIds.label(cubeId)}"
+                        },
+                    )
+                    SmallFloatingActionButton(
+                        onClick = { showPictureSheet = true },
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        Icon(
+                            Icons.Filled.PhotoCamera,
+                            contentDescription = stringResource(R.string.profile_change_picture),
+                        )
+                    }
+                }
+            }
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = DuaGenAITheme.shapes.card,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Column(
-                        modifier = Modifier.padding(spacing.lg),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        // The saved cube, drawn untinted. `CubeAvatar` uses
-                        // Image (not Icon) so the charcoal/orange art survives.
-                        CubeAvatar(
-                            cubeId = cubeId,
-                            size = 72.dp,
-                            shape = DuaGenAITheme.shapes.avatarProfile,
-                            contentDescription = "Your avatar, ${CubeIds.label(cubeId)}",
+                    Column {
+                        val nameValue = displayName.ifBlank { notSet }
+                        SettingsRow(
+                            title = stringResource(R.string.profile_field_name),
+                            subtitle = nameValue,
+                            icon = Icons.Outlined.Person,
+                            onClick = { editing = "name" },
                         )
-                        Spacer(Modifier.height(spacing.md))
-                        // NO HARDCODED IDENTITY.
-                        //
-                        // This used to be a literal name and email address in
-                        // the source, which shipped one real person's PII in
-                        // every build. The header now says what the app actually
-                        // knows: whether there is a session.
-                        Text(
-                            text = if (signedIn) "Signed in" else "Not signed in",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
+                        HorizontalDivider(color = colors.hairline)
+                        SettingsRow(
+                            title = stringResource(R.string.profile_field_about),
+                            subtitle = about.ifBlank { notSet },
+                            icon = Icons.Outlined.Info,
+                            onClick = { editing = "about" },
                         )
-                        Text(
-                            text = if (signedIn) {
-                                "Session active \u00b7 Artifacts and Memory are live"
+                        HorizontalDivider(color = colors.hairline)
+                        val usernameEmpty = username.isBlank()
+                        SettingsRow(
+                            title = stringResource(R.string.profile_field_username),
+                            subtitle = if (usernameEmpty) reserveUsername else username,
+                            icon = Icons.Outlined.AlternateEmail,
+                            onClick = { editing = "username" },
+                            subtitleColor = if (usernameEmpty) {
+                                MaterialTheme.colorScheme.primary
                             } else {
-                                "Sign in below to load Artifacts and Memory"
+                                Color.Unspecified
                             },
-                            style = DuaGenAITextStyles.snippet,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(spacing.sm))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(DuaGenAITheme.shapes.pill)
-                                    .background(colors.logoMint)
-                                    .padding(horizontal = 10.dp, vertical = 3.dp),
-                            ) {
-                                Text(
-                                    text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
-                                    style = DuaGenAITextStyles.eyebrow,
-                                    color = colors.onLogoMint,
-                                )
-                            }
-                            // The plan is not read from billing yet.
-                            Spacer(Modifier.width(spacing.xs))
-                            DemoBadge()
-                        }
-                        Spacer(Modifier.height(spacing.lg))
-                        // Audit fix #9: this used to be `onClick = {}` — a button
-                        // that looked enabled and did nothing. Profile editing is
-                        // not part of this kit, so the control is now HONESTLY
-                        // disabled: M3 disabled colours, no ripple, not clickable,
-                        // and `disabled()` semantics so a screen reader says so.
-                        // The helper line below says why, instead of leaving the
-                        // user tapping a dead button.
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            shape = DuaGenAITheme.shapes.pill,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary,
-                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                        ) {
-                            Text("Edit profile", style = DuaGenAITextStyles.button)
-                        }
-                        Spacer(Modifier.height(spacing.xs))
-                        Text(
-                            text = "Profile editing is not available in this build.",
-                            style = DuaGenAITextStyles.meta,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
+                        HorizontalDivider(color = colors.hairline)
+                        SettingsRow(
+                            title = stringResource(R.string.profile_field_phone),
+                            subtitle = phone.ifBlank { notSet },
+                            icon = Icons.Outlined.Phone,
+                            onClick = { editing = "phone" },
+                        )
+                        HorizontalDivider(color = colors.hairline)
+                        SettingsRow(
+                            title = stringResource(R.string.profile_field_links),
+                            subtitle = links.ifBlank { notSet },
+                            icon = Icons.Outlined.Link,
+                            onClick = { editing = "links" },
                         )
                     }
+                }
+            }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(DuaGenAITheme.shapes.pill)
+                            .background(colors.logoMint)
+                            .padding(horizontal = 10.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = if (signedIn) "DUA GEN AI PRO" else "DUA GEN AI FREE",
+                            style = DuaGenAITextStyles.eyebrow,
+                            color = colors.onLogoMint,
+                        )
+                    }
+                    Spacer(Modifier.width(spacing.xs))
+                    DemoBadge()
                 }
             }
             item {
@@ -248,119 +331,247 @@ fun ProfileScreen(
                     StatTile(artifactCount.toString(), "ARTIFACTS", Modifier.weight(1f), onOpenArtifacts)
                 }
             }
-            item {
-                Text(
-                    text = "QUICK ACTIONS",
-                    style = DuaGenAITextStyles.eyebrow,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = DuaGenAITheme.shapes.card,
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
-                    Column {
-                        // The entry point to the picker. It shows the CURRENT
-                        // cube as a thumbnail, so the row is a preview of what
-                        // tapping it will let you change — and it reads the
-                        // same `cubeId` the header above draws, so the two can
-                        // never disagree.
-                        SettingsRow(
-                            title = "Change cube",
-                            subtitle = "Avatar · ${CubeIds.label(cubeId)}",
-                            icon = null,
-                            onClick = onChangeCube,
-                            leading = {
-                                CubeAvatar(
-                                    cubeId = cubeId,
-                                    size = 32.dp,
-                                    shape = DuaGenAITheme.shapes.avatarList,
-                                    contentDescription = null,
-                                )
-                            },
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        // Each of the three rows is a real button with its own
-                        // destination, and its subtitle is the CURRENT value —
-                        // so the row says what is set before you open it.
-                        SettingsRow(
-                            title = "Appearance",
-                            subtitle = themeModeLabel,
-                            icon = Icons.Filled.DarkMode,
-                            onClick = onOpenAppearance,
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = "Storage",
-                            subtitle = storageLabel,
-                            icon = null,
-                            onClick = onOpenStorage,
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = "Notifications",
-                            subtitle = notificationsLabel,
-                            icon = null,
-                            onClick = onOpenNotifications,
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = "Settings",
-                            subtitle = "Appearance, storage, notifications, agents",
-                            icon = null,
-                            onClick = onOpenSettings,
-                        )
-                    }
-                }
-            }
-            item {
-                // THE SESSION CARD. Signed out it is a row into the one
-                // email/password sign-in (the same dialog Settings opens), so
-                // there is no raw token field anywhere in the app. Signed in it
-                // only states the session; Sign out is in Settings, once.
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = DuaGenAITheme.shapes.card,
-                    color = MaterialTheme.colorScheme.surface,
-                ) {
-                    Column {
-                        Text(
-                            text = "SESSION",
-                            style = DuaGenAITextStyles.eyebrow,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(
-                                start = spacing.lg,
-                                end = spacing.lg,
-                                top = spacing.lg,
-                            ),
-                        )
-                        if (signedIn) {
-                            Text(
-                                text = "You are signed in. Artifacts and Memory load from the live service.",
-                                style = DuaGenAITextStyles.meta,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(spacing.lg),
-                            )
-                        } else {
-                            SettingsRow(
-                                title = SETTINGS_SIGN_IN_LABEL,
-                                subtitle = "Use your Dua account email and password.",
-                                icon = null,
-                                onClick = { showSignIn = true },
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 
-    if (showSignIn) {
-        AccountSignInDialog(
-            accountDataSource = accountDataSource,
-            onDismiss = { showSignIn = false },
+    if (showPictureSheet) {
+        ProfilePictureSheet(
+            cubeId = cubeId,
+            hasPhoto = photoPath != null,
+            onDismiss = { showPictureSheet = false },
+            onCamera = { launchCamera() },
+            onGallery = {
+                galleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            },
+            onChooseCube = {
+                showPictureSheet = false
+                onChangeCube()
+            },
+            onDelete = {
+                onClearPhoto()
+                showPictureSheet = false
+            },
+            onComingSoon = { showComingSoon() },
+        )
+    }
+
+    val field = editing
+    if (field != null) {
+        val (title, value, type, save) = when (field) {
+            "about" -> FieldEdit(
+                stringResource(R.string.profile_field_about), about,
+                KeyboardType.Text, onSaveAbout,
+            )
+            "username" -> FieldEdit(
+                stringResource(R.string.profile_field_username), username,
+                KeyboardType.Text, onSaveUsername,
+            )
+            "phone" -> FieldEdit(
+                stringResource(R.string.profile_field_phone), phone,
+                KeyboardType.Phone, onSavePhone,
+            )
+            "links" -> FieldEdit(
+                stringResource(R.string.profile_field_links), links,
+                KeyboardType.Uri, onSaveLinks,
+            )
+            else -> FieldEdit(
+                stringResource(R.string.profile_field_name), displayName,
+                KeyboardType.Text, onSaveName,
+            )
+        }
+        ProfileFieldDialog(
+            title = title,
+            initial = value,
+            keyboardType = type,
+            onDismiss = { editing = null },
+            onSave = { next ->
+                save(next)
+                editing = null
+            },
+        )
+    }
+}
+
+private data class FieldEdit(
+    val title: String,
+    val value: String,
+    val keyboardType: KeyboardType,
+    val save: (String) -> Unit,
+)
+
+@Composable
+private fun ProfileFieldDialog(
+    title: String,
+    initial: String,
+    keyboardType: KeyboardType,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var text by rememberSaveable(initial) { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text) }) {
+                Text(stringResource(R.string.profile_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.profile_cancel))
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ProfilePictureSheet(
+    cubeId: String,
+    hasPhoto: Boolean,
+    onDismiss: () -> Unit,
+    onCamera: () -> Unit,
+    onGallery: () -> Unit,
+    onChooseCube: () -> Unit,
+    onDelete: () -> Unit,
+    onComingSoon: () -> Unit,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val colors = DuaGenAITheme.colors
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = spacing.xxl),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.profile_picture_close),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.profile_picture_sheet_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                )
+                IconButton(onClick = onDelete, enabled = hasPhoto) {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = stringResource(R.string.profile_picture_delete),
+                    )
+                }
+            }
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_camera),
+                subtitle = " ",
+                icon = Icons.Outlined.PhotoCamera,
+                onClick = onCamera,
+            )
+            HorizontalDivider(color = colors.hairline)
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_gallery),
+                subtitle = " ",
+                icon = Icons.Outlined.Image,
+                onClick = onGallery,
+            )
+            HorizontalDivider(color = colors.hairline)
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_choose_cube),
+                subtitle = "Avatar · ${CubeIds.label(cubeId)}",
+                icon = null,
+                onClick = onChooseCube,
+                leading = {
+                    CubeAvatar(
+                        cubeId = cubeId,
+                        size = 32.dp,
+                        shape = CircleShape,
+                        contentDescription = null,
+                    )
+                },
+            )
+            HorizontalDivider(color = colors.hairline)
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_instagram),
+                subtitle = " ",
+                icon = Icons.Outlined.Public,
+                onClick = onComingSoon,
+            )
+            HorizontalDivider(color = colors.hairline)
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_facebook),
+                subtitle = " ",
+                icon = Icons.Outlined.Public,
+                onClick = onComingSoon,
+            )
+            HorizontalDivider(color = colors.hairline)
+            SettingsRow(
+                title = stringResource(R.string.profile_picture_ai),
+                subtitle = " ",
+                icon = Icons.Outlined.AutoAwesome,
+                onClick = onComingSoon,
+            )
+        }
+    }
+}
+
+/**
+ * The Profile / Settings avatar: the locally saved photo when one exists,
+ * otherwise the saved cube, always clipped to a circle.
+ */
+@Composable
+internal fun ProfileOrCubeAvatar(
+    cubeId: String,
+    photoPath: String?,
+    size: Dp,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    val photo = remember(photoPath) {
+        photoPath?.takeIf { File(it).isFile }?.let { path ->
+            BitmapFactory.decodeFile(path)
+        }
+    }
+    if (photo != null) {
+        Image(
+            bitmap = photo.asImageBitmap(),
+            contentDescription = contentDescription,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        CubeAvatar(
+            cubeId = cubeId,
+            size = size,
+            shape = CircleShape,
+            contentDescription = contentDescription,
+            modifier = modifier,
         )
     }
 }
@@ -400,9 +611,9 @@ private fun StatTile(
 internal fun SettingsRow(
     title: String,
     subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    icon: ImageVector?,
     onClick: (() -> Unit)? = null,
-    /** Optional leading slot, drawn before the icon. Used by "Change cube" to
+    /** Optional leading slot, drawn before the icon. Used by "Choose cube" to
      *  show the current cube as a thumbnail. */
     leading: (@Composable () -> Unit)? = null,
     /**
@@ -416,6 +627,8 @@ internal fun SettingsRow(
     enabled: Boolean = true,
     /** Overrides the title colour. [Color.Unspecified] keeps the enabled/disabled ink. */
     titleColor: Color = Color.Unspecified,
+    /** Overrides the subtitle colour. [Color.Unspecified] keeps onSurfaceVariant. */
+    subtitleColor: Color = Color.Unspecified,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     Row(
@@ -434,8 +647,6 @@ internal fun SettingsRow(
                 if (enabled) {
                     Modifier
                 } else {
-                    // Merge so the row title itself is what is announced as
-                    // disabled. A separate text node would still sound tappable.
                     Modifier.semantics(mergeDescendants = true) { disabled() }
                 },
             ),
@@ -464,11 +675,17 @@ internal fun SettingsRow(
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 },
             )
-            Text(
-                text = subtitle,
-                style = DuaGenAITextStyles.snippet,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = DuaGenAITextStyles.snippet,
+                    color = if (subtitleColor != Color.Unspecified) {
+                        subtitleColor
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
         }
         if (enabled) {
             Icon(

@@ -3,6 +3,8 @@
 
     <!-- The remote data sources talk to the backend over HTTPS. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Profile picture: TakePicturePreview on the Profile picture sheet. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"

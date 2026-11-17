@@ -26,6 +26,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -932,6 +933,31 @@ class DuaGenAINavHostTest {
      * Switches mode the way a user does. Dua home has the toggle; Agent home
      * has none, so going to Dua uses the drawer's ONE mode row.
      */
+    private fun openProfileFromDrawer() {
+        openDrawer()
+        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
+        compose.waitForIdle()
+    }
+
+    private fun openSettingsFromHome() {
+        compose.onNodeWithContentDescription("Settings").performClick()
+        compose.waitForIdle()
+    }
+
+    private fun openProfilePictureSheet() {
+        compose.onNodeWithContentDescription("Change profile picture").performClick()
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+    }
+
+    private fun openCubePickerFromProfile() {
+        openProfileFromDrawer()
+        openProfilePictureSheet()
+        compose.onNodeWithText("Choose cube").performClick()
+        compose.waitForIdle()
+    }
+
+
     private fun switchTo(mode: HomeMode) {
         if (visibleDescCount("${mode.label} mode") > 0) {
             compose.onNodeWithContentDescription("${mode.label} mode").performClick()
@@ -1825,42 +1851,24 @@ class DuaGenAINavHostTest {
      * too, because a disabled control with no reason is its own usability bug.
      */
     @Test
-    fun theDisabledProfileControlsAreNotClickable() {
+    fun theProfileScreenShowsIdentityRowsAndNoSignIn() {
         launch()
-        openDrawer()
-        // The drawer gear is "Profile". The home gear is "Settings" and opens
-        // the settings screen; this test is about the profile controls.
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
+        openProfileFromDrawer()
 
-        // Both inert controls are announced as disabled.
-        val disabled = compose.onAllNodes(
-            hasText(EDIT_PROFILE_LABEL) and isNotEnabled(),
-        ).fetchSemanticsNodes().count { isOnScreen(it) }
-        assertTrue("\"$EDIT_PROFILE_LABEL\" must be announced as disabled", disabled >= 1)
-
-        // Signed out (the default here) the SESSION card is a "Sign in" row
-        // into the one email/password sign-in. There is no raw token field and
-        // no Sign out here: the one Sign out lives in Settings.
-        //
-        // The card sits below the fold, so it is scrolled into view first: a
-        // LazyColumn does not compose an off-screen item, and asserting on one
-        // would fail for a reason that has nothing to do with the fix.
-        compose.onAllNodes(hasScrollAction()).onFirst()
-            .performScrollToNode(hasText(SIGN_IN_LABEL))
-        compose.waitForIdle()
-        assertVisible(SIGN_IN_LABEL)
+        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertVisible("Profile")
+        assertVisible("Name")
+        assertVisible("About")
+        assertVisible("Username")
+        assertVisible("Reserve username")
+        assertVisible("Phone")
+        assertVisible("Links")
+        assertVisible("Not set")
+        // Sign in / Sign out live on Settings, once.
+        assertNotVisible(SIGN_IN_LABEL)
         assertNotVisible(SESSION_TOKEN_LABEL)
         assertNotVisible(SETTINGS_SIGN_OUT_LABEL)
-
-
-        // The reason is on screen, not left to the user to guess.
-        assertVisible(EDIT_PROFILE_HELPER)
-
-        // Clicking it changes nothing: the Profile screen is still the route.
-        compose.onNodeWithText(EDIT_PROFILE_LABEL).performClick()
-        compose.waitForIdle()
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertNotVisible(EDIT_PROFILE_HELPER)
     }
 
     // ------------------------------------------- Memory filter + search
@@ -2651,11 +2659,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theCubePickerChipsAreAtLeast48dpTall() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
         assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
 
         for (cat in PICKER_CATEGORIES) {
@@ -2682,11 +2686,7 @@ class DuaGenAINavHostTest {
     @Test
     fun theCubePickerChipLongPressShowsATooltipWithTheFullLabel() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
         assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
 
         // The tooltip is not up before the long-press.
@@ -3221,9 +3221,10 @@ class DuaGenAINavHostTest {
         )
 
         // ProfileScreen is really on screen, not just the route: its own title
-        // and the "Change cube" row are the screen's markers.
+        // and the identity rows are the screen's markers.
         assertVisible("Profile")
-        assertVisible("Change cube")
+        assertVisible("Name")
+        assertVisible("Reserve username")
     }
 
     /**
@@ -3272,13 +3273,13 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
-        assertVisible("Change cube")
+        assertVisible("Name")
     }
 
     // ------------------------------------------- Profile -> cube picker
 
     /**
-     * "Change cube" on Profile opens the cube picker.
+     * "Choose cube" on the Profile picture sheet opens the cube picker.
      *
      * The row is wired to [DuaGenAIRoutes.CUBE_PICKER] through the same
      * `navController.navigate(...)` every other destination uses. The picker's
@@ -3287,16 +3288,10 @@ class DuaGenAINavHostTest {
     @Test
     fun theChangeCubeRowOpensTheCubePicker() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
-
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
 
         assertEquals(
-            "the Change cube row must open the cube picker route",
+            "Choose cube must open the cube picker route",
             DuaGenAIRoutes.CUBE_PICKER,
             currentRoute(),
         )
@@ -3314,11 +3309,7 @@ class DuaGenAINavHostTest {
     @Test
     fun cancelFromThePickerReturnsToProfileWithoutSaving() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
         assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
 
         compose.onNodeWithText(PICKER_CANCEL).performClick()
@@ -3329,24 +3320,19 @@ class DuaGenAINavHostTest {
             DuaGenAIRoutes.PROFILE,
             currentRoute(),
         )
-        assertVisible("Change cube")
+        assertVisible("Name")
     }
 
     /**
      * Save from the picker persists the choice and returns to Profile.
      *
      * The picker's Save writes through CubeStore (the existing storage pattern)
-     * and then pops back, so Profile's header and the "Change cube" row both
-     * re-read the saved cube from the Flow and update on their own.
+     * and then pops back, so Profile's header re-reads the saved cube from the Flow and updates on its own.
      */
     @Test
     fun saveFromThePickerPersistsAndReturnsToProfile() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
         assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
 
         // Pick a different cube, then Save.
@@ -3360,9 +3346,8 @@ class DuaGenAINavHostTest {
             DuaGenAIRoutes.PROFILE,
             currentRoute(),
         )
-        // The saved cube is now Cube 07, so the header and the row agree.
+        // The saved cube is now Cube 07, so the header draws it.
         assertVisibleDescCount("Your avatar, Cube 07", 1)
-        assertVisible("Avatar · Cube 07")
     }
 
     // ------------------------------------------- Profile -> settings rows
@@ -3378,11 +3363,11 @@ class DuaGenAINavHostTest {
     @Test
     fun theAppearanceRowOpensTheAppearanceScreen() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        openSettingsFromHome()
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
 
+        compose.onNodeWithText("Appearance").performScrollTo()
+        compose.waitForIdle()
         compose.onNodeWithText("Appearance").performClick()
         compose.waitForIdle()
 
@@ -3406,8 +3391,8 @@ class DuaGenAINavHostTest {
     @Test
     fun choosingAThemePersistsAndUpdatesTheProfileRow() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
+        openSettingsFromHome()
+        compose.onNodeWithText("Appearance").performScrollTo()
         compose.waitForIdle()
         // The row starts on the default.
         assertVisible("System default")
@@ -3419,10 +3404,12 @@ class DuaGenAINavHostTest {
         compose.onNodeWithText("Dark").performClick()
         compose.waitForIdle()
 
-        // Back to Profile: the row's subtitle is now the saved mode.
+        // Back to Settings: the row's subtitle is now the saved mode.
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
-        assertEquals(DuaGenAIRoutes.PROFILE, currentRoute())
+        assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+        compose.onNodeWithText("Appearance").performScrollTo()
+        compose.waitForIdle()
         assertVisible("Dark")
     }
 
@@ -3436,8 +3423,8 @@ class DuaGenAINavHostTest {
     @Test
     fun theStorageRowOpensTheStorageScreenAndClearCacheConfirms() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
+        openSettingsFromHome()
+        compose.onNodeWithText("Storage").performScrollTo()
         compose.waitForIdle()
 
         compose.onNodeWithText("Storage").performClick()
@@ -3467,8 +3454,8 @@ class DuaGenAINavHostTest {
     @Test
     fun theNotificationsRowOpensTheNotificationsScreen() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
+        openSettingsFromHome()
+        compose.onNodeWithText("Notifications").performScrollTo()
         compose.waitForIdle()
 
         compose.onNodeWithText("Notifications").performClick()
@@ -3495,11 +3482,7 @@ class DuaGenAINavHostTest {
     @Test
     fun thePickerSearchFiltersTheGrid() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
         assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
 
         // The search field and the chips are there.
@@ -3524,11 +3507,7 @@ class DuaGenAINavHostTest {
     @Test
     fun thePickerShowsNoResultsForAnUnmatchedQuery() {
         launch()
-        openDrawer()
-        compose.onNodeWithContentDescription(DRAWER_PROFILE, substring = true).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText("Change cube").performClick()
-        compose.waitForIdle()
+        openCubePickerFromProfile()
 
         compose.onNode(hasSetTextAction()).performTextInput("zzz")
         compose.waitForIdle()
@@ -4683,11 +4662,11 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         assertVisible(SETTINGS_SIGN_IN_LABEL)
-        assertVisible(SETTINGS_ACCOUNT_HELPER)
-        val editDisabled = compose.onAllNodes(
-            hasText(SETTINGS_EDIT_PROFILE_LABEL) and isNotEnabled(),
+        assertVisible("Name, about, username and photo")
+        val editEnabled = compose.onAllNodes(
+            hasText(SETTINGS_EDIT_PROFILE_LABEL) and hasClickAction(),
         ).fetchSemanticsNodes().count { isOnScreen(it) }
-        assertTrue("Edit profile must stay disabled", editDisabled >= 1)
+        assertTrue("Edit profile must open Profile", editEnabled >= 1)
         assertEquals(
             "No Sign out while signed out",
             0,
@@ -4717,20 +4696,19 @@ class DuaGenAINavHostTest {
      * fields keep Robolectric from ever going idle.
      */
     @Test
-    fun profileSessionCardIsASignInRowWithNoTokenField() {
+    fun profileScreenHasIdentityRowsAndNoSignIn() {
         TokenStore.token = null
         compose.setContent {
             DuaGenAITheme(darkTheme = false) { ProfileScreen() }
         }
         compose.waitForIdle()
-        compose.onAllNodes(hasScrollAction()).onFirst()
-            .performScrollToNode(hasText(SIGN_IN_LABEL))
-        compose.waitForIdle()
-        assertTrue(
+        assertVisible("Name")
+        assertVisible("Reserve username")
+        assertEquals(
+            0,
             compose.onAllNodes(hasText(SIGN_IN_LABEL) and hasClickAction())
-                .fetchSemanticsNodes().isNotEmpty(),
+                .fetchSemanticsNodes().size,
         )
-        assertEquals(0, compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodesWithText(SESSION_TOKEN_LABEL).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodesWithText(SETTINGS_SIGN_OUT_LABEL).fetchSemanticsNodes().size)
     }

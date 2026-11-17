@@ -352,6 +352,12 @@ fun DuaGenAINavHost(
         .collectAsStateWithLifecycle(SettingsStore.DEFAULT_STORAGE_TOTAL_GB)
     val notifications by settings.notifications
         .collectAsStateWithLifecycle(defaultNotificationState)
+    val profilePhotoPath by settings.profilePhotoPath.collectAsStateWithLifecycle(null)
+    val profileName by settings.profileName.collectAsStateWithLifecycle("")
+    val profileAbout by settings.profileAbout.collectAsStateWithLifecycle("")
+    val profileUsername by settings.profileUsername.collectAsStateWithLifecycle("")
+    val profilePhone by settings.profilePhone.collectAsStateWithLifecycle("")
+    val profileLinks by settings.profileLinks.collectAsStateWithLifecycle("")
 
     // Drawer state — hoisted so the drawer can cover the whole app surface and
     // survive a Home recomposition. `rememberDrawerState` is M3's own holder; it
@@ -529,19 +535,21 @@ fun DuaGenAINavHost(
             composable(DuaGenAIRoutes.PROFILE) {
                 ProfileScreen(
                     cubeId = savedCubeId,
-                    // The whole point of this file: Profile -> picker.
+                    photoPath = profilePhotoPath,
+                    displayName = profileName,
+                    about = profileAbout,
+                    username = profileUsername,
+                    phone = profilePhone,
+                    links = profileLinks,
                     onChangeCube = { navController.navigate(DuaGenAIRoutes.CUBE_PICKER) },
-                    // The other three rows, each wired to its own destination.
-                    onOpenAppearance = { navController.navigate(DuaGenAIRoutes.APPEARANCE) },
-                    onOpenStorage = { navController.navigate(DuaGenAIRoutes.STORAGE) },
-                    onOpenNotifications = { navController.navigate(DuaGenAIRoutes.NOTIFICATIONS) },
-                    // Each row's subtitle is the CURRENT value, read from the
-                    // same store the screen it opens writes to.
-                    themeModeLabel = themeMode.label,
-                    storageLabel = storageLabel(storageUsedGb, storageTotalGb),
-                    notificationsLabel = notificationSummary(notifications),
-                    // Signed out, Profile's SESSION row opens the same
-                    // email/password sign-in as Settings (one sign-in path).
+                    onBack = { navController.popBackStack() },
+                    onPhotoChosen = { bitmap -> scope.launch { settings.saveProfilePhoto(bitmap) } },
+                    onClearPhoto = { scope.launch { settings.clearProfilePhoto() } },
+                    onSaveName = { value -> scope.launch { settings.setProfileName(value) } },
+                    onSaveAbout = { value -> scope.launch { settings.setProfileAbout(value) } },
+                    onSaveUsername = { value -> scope.launch { settings.setProfileUsername(value) } },
+                    onSavePhone = { value -> scope.launch { settings.setProfilePhone(value) } },
+                    onSaveLinks = { value -> scope.launch { settings.setProfileLinks(value) } },
                     signedIn = sessionToken != null,
                     chatCount = profileChatRows().size,
                     agentCount = profileAgentRows(linesOf(madeAgents)).size,
@@ -549,7 +557,6 @@ fun DuaGenAINavHost(
                     onOpenChats = { navController.navigate(DuaGenAIRoutes.PROFILE_CHATS) },
                     onOpenAgents = { navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS) },
                     onOpenArtifacts = { navController.navigate(DuaGenAIRoutes.PROFILE_ARTIFACTS) },
-                    onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                 )
             }
 
@@ -808,11 +815,16 @@ fun DuaGenAINavHost(
             }
             composable(DuaGenAIRoutes.SETTINGS) {
                 SettingsScreen(
+                    cubeId = savedCubeId,
+                    photoPath = profilePhotoPath,
+                    displayName = profileName,
                     connectorSummary = "${connectors.count { it.connected }}/${connectors.size}",
                     languageLabel = languageLabel,
                     themeModeLabel = themeMode.label,
                     storageLabel = storageLabel(storageUsedGb, storageTotalGb),
                     notificationsLabel = notificationSummary(notifications),
+                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.PROFILE) },
+                    onBack = { navController.popBackStack() },
                     onOpenConnectors = { navController.navigate(DuaGenAIRoutes.SETTINGS_CONNECTORS) },
                     onOpenRuntimes = { navController.navigate(DuaGenAIRoutes.SETTINGS_RUNTIMES) },
                     onOpenSkills = { navController.navigate(DuaGenAIRoutes.SETTINGS_SKILLS) },
