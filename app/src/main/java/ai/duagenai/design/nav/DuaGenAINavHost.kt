@@ -358,10 +358,10 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // The app launches into Agent home (Teamily chat list). Dua home's top bar
-    // has the Dua | Agent switch; from Agent home the drawer's mode row
-    // ("Agent mode", TalkBack "Switch to Dua mode") switches to Dua.
-    var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
+    // The app launches into Dua home (greeting, starters, composer, pill).
+    // Dua home's top bar has the Dua | Agent switch; from Agent home the
+    // drawer's "Dua" row (TalkBack: "Switch to Dua mode") switches back.
+    var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
@@ -432,9 +432,10 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // ONE mode row: it shows the current mode and a tap
-                        // flips to the other one, landing on that mode's home.
-                        // Agent home has no toggle, so this is its way to Dua.
+                        // ONE mode row: it shows the target mode's short
+                        // label. A tap closes the drawer and flips to that
+                        // mode's home. Agent home has no toggle, so this
+                        // is its way back to Dua.
                         DrawerDestination.ModeSwitch -> {
                             mode = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
                             navController.navigate(DuaGenAIRoutes.HOME) {

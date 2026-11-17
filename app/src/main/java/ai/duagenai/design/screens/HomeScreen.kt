@@ -254,10 +254,10 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit = {},
     /**
      * Current assistant mode. Hoisted so it survives configuration changes.
-     * The app launches into Agent home. Only Dua home draws the Dua | Agent
-     * switch; from Agent home the drawer's "Dua" row switches to Dua.
+     * The app launches into Dua home. Only Dua home draws the Dua | Agent
+     * switch; from Agent home the drawer's "Dua" row switches back to Dua.
      */
-    mode: HomeMode = HomeMode.Agent,
+    mode: HomeMode = HomeMode.Dua,
     onModeChange: (HomeMode) -> Unit = {},
     /** The top bar's right button in Dua mode (the gear). */
     onOpenSettings: () -> Unit = {},

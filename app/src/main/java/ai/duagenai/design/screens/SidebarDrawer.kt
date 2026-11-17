@@ -41,6 +41,7 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -89,9 +90,9 @@ import kotlinx.coroutines.launch
  *      that conversation's own cube in ChatScreen.
  *
  *  Layout follows the ChatGPT Android drawer in Dua colours. Every nav row
- *  leads with an outline icon. The mode
- *  row shows "Agent mode" with a WIREFRAME nav icon (hexagon + Y seam,
- *  stroke only, no fill), or "Dua mode" with a front-facing
+ *  leads with an outline icon. The mode row's visible label is the target
+ *  ("Agent" or "Dua"). "Agent" uses a WIREFRAME nav icon (hexagon + Y seam,
+ *  stroke only, no fill); "Dua" uses a front-facing
  *  wireframe cube, also stroke only — distinct from Agent's pointy hexagon
  *  and from Library's isometric box in the HTML preview. Neither is a cube
  *  avatar and must not be drawn with [CubeAvatar]: the 42 cube assets are
@@ -119,9 +120,10 @@ enum class DrawerDestination(val label: String, val comingSoon: Boolean = false)
     Computer("Computer", comingSoon = true),
     Videos("Videos", comingSoon = true),
     /**
-     * ONE row for the Dua | Agent mode. It shows the CURRENT mode ("Agent mode"
-     * / "Dua mode", with that mode's glyph) and a tap switches to the other
-     * one. Agent home has no toggle, so this is its way to Dua.
+     * ONE row for the Dua | Agent mode. Visible label is the target ("Dua"
+     * on Agent home, "Agent" on Dua home) with that mode's glyph. TalkBack
+     * hears "Switch to Dua/Agent mode". Agent home has no toggle, so this
+     * is its way back to Dua.
      */
     ModeSwitch("Mode"),
 }
@@ -378,8 +380,9 @@ private fun drawerRowText() = MaterialTheme.typography.bodyLarge.copy(
 
 /**
  * One nav row: a 22dp outline icon, then the label, 56dp tall, no highlight.
- * The [DrawerDestination.ModeSwitch] row shows the current mode's glyph and
- * label, and TalkBack hears what a tap does ("Switch to Dua mode").
+ * The [DrawerDestination.ModeSwitch] row shows the target mode's short
+ * label ("Dua" on Agent, "Agent" on Dua) with the OTHER mode's glyph
+ * and a small trailing swap arrow. TalkBack hears "Switch to Dua/Agent mode".
  */
 @Composable
 private fun DrawerNavItem(
@@ -390,20 +393,34 @@ private fun DrawerNavItem(
     val spacing = LocalDuaGenAISpacing.current
     val iconTint = MaterialTheme.colorScheme.onSurface
     val isModeRow = destination == DrawerDestination.ModeSwitch
-    val label = if (isModeRow) "${mode.label} mode" else destination.label
     val other = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
+    val label = if (isModeRow) {
+        stringResource(
+            if (other == HomeMode.Dua) R.string.drawer_switch_to_dua else R.string.drawer_switch_to_agent,
+        )
+    } else {
+        destination.label
+    }
+    val talkback = if (isModeRow) {
+        stringResource(
+            if (other == HomeMode.Dua) {
+                R.string.drawer_switch_to_dua_talkback
+            } else {
+                R.string.drawer_switch_to_agent_talkback
+            },
+        )
+    } else {
+        null
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick)
             .then(
-                if (isModeRow) {
-                    Modifier.semantics { contentDescription = "Switch to ${other.label} mode" }
-                } else {
-                    Modifier
-                },
+                if (talkback != null) Modifier.semantics { contentDescription = talkback }
+                else Modifier
             )
+            .clickable(role = Role.Button, onClick = onClick)
             .sizeIn(minHeight = 56.dp)
             .padding(horizontal = spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
@@ -416,7 +433,8 @@ private fun DrawerNavItem(
             DrawerDestination.Computer -> Icon(Icons.Outlined.Computer, null, iconModifier, tint = iconTint)
             DrawerDestination.Videos -> Icon(Icons.Outlined.VideoLibrary, null, iconModifier, tint = iconTint)
             // Wireframe glyphs, NOT cube avatars — see the file header.
-            DrawerDestination.ModeSwitch -> when (mode) {
+            // The mode the tap goes TO.
+            DrawerDestination.ModeSwitch -> when (other) {
                 HomeMode.Dua -> DuaCubeGlyph(tint = iconTint, modifier = iconModifier)
                 HomeMode.Agent -> AgentCubeGlyph(tint = iconTint, modifier = iconModifier)
             }
@@ -428,7 +446,21 @@ private fun DrawerNavItem(
             text = label,
             style = drawerRowText(),
             color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        if (isModeRow) {
+            Spacer(Modifier.width(spacing.sm))
+            // Decorative: TalkBack already hears the action from the row.
+            Icon(
+                Icons.Outlined.SwapHoriz,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 
