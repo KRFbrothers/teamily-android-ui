@@ -474,10 +474,6 @@ fun DuaGenAINavHost(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     mode = mode,
                     onModeChange = { mode = it },
-                    // The top bar's right button is a gear in Dua mode and a plus
-                    // in Agent mode, so the two callbacks are separate.
-                    onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
-                    onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
                     // Dua home's composer: every Send starts a NEW Dua thread
                     // (fresh chat id) carrying that first message.
                     onSendDuaMessage = { text ->
@@ -489,6 +485,10 @@ fun DuaGenAINavHost(
                             ),
                         )
                     },
+                    // The top bar's right button is a gear in Dua mode and a plus
+                    // in Agent mode, so the two callbacks are separate.
+                    onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
+                    onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
                     // Every tab has a destination. `HomeTab.Managed` is shown
                     // as "Agents" (the reference dock's label) and still opens
                     // the agents route. Memory and Artifacts open their own
