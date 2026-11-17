@@ -126,13 +126,16 @@ enum class DrawerDestination(val label: String, val comingSoon: Boolean = false)
     ModeSwitch("Mode"),
 }
 
+/** The drawer's one width cap (ChatGPT-like; leaves a home strip beside it). */
+internal val DRAWER_MAX_WIDTH = 280.dp
+
 /** Test tag on the footer avatar, carrying the cube it draws. */
 internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
 
 /**
  * The drawer sheet, laid out like the ChatGPT Android drawer in Dua colours:
  *
- *   "Dua" title · round search button
+ *   "Dua Gen AI" title · round search button
  *   Library / Images / Computer / Videos / mode row  (icon + label, no highlight)
  *   thin divider
  *   HISTORY [Demo] · plain chat titles · "See all"
@@ -181,11 +184,11 @@ fun SidebarDrawer(
     }
 
     ModalDrawerSheet(
-        // Capped at 320dp FIRST, then filling: on a phone the home screen
+        // Capped at DRAWER_MAX_WIDTH FIRST, then filling: on a phone the home screen
         // stays visible as a strip beside the sheet (ChatGPT reference), and a
         // narrow multi-window pane still uses the whole window.
         modifier = modifier
-            .widthIn(max = 320.dp)
+            .widthIn(max = DRAWER_MAX_WIDTH)
             .fillMaxWidth(),
         // Clean white in light (bgSurface #FFFFFF), dark surface in dark.
         drawerContainerColor = MaterialTheme.colorScheme.surface,
@@ -201,10 +204,16 @@ fun SidebarDrawer(
                         .padding(start = spacing.lg, end = spacing.md, top = spacing.lg, bottom = spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // The app's own name (`app_name`, "Dua Gen AI"). headlineSmall
+                    // bold, one line, so it fits beside the 48dp search button
+                    // at 280dp.
                     Text(
-                        text = "Dua",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
                     // Search had no behaviour before (a static pill), so the

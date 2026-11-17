@@ -3031,6 +3031,33 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Profile", 0)
     }
 
+    /**
+     * Header: "Dua Gen AI" (app_name) on ONE line beside the round search
+     * button, inside a drawer no wider than 280dp.
+     */
+    @Test
+    fun theDrawerTitleIsTheAppNameOnOneLineWithin280dp() {
+        launch()
+        switchTo(HomeMode.Dua)
+        // Dua home draws no app name, so the only one on screen is the drawer's.
+        assertNotVisible(APP_NAME_TEXT)
+        openDrawer()
+        assertVisible(APP_NAME_TEXT)
+
+        val title = compose.onAllNodesWithText(APP_NAME_TEXT).fetchSemanticsNodes().first { isOnScreen(it) }
+        val search = compose.onAllNodes(hasContentDescription("Search") and hasClickAction() and isEnabled())
+            .fetchSemanticsNodes().first { isOnScreen(it) }
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        title.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals("title must not wrap", 1, layouts.first().lineCount)
+        assertTrue("title must end before the search button", title.boundsInRoot.right <= search.boundsInRoot.left)
+        val density = compose.activity.resources.displayMetrics.density
+        assertTrue(
+            "drawer (search button edge) must sit inside 280dp",
+            search.boundsInRoot.right <= 280f * density + 0.5f,
+        )
+    }
+
     /** The round search button replaces the field; search is not built yet. */
     @Test
     fun theDrawerSearchButtonShowsComingSoon() {
