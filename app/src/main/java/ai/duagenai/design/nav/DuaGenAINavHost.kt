@@ -358,8 +358,9 @@ fun DuaGenAINavHost(
     // carries the animation and the swipe gesture.
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-    // The app launches into Agent home (Teamily chat list). Both top bars carry
-    // the Dua | Agent switch, so the user can always move between the two.
+    // The app launches into Agent home (Teamily chat list). Dua home's top bar
+    // has the Dua | Agent switch; from Agent home the drawer's "Dua" row
+    // switches back to Dua.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Agent) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
@@ -442,8 +443,8 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // Dua is a MODE too: this row (like the top-bar
-                        // Dua | Agent switch) switches Home to Dua.
+                        // Dua is a MODE too: Agent home has no toggle, so this
+                        // row is the way back to Dua's home.
                         DrawerDestination.Dua -> {
                             mode = HomeMode.Dua
                             navController.navigate(DuaGenAIRoutes.HOME) {
