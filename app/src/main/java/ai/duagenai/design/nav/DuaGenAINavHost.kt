@@ -412,7 +412,7 @@ fun DuaGenAINavHost(
 
     // The app launches into Dua home (greeting, starters, composer, pill).
     // Dua home's top bar has the Dua | Agent switch; from Agent home the
-    // drawer's "Dua" row (TalkBack: "Switch to Dua mode") switches back.
+    // drawer's Dua | Agent toggle (TalkBack: "Switch to Dua mode") switches back.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
     // The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
@@ -490,17 +490,6 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
                             launchSingleTop = true
                         }
-                        // ONE mode row: it shows the target mode's short
-                        // label. A tap closes the drawer and flips to that
-                        // mode's home. Agent home has no toggle, so this
-                        // is its way back to Dua.
-                        DrawerDestination.ModeSwitch -> {
-                            mode = if (mode == HomeMode.Agent) HomeMode.Dua else HomeMode.Agent
-                            navController.navigate(DuaGenAIRoutes.HOME) {
-                                popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
                         // Library / Images / Computer / Videos have no screen
                         // yet. The drawer answers them itself with the "Jaldi
                         // aa raha hai" snackbar and never calls onSelect.
@@ -508,6 +497,17 @@ fun DuaGenAINavHost(
                         DrawerDestination.Images,
                         DrawerDestination.Computer,
                         DrawerDestination.Videos -> Unit
+                    }
+                },
+                // The Dua | Agent toggle under the drawer title. A segment tap
+                // closes the drawer and opens THAT mode's home. Agent home has
+                // no pill, so this is its way back to Dua.
+                onModeChange = { target ->
+                    scope.launch { drawerState.close() }
+                    mode = target
+                    navController.navigate(DuaGenAIRoutes.HOME) {
+                        popUpTo(DuaGenAIRoutes.HOME) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
                 onOpenChat = { chatId, title ->

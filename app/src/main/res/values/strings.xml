@@ -10,7 +10,7 @@
     <!-- Dua home composer: Attach / Voice are not wired yet. Also used for
          Profile picture sources that are not built yet. -->
     <string name="composer_coming_soon">Jaldi aa raha hai</string>
-    <!-- Drawer mode row: short visible label; TalkBack hears the action. -->
+    <!-- Drawer Dua | Agent toggle: segment labels; TalkBack hears the action. -->
     <string name="drawer_switch_to_dua">Dua</string>
     <string name="drawer_switch_to_agent">Agent</string>
     <string name="drawer_switch_to_dua_talkback">Switch to Dua mode</string>

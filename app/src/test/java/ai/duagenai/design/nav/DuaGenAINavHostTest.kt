@@ -20,6 +20,9 @@ import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isOn
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.isNotSelected
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -35,6 +38,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
@@ -999,14 +1004,9 @@ class DuaGenAINavHostTest {
         if (visibleDescCount("${mode.label} mode") > 0) {
             compose.onNodeWithContentDescription("${mode.label} mode").performClick()
         } else {
+            // The drawer's Dua | Agent toggle always offers both modes.
             openDrawer()
-            val action = "Switch to ${mode.label} mode"
-            if (visibleDescCount(action) > 0) {
-                modeRow(mode.label).performClick()
-            } else {
-                // Already in [mode]: the row offers the other mode. Just close.
-                compose.onNodeWithContentDescription(CLOSE_DRAWER).performClick()
-            }
+            modeRow(mode.label).performClick()
         }
         compose.waitForIdle()
     }
@@ -1405,7 +1405,7 @@ class DuaGenAINavHostTest {
         assertNotVisible(DUA_ASK_HINT)
         assertNotVisible(DUA_GREETING)
 
-        // Agent -> Dua goes through the drawer row labelled "Dua".
+        // Agent -> Dua goes through the drawer toggle's "Dua" segment.
         openDrawer()
         assertVisible("Dua")
         assertVisibleDescCount("Switch to Dua mode", 1)
@@ -1565,15 +1565,14 @@ class DuaGenAINavHostTest {
             compose.waitForIdle()
             assertEquals(route, currentRoute())
             assertTabSelected(tab.label)
-            // Exactly five tabs in the dock on every tab screen.
+            // Exactly five tabs in the dock on every tab screen. Counted on
+            // screen only: the closed drawer stays composed off screen and its
+            // Dua | Agent toggle is also a pair of tabs.
             assertEquals(
                 5,
                 compose.onAllNodes(
-                    androidx.compose.ui.test.SemanticsMatcher.expectValue(
-                        androidx.compose.ui.semantics.SemanticsProperties.Role,
-                        androidx.compose.ui.semantics.Role.Tab,
-                    ),
-                ).fetchSemanticsNodes().size,
+                    SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab),
+                ).fetchSemanticsNodes().count { isOnScreen(it) },
             )
         }
 
@@ -3061,22 +3060,28 @@ class DuaGenAINavHostTest {
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
-    /** The drawer's clickable mode row, found by its TalkBack action. */
+    /** A drawer toggle segment, found by its TalkBack action. */
     private fun modeRow(target: String) =
         compose.onNode(hasContentDescription("Switch to $target mode") and hasClickAction())
 
     /**
-     * ChatGPT-style drawer: one mode row whose visible text is the short
-     * target name. TalkBack hears the action ("Switch to Dua/Agent mode").
-     * A tap closes the drawer and opens that mode's home.
+     * Drawer Dua | Agent toggle, directly under the title: BOTH segments are
+     * always there as tabs, the active mode's segment is the selected one, and
+     * a tap closes the drawer and opens that mode's home.
      */
     @Test
-    fun theDrawerHasOneModeRowThatFlipsBothWays() {
+    fun drawerToggleAgentOpensAgentHomeAndDuaReturnsToDuaHome() {
         launch()
         openDrawer()
-        // Launch is Dua home, so the row offers Agent.
+        // Launch is Dua home: both segments present, Dua is selected.
         assertVisibleDescCount("Switch to Agent mode", 1)
-        assertVisibleDescCount("Switch to Dua mode", 0)
+        assertVisibleDescCount("Switch to Dua mode", 1)
+        modeRow("Dua").assert(isSelected())
+        modeRow("Agent").assert(isNotSelected())
+        modeRow("Agent").assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+        // The old cube + swap-arrow row is gone: no "Mode" nav row.
+        assertNotVisible("Mode")
+
         modeRow("Agent").performClick()
         compose.waitForIdle()
         // Drawer closed, Agent home is showing.
@@ -3091,10 +3096,10 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount("Agent mode", 0)
         assertNotVisible(DUA_ASK_HINT)
 
-        // Back in the drawer the row now reads "Dua" and returns to Dua home.
+        // Back in the drawer the Agent segment is selected; Dua returns home.
         openDrawer()
-        assertVisible("Dua")
-        assertVisibleDescCount("Switch to Dua mode", 1)
+        modeRow("Agent").assert(isSelected())
+        modeRow("Dua").assert(isNotSelected())
         modeRow("Dua").performClick()
         compose.waitForIdle()
         assertVisibleDescCount(CLOSE_DRAWER, 0)
@@ -3104,6 +3109,14 @@ class DuaGenAINavHostTest {
         assertVisible(DUA_ASK_HINT)
         assertVisibleDescCount("Dua mode", 1)
         assertVisibleDescCount("Agent mode", 1)
+        assertNotVisible(CHATS_HEADER)
+
+        // Tapping the ACTIVE segment keeps the mode and still closes the drawer.
+        openDrawer()
+        modeRow("Dua").performClick()
+        compose.waitForIdle()
+        assertVisibleDescCount(CLOSE_DRAWER, 0)
+        assertVisible(DUA_GREETING)
         assertNotVisible(CHATS_HEADER)
     }
 
