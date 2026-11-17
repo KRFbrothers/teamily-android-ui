@@ -1812,6 +1812,12 @@ internal fun HomeBottomNav(
     selected: HomeTab,
     onSelect: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Whether Memory has unread updates. There is no real unread-memory source
+     * yet, so it defaults to false: no dot, and TalkBack says just "Memory".
+     * The dot sits on the glyph as an overlay, so hiding it changes no size.
+     */
+    hasUnreadMemory: Boolean = false,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
@@ -1862,8 +1868,12 @@ internal fun HomeBottomNav(
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
                                 this.selected = active
-                                // Matches Teamily mobile app accessibility label
-                                if (tab == HomeTab.Memory) contentDescription = "${tab.label}, New updates"
+                                // Matches Teamily mobile app accessibility label.
+                                // "New updates" only with a real unread source.
+                                if (tab == HomeTab.Memory) {
+                                    contentDescription =
+                                        if (hasUnreadMemory) "${tab.label}, New updates" else tab.label
+                                }
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1882,8 +1892,9 @@ internal fun HomeBottomNav(
                         ) {
                             Box {
                                 TabGlyph(tab = tab, tint = tint, strong = active)
-                                if (tab == HomeTab.Memory) {
-                                    // The reference's unread dot
+                                if (tab == HomeTab.Memory && hasUnreadMemory) {
+                                    // The reference's unread dot, only when a
+                                    // real unread source says so.
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopStart)
