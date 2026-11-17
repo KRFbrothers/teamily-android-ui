@@ -64,12 +64,12 @@ fun engineBaseUrlFor(buildTypeSuffix: String): String {
 
 android {
     namespace = "ai.duagenai.design"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "ai.duagenai.design"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
