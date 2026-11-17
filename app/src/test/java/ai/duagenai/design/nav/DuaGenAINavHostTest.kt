@@ -3286,6 +3286,19 @@ class DuaGenAINavHostTest {
      * own title and its Save/Cancel controls are the screen's markers.
      */
     @Test
+    fun theProfilePictureSheetHasOnlyCameraGalleryAndChooseCube() {
+        launch()
+        openProfileFromDrawer()
+        openProfilePictureSheet()
+        assertVisible("Camera")
+        assertVisible("Gallery")
+        assertVisible("Choose cube")
+        assertNotVisible("Import from Instagram")
+        assertNotVisible("Import from Facebook")
+        assertNotVisible("AI images")
+    }
+
+    @Test
     fun theChangeCubeRowOpensTheCubePicker() {
         launch()
         openCubePickerFromProfile()

@@ -44,9 +44,6 @@
     <string name="profile_picture_camera">Camera</string>
     <string name="profile_picture_gallery">Gallery</string>
     <string name="profile_picture_choose_cube">Choose cube</string>
-    <string name="profile_picture_instagram">Import from Instagram</string>
-    <string name="profile_picture_facebook">Import from Facebook</string>
-    <string name="profile_picture_ai">AI images</string>
     <string name="profile_save">Save</string>
     <string name="profile_cancel">Cancel</string>
     <string name="back">Back</string>

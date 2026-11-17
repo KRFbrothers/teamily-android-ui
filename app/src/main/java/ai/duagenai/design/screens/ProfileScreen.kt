@@ -33,7 +33,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.AlternateEmail
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Info
@@ -41,7 +40,6 @@ import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -52,8 +50,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SmallFloatingActionButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -64,7 +60,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,7 +86,6 @@ import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
-import kotlinx.coroutines.launch
 import java.io.File
 
 /* ============================================================================
@@ -138,8 +132,6 @@ fun ProfileScreen(
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
     var showPictureSheet by rememberSaveable { mutableStateOf(false) }
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -177,18 +169,12 @@ fun ProfileScreen(
         }
     }
 
-    val comingSoon = stringResource(R.string.composer_coming_soon)
-    fun showComingSoon() {
-        scope.launch { snackbar.showSnackbar(comingSoon) }
-    }
-
     val notSet = stringResource(R.string.profile_not_set)
     val reserveUsername = stringResource(R.string.profile_reserve_username)
 
     Scaffold(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = {
@@ -353,7 +339,6 @@ fun ProfileScreen(
                 onClearPhoto()
                 showPictureSheet = false
             },
-            onComingSoon = { showComingSoon() },
         )
     }
 
@@ -445,7 +430,6 @@ internal fun ProfilePictureSheet(
     onGallery: () -> Unit,
     onChooseCube: () -> Unit,
     onDelete: () -> Unit,
-    onComingSoon: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
@@ -513,27 +497,6 @@ internal fun ProfilePictureSheet(
                         contentDescription = null,
                     )
                 },
-            )
-            HorizontalDivider(color = colors.hairline)
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_instagram),
-                subtitle = " ",
-                icon = Icons.Outlined.Public,
-                onClick = onComingSoon,
-            )
-            HorizontalDivider(color = colors.hairline)
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_facebook),
-                subtitle = " ",
-                icon = Icons.Outlined.Public,
-                onClick = onComingSoon,
-            )
-            HorizontalDivider(color = colors.hairline)
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_ai),
-                subtitle = " ",
-                icon = Icons.Outlined.AutoAwesome,
-                onClick = onComingSoon,
             )
         }
     }
