@@ -51,7 +51,7 @@ data class TeamilyPalette(
     val cardGradient: Brush,
     val borderGradient: Brush,
     val cardHeroColor: Color,
-    /** Soft rim on the personal-agent hero. #AEBBB1 at 13% (0x22). */
+    /** Soft rim on the personal-agent hero: 0.5dp Color(0x18AEBBB1). */
     val heroCardBorder: Color,
     val surfaceRecessed: Color,
     val statusbarBg: Color,
@@ -130,13 +130,12 @@ data class TeamilyPalette(
 )
 
 val TeamilyDarkPalette = TeamilyPalette(
-    // AMOLED depth (Fareed, freeze override): near-black #0F1412 canvas so the
-    // #1A231E surfaces, #222D27 composer and #1E3A2B hero separate cleanly.
-    bgCanvas = Color(0xFF0F1412),
-    bgCanvasTop = Color(0xFF0F1412),
-    bgCanvasBottom = Color(0xFF0F1412),
+    // Dark canvas: warm dark slate Color(0xFF1D2120) (RGB 29, 33, 32) matching Teamily AI.
+    bgCanvas = Color(0xFF1D2120),
+    bgCanvasTop = Color(0xFF1D2120),
+    bgCanvasBottom = Color(0xFF1D2120),
     bgCanvasGradient = Brush.verticalGradient(
-        listOf(Color(0xFF0F1412), Color(0xFF0F1412), Color(0xFF0F1412)),
+        listOf(Color(0xFF1D2120), Color(0xFF1D2120), Color(0xFF1D2120)),
     ),
     // AMOLED surface & dock.
     bgSurface = Color(0xFF1A231E),
@@ -164,12 +163,12 @@ val TeamilyDarkPalette = TeamilyPalette(
     ),
     // Hero pinned card fill (dark).
     cardHeroColor = Color(0xFF1E3A2B),
-    heroCardBorder = Color(0x22AEBBB1),
+    heroCardBorder = Color(0x18AEBBB1),
     // Live measured recessed search field: #181D1B (R=24, G=29, B=27)
     surfaceRecessed = Color(0xFF181D1B),
     // Header sits on the canvas, so it matches it (no band at the top).
-    statusbarBg = Color(0xFF0F1412),
-    topbarBg = Color(0xFF0F1412),
+    statusbarBg = Color(0xFF1D2120),
+    topbarBg = Color(0xFF1D2120),
     // Top of `--nv-glass-surface` dark (spec allows solid #323B36 only as an elevated fallback).
     composerBg = Color(0xFF222D27),
     bottomnavBg = Color(0xFF1A231E),
@@ -235,14 +234,14 @@ val TeamilyDarkPalette = TeamilyPalette(
     tilePink = Color(0xFFE84A9B),
     // --nv-atmosphere dark: radial-gradient(ellipse at 8% 92%, #242b27 0, transparent 48%), #171c19
     atmosphereDeep = Color(0xFF242B27),
-    atmosphereBase = Color(0xFF0F1412),
+    atmosphereBase = Color(0xFF1D2120),
     atmosphereStop = 0.48f,
     toolActive = Color(0xFF42D982),
     notificationDot = Color(0xFFA2E4B6),
-    // Dark --nv-notification-outline = --nv-canvas.
-    notificationOutline = Color(0xFF0F1412),
+    // Dark --nv-notification-outline = #141816 ring.
+    notificationOutline = Color(0xFF141816),
     // Matches the dark header (= canvas).
-    avatarOnlineRing = Color(0xFF0F1412),
+    avatarOnlineRing = Color(0xFF1D2120),
     restingShadowElevation = 6.dp,
     restingShadowAmbient = Color(0x55000000),
     restingShadowSpot = Color(0x88000000),
@@ -279,7 +278,7 @@ val TeamilyLightPalette = TeamilyPalette(
         1f to Color(0xFFCFD9D2),
     ),
     cardHeroColor = Color(0xFFDDF3E5),
-    heroCardBorder = Color(0x22AEBBB1),
+    heroCardBorder = Color(0x18AEBBB1),
     surfaceRecessed = Color(0xFFF2F4F3),
     statusbarBg = Color(0xFFFAFBFA),
     topbarBg = Color(0xFFEEF2EF),

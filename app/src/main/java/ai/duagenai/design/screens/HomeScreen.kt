@@ -49,6 +49,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Add
@@ -302,6 +303,7 @@ fun HomeScreen(
      * that circle's top-right rim. The green app badge is [AppBadge].
      */
     userAvatar: Painter? = null,
+    hasUnreadMemory: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     // Local only when the host does not own the flag. On means the public
@@ -420,8 +422,8 @@ fun HomeScreen(
                 PersonalAgentHeroCard(
                     onClick = onOpenPersonalAgentChat,
                     modifier = Modifier.padding(
-                        start = LocalDuaGenAISpacing.current.gutter,
-                        end = LocalDuaGenAISpacing.current.gutter,
+                        start = 9.dp,
+                        end = 9.dp,
                         bottom = 6.dp,
                     ),
                 )
@@ -437,6 +439,7 @@ fun HomeScreen(
                     HomeBottomNav(
                         selected = selectedTab,
                         onSelect = onSelectTab,
+                        hasUnreadMemory = hasUnreadMemory,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
@@ -1035,16 +1038,16 @@ private fun SendStopVoiceButton(
  * ==========================================================================*/
 
 /** Hero card title. The thread opened from the card uses the same string. */
-internal const val PERSONAL_AGENT_TITLE = "Personal Agent"
+internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
 /** Honest hero subtitle — a description of what the card opens, not a fake chat line. */
 internal const val PERSONAL_AGENT_PREVIEW = "Your own assistant — tap to chat"
-internal const val PERSONAL_AGENT_DATE = ""
+internal const val PERSONAL_AGENT_DATE = "Mon"
 
 /** The pinned official agent row. Matches Teamily AI mobile app parity. */
 internal const val DUA_AGENT_TITLE = "Dua Agent"
 internal const val DUA_AGENT_SUBTITLE = "I'm Dua Agent \u2014 the official agent of Dua Gen AI"
-/** No fake timestamp on the pinned row: an empty [CanvasChatRow] time hides it. */
-internal const val DUA_AGENT_TIME = ""
+/** Timestamp on the pinned row: "Mon" right-aligned matching Teamily parity. */
+internal const val DUA_AGENT_TIME = "Mon"
 
 /** Header brand text. Matches Teamily AI mobile app parity. */
 internal const val APP_NAME = "Dua Gen AI"
@@ -1069,18 +1072,17 @@ private fun AgentHomeTopBar(
             .fillMaxWidth()
             .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
     ) {
-        // LEFT — the user's photo. Same drawer the Dua hamburger opens, so the
-        // accessibility label stays "Open menu". The clip stays on the photo
-        // so the online dot can sit on the circle's top-right rim.
+        // LEFT — the user's photo: 35.dp visual circle inside 48.dp touch target.
         val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(40.dp),
+                .size(48.dp),
+            contentAlignment = Alignment.CenterStart,
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .size(35.dp)
                     .clip(CircleShape)
                     .background(palette.chromeFill)
                     .clickable(role = Role.Button, onClick = onOpenDrawer)
@@ -1093,14 +1095,15 @@ private fun AgentHomeTopBar(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // 8.dp #42D982 fill, 2.dp #1D2220 ring.
+            // 8.dp #42D982 fill, 2.dp #1D2120 ring.
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(12.dp)
+                    .align(Alignment.TopStart)
+                    .offset(x = 24.dp, y = 3.dp)
+                    .size(11.dp)
                     .clip(CircleShape)
                     .background(palette.avatarOnlineRing)
-                    .padding(2.dp)
+                    .padding(1.5.dp)
                     .clip(CircleShape)
                     .background(palette.logoMint),
             )
@@ -1111,7 +1114,7 @@ private fun AgentHomeTopBar(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
+            AppBadge(size = 30.dp, shape = TeamilyShapes.xs)
             Spacer(Modifier.width(spacing.sm))
             Text(
                 text = APP_NAME,
@@ -1126,15 +1129,12 @@ private fun AgentHomeTopBar(
             )
         }
 
-        // RIGHT — plus. Opens the menu of REAL actions: Create Agent (its own
-        // screen) and New Group. The mockup's dead entries — Add Contact,
-        // Referral Program, video meetings — are gone rather than shown
-        // inert; new features re-add their own row here with a working action.
+        // RIGHT — plus (48.dp visual circle). Opens the menu of REAL actions.
         Box(modifier = Modifier.align(Alignment.CenterEnd)) {
             var menuOpen by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(palette.plusFill)
                     .clickable(role = Role.Button) { menuOpen = true }
@@ -1145,7 +1145,7 @@ private fun AgentHomeTopBar(
                     Icons.Filled.Add,
                     contentDescription = null,
                     tint = palette.plusIcon,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -1222,7 +1222,6 @@ private fun DuaHomeWelcome(
 @Composable
 private fun AppBadge(size: Dp, shape: Shape) {
     val palette = teamilyPalette()
-    val mini = size < 20.dp
     Box(
         modifier = Modifier
             .size(size)
@@ -1230,10 +1229,11 @@ private fun AppBadge(size: Dp, shape: Shape) {
             .background(palette.logoMint),
         contentAlignment = Alignment.Center,
     ) {
-        CubeLogoGlyph(
-            tint = palette.tileInk,
-            strokeWidth = if (mini) 1.25.dp else TeamilyStroke.icon,
-            modifier = Modifier.size(size * if (mini) 0.75f else 0.65f),
+        Image(
+            painter = painterResource(R.drawable.dua_bot_head),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(size * 0.82f),
         )
     }
 }
@@ -1290,7 +1290,6 @@ private fun SearchRow(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
-    val palette = teamilyPalette()
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -1299,10 +1298,9 @@ private fun SearchRow(
     ) {
         Box(
             modifier = Modifier
-                .size(MinTouchTarget)
+                .size(48.dp)
                 .clip(CircleShape)
-                .background(if (filterActive) colors.brandSoft else palette.chromeFill)
-                .border(1.dp, palette.border, CircleShape)
+                .background(if (filterActive) colors.brandSoft else Color(0xFF2A322E))
                 .clickable(role = Role.Button, onClick = onToggleFilter)
                 .semantics {
                     contentDescription = "Filter"
@@ -1331,19 +1329,19 @@ private fun SearchRow(
         Surface(
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp)
+                .height(46.dp)
                 .semantics {
                     contentDescription = "Search"
                     disabled()
                 },
             shape = TeamilyShapes.capsule,
-            color = palette.surfaceRecessed,
-            border = BorderStroke(1.dp, palette.border),
+            color = Color(0xFF181C1B),
+            border = BorderStroke(1.dp, Color(0xFF323A36)),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(46.dp)
                     .padding(horizontal = spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1383,12 +1381,13 @@ internal fun PersonalAgentHeroCard(
     val palette = teamilyPalette()
     val interactionSource = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
+    val heroShape = RoundedCornerShape(10.dp)
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .teamilyPressScale(interactionSource, targetScale = 0.97f)
-            .teamilyRestingShadow(palette, TeamilyShapes.card)
-            .clip(TeamilyShapes.card)
+            .teamilyRestingShadow(palette, heroShape)
+            .clip(heroShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -1401,20 +1400,49 @@ internal fun PersonalAgentHeroCard(
             .semantics {
                 contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW, $PERSONAL_AGENT_DATE"
             },
-        shape = TeamilyShapes.card,
-        color = palette.cardHeroColor,
-        border = BorderStroke(1.dp, palette.heroCardBorder),
+        shape = heroShape,
+        color = Color(0xFF263C30),
+        border = null,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
-                ring = palette.cardHeroColor,
+                ring = Color(0xFF263C30),
                 miniBadge = true,
-                mini = { BotBadge(14.dp) },
+                size = 42.dp,
+                mini = {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(palette.logoMint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.dua_bot_head),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                },
             ) {
-                BotBadge(40.dp)
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF3E8EE)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.dua_bot_head),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(34.dp),
+                    )
+                }
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1461,26 +1489,28 @@ internal fun PersonalAgentHeroCard(
 }
 
 /**
- * A 40dp circular avatar with an optional green mini-badge at its bottom-end.
+ * A circular avatar with an optional green mini-badge at its bottom-end.
  * The badge is ringed in [ring] (the surface behind it) so it reads as a badge.
  */
 @Composable
 private fun ChatAvatar(
     ring: Color,
     miniBadge: Boolean,
+    size: Dp = 40.dp,
     mini: @Composable () -> Unit = { AppBadge(size = 14.dp, shape = CircleShape) },
     content: @Composable () -> Unit,
 ) {
-    Box(Modifier.size(44.dp)) {
-        Box(Modifier.align(Alignment.TopStart).size(40.dp).clip(CircleShape)) { content() }
+    val badgeSize = if (size > 44.dp) 18.dp else 17.dp
+    Box(Modifier.size(size + 4.dp)) {
+        Box(Modifier.align(Alignment.TopStart).size(size).clip(CircleShape)) { content() }
         if (miniBadge) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(17.dp)
+                    .size(badgeSize)
                     .clip(CircleShape)
                     .background(ring)
-                    .padding(1.5.dp),
+                    .padding(1.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 mini()
@@ -1506,10 +1536,8 @@ internal fun BotBadge(size: Dp) {
  * stays the untouched mint image for the hero.
  */
 @Composable
-internal fun SignalBotBadge(size: Dp) {
-    val context = LocalContext.current
+internal fun SignalBotBadge(size: Dp = 42.dp) {
     val green = teamilyPalette().signalGreen
-    val bot = remember { botBadgeWithoutMint(context) }
     Box(
         modifier = Modifier
             .size(size)
@@ -1518,10 +1546,10 @@ internal fun SignalBotBadge(size: Dp) {
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            bitmap = bot,
+            painter = painterResource(R.drawable.dua_bot_head),
             contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(size * 0.81f),
         )
     }
 }
@@ -1550,7 +1578,7 @@ private fun botBadgeWithoutMint(context: android.content.Context): ImageBitmap {
 /** One chat row's 3D character, cropped to the avatar circle. */
 /**
  * One canvas row — no card box: avatar · title (+ verified ✓) / 1-line
- * subtitle · right-aligned time. 16dp side padding, sits on the canvas.
+ * subtitle · right-aligned time. 18dp side padding to align avatar with hero card.
  */
 @Composable
 private fun CanvasChatRow(
@@ -1576,7 +1604,7 @@ private fun CanvasChatRow(
                 onClick()
             },
         )
-        .padding(horizontal = spacing.gutter, vertical = 9.dp)
+        .padding(horizontal = 18.dp, vertical = 9.dp)
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1850,7 +1878,7 @@ internal fun HomeBottomNav(
      * yet, so it defaults to false: no dot, and TalkBack says just "Memory".
      * The dot sits on the glyph as an overlay, so hiding it changes no size.
      */
-    hasUnreadMemory: Boolean = false,
+    hasUnreadMemory: Boolean = true,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
@@ -1896,7 +1924,8 @@ internal fun HomeBottomNav(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onSelect(tab)
                             }
-                            .sizeIn(minWidth = 54.dp, minHeight = 48.dp)
+                            .height(76.dp)
+                            .fillMaxWidth()
                             .semantics {
                                 role = Role.Tab
                                 // `this.` — the parameter `selected` would shadow it.
@@ -1919,29 +1948,29 @@ internal fun HomeBottomNav(
                         )
                         Column(
                             modifier = Modifier
-                                .padding(horizontal = spacing.xs, vertical = 2.dp),
+                                .fillMaxHeight()
+                                .padding(horizontal = spacing.xs, vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Box {
                                 TabGlyph(tab = tab, tint = tint, strong = active)
                                 if (tab == HomeTab.Memory && hasUnreadMemory) {
-                                    // The reference's unread dot, only when a
-                                    // real unread source says so.
+                                    // The reference's unread dot: 13.dp pale-green dot (#A2E4B6 fill with 2.dp #141816 outline ring)
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopStart)
                                             .offset(x = 16.dp, y = (-5).dp)
-                                            .size(11.dp)
+                                            .size(13.dp)
                                             .clip(CircleShape)
                                             .background(palette.notificationOutline)
-                                            .padding(1.5.dp)
+                                            .padding(2.dp)
                                             .clip(CircleShape)
                                             .background(palette.notificationDot),
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.height(3.dp))
                             Text(
                                 text = tab.label,
                                 style = DuaGenAITextStyles.navLabel.copy(
@@ -1966,13 +1995,13 @@ internal fun HomeBottomNav(
 @Composable
 private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
     // The chat list keeps Chats selected. That tab's glyph is the 3D bot,
-    // sitting on the navSelected pill (#545B56 in dark). Not the wireframe cube.
+    // sitting directly on the navSelected pill (#545B56 in dark) with transparent background.
     if (tab == HomeTab.Chats) {
         Image(
-            painter = painterResource(R.drawable.dua_bot_badge),
+            painter = painterResource(R.drawable.dua_bot_head),
             contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(20.dp).clip(CircleShape),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(28.dp),
         )
         return
     }
