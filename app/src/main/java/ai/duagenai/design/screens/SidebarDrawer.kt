@@ -280,9 +280,6 @@ fun SidebarDrawer(
                         style = DuaGenAITextStyles.eyebrow,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    // Sample history, not the user's real chats yet.
-                    Spacer(Modifier.width(spacing.xs))
-                    DemoBadge()
                 }
 
                 LazyColumn(
@@ -291,22 +288,38 @@ fun SidebarDrawer(
                     // covers it.
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
                 ) {
-                    items(history) { row ->
-                        DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
-                    }
-                    // "All" was a static label; "See all" now answers like
-                    // the other unbuilt destinations.
-                    item {
-                        Text(
-                            text = "See all",
-                            style = drawerRowText().copy(fontSize = 15.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(role = Role.Button, onClick = showComingSoon)
-                                .sizeIn(minHeight = 48.dp)
-                                .padding(horizontal = spacing.lg, vertical = spacing.md),
-                        )
+                    if (history.isEmpty()) {
+                        // No sample conversations are shipped: the history
+                        // says so instead of listing chats that are not there.
+                        item {
+                            Text(
+                                text = "No conversations yet",
+                                style = drawerRowText().copy(fontSize = 15.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sizeIn(minHeight = 48.dp)
+                                    .padding(horizontal = spacing.lg, vertical = spacing.md),
+                            )
+                        }
+                    } else {
+                        items(history) { row ->
+                            DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
+                        }
+                        // "All" was a static label; "See all" now answers like
+                        // the other unbuilt destinations.
+                        item {
+                            Text(
+                                text = "See all",
+                                style = drawerRowText().copy(fontSize = 15.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(role = Role.Button, onClick = showComingSoon)
+                                    .sizeIn(minHeight = 48.dp)
+                                    .padding(horizontal = spacing.lg, vertical = spacing.md),
+                            )
+                        }
                     }
                 }
             }

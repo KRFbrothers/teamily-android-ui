@@ -332,18 +332,19 @@ fun AgentCubeAvatar(size: Dp, modifier: Modifier = Modifier, badge: Dp = 0.dp, r
 const val MADE_AGENT_PREFIX = "made_agent_"
 
 /**
- * Built-in agent threads. Groups, people (David Park, Family, Design Team, the
- * guild) and Dua threads are NOT agents, so they keep the plain chat header.
+ * Built-in agent threads. Groups, people and Dua threads are NOT agents, so
+ * they keep the plain chat header. The legacy curated chat ids stay mapped
+ * even though nothing lists them any more: a thread opened by one (an old
+ * link, a test) keeps the agent header it always had.
  */
-internal val BUILT_IN_AGENT_IDS: Set<String> = buildSet {
-    add(AGENT_CHAT_ID)
-    add(PERSONAL_AGENT_CHAT_ID)
-    agentHomeChats.forEach { if (it.chatId != FULL_STACK_GUILD_CHAT_ID) add(it.chatId) }
-    add("chat_webpage_developer")
-    add("chat_slides_assistant")
-    add("chat_market_research")
-    add("chat_accounting_assistant")
-}
+internal val BUILT_IN_AGENT_IDS: Set<String> = setOf(
+    AGENT_CHAT_ID,
+    PERSONAL_AGENT_CHAT_ID,
+    "chat_webpage_developer",
+    "chat_slides_assistant",
+    "chat_market_research",
+    "chat_accounting_assistant",
+)
 
 /** True for an agent's thread (built-in or user-made). */
 fun isAgentChatId(chatId: String): Boolean =
@@ -352,25 +353,17 @@ fun isAgentChatId(chatId: String): Boolean =
 /** Only agents the user made can be deleted; built-in agents cannot. */
 fun isUserMadeAgent(agentId: String): Boolean = agentId.startsWith(MADE_AGENT_PREFIX)
 
-/** The 3D character art Agent home already uses for these five agents. */
-private val AGENT_AVATAR_RES = mapOf(
-    "chat_code_reviewer" to R.drawable.avatar_code_reviewer,
-    "chat_backend_architect" to R.drawable.avatar_backend_architect,
-    "chat_devops_automator" to R.drawable.avatar_devops_automator,
-    "chat_api_tester" to R.drawable.avatar_api_tester,
-    "chat_frontend_developer" to R.drawable.avatar_frontend_developer,
-)
-
 /**
  * One agent's avatar, circular: the bot art for Dua Agent / Personal Agent,
- * the 3D character for Agent home's five, otherwise that thread's own cube
- * (the same `CubeCatalog.forEntity` the chat bubbles use).
+ * otherwise that thread's own cube (the same `CubeCatalog.forEntity` the chat
+ * bubbles use). The old per-agent 3D character art belonged to the sample
+ * roster and is gone with it.
  */
 @Composable
 internal fun AgentAvatar(agentId: String, name: String, size: Dp, modifier: Modifier = Modifier) {
     val res = when (agentId) {
         AGENT_CHAT_ID, PERSONAL_AGENT_CHAT_ID -> R.drawable.dua_bot_badge
-        else -> AGENT_AVATAR_RES[agentId]
+        else -> null
     }
     if (res != null) {
         Image(
