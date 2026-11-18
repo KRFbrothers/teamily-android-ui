@@ -51,7 +51,7 @@ data class TeamilyPalette(
     val cardGradient: Brush,
     val borderGradient: Brush,
     val cardHeroColor: Color,
-    /** Soft rim on the personal-agent hero. #AEBBB1 at 13% (0x22). */
+    /** Soft rim on the personal-agent hero: 0.5dp Color(0x18AEBBB1). */
     val heroCardBorder: Color,
     val surfaceRecessed: Color,
     val statusbarBg: Color,
@@ -164,7 +164,7 @@ val TeamilyDarkPalette = TeamilyPalette(
     ),
     // Hero pinned card fill (dark).
     cardHeroColor = Color(0xFF1E3A2B),
-    heroCardBorder = Color(0x22AEBBB1),
+    heroCardBorder = Color(0x18AEBBB1),
     // Live measured recessed search field: #181D1B (R=24, G=29, B=27)
     surfaceRecessed = Color(0xFF181D1B),
     // Header sits on the canvas, so it matches it (no band at the top).
@@ -239,8 +239,8 @@ val TeamilyDarkPalette = TeamilyPalette(
     atmosphereStop = 0.48f,
     toolActive = Color(0xFF42D982),
     notificationDot = Color(0xFFA2E4B6),
-    // Dark --nv-notification-outline = --nv-canvas.
-    notificationOutline = Color(0xFF0F1412),
+    // Dark --nv-notification-outline = #141816 ring.
+    notificationOutline = Color(0xFF141816),
     // Matches the dark header (= canvas).
     avatarOnlineRing = Color(0xFF0F1412),
     restingShadowElevation = 6.dp,
@@ -279,7 +279,7 @@ val TeamilyLightPalette = TeamilyPalette(
         1f to Color(0xFFCFD9D2),
     ),
     cardHeroColor = Color(0xFFDDF3E5),
-    heroCardBorder = Color(0x22AEBBB1),
+    heroCardBorder = Color(0x18AEBBB1),
     surfaceRecessed = Color(0xFFF2F4F3),
     statusbarBg = Color(0xFFFAFBFA),
     topbarBg = Color(0xFFEEF2EF),
