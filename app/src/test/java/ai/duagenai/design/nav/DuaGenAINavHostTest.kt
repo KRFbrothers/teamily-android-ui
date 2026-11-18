@@ -266,7 +266,7 @@ private const val AGENT_COMPOSER_HINT = "Type a message..."
  * Used to FIND the card: it is the one filled card on Agent home and tapping
  * it opens the Personal Agent thread. The title is unique to the card.
  */
-private const val AGENT_ROLE_LINE = "Personal Agent"
+private const val AGENT_ROLE_LINE = PERSONAL_AGENT_TITLE
 
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
