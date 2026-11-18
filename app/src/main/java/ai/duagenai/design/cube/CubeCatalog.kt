@@ -33,9 +33,11 @@ object CubeCatalog {
     /**
      * The curated id -> cube assignments.
      *
-     * These are the seven conversations in `sampleChats` plus Agent's own
-     * thread. They are the mockups' pairings; keeping them explicit means the
-     * hash below can change without silently re-facing a shipped conversation.
+     * These pairings came from the original mockups and are kept explicit so
+     * the hash below can change without silently re-facing a shipped
+     * conversation. The ids no longer correspond to listed sample chats — the
+     * app ships none — but the curated cube for an id must never change once
+     * a real conversation carries it.
      */
     private val CURATED: Map<String, String> = mapOf(
         "chat_webpage_developer" to "cube_34",

@@ -115,7 +115,6 @@ import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.screens.defaultNotificationState
 import ai.duagenai.design.screens.notificationSummary
 import ai.duagenai.design.screens.demoArtifacts
-import ai.duagenai.design.screens.sampleChats
 import ai.duagenai.design.screens.sampleMemories
 import ai.duagenai.design.theme.DuaGenAITheme
 import kotlin.math.round
@@ -170,8 +169,8 @@ import kotlinx.coroutines.launch
  *
  *  Why not from Home: Dua's home is deliberately empty (Dua is a chatbot, not an
  *  agent host), so it draws no chat list. The drawer's history section is the
- *  one place conversations are listed, and it renders the same `sampleChats`
- *  list with the same per-chat cubes.
+ *  one place conversations are listed, and until real chats exist it renders
+ *  the honest empty state — no sample rows.
  * ==========================================================================*/
 
 /** Every destination, in one place so a typo cannot silently create a new route. */
@@ -437,7 +436,8 @@ fun DuaGenAINavHost(
 
     // Agent-home filter. True covers Home with the public profile.
     var publicProfileOpen by rememberSaveable { mutableStateOf(false) }
-    // Header menu creates. Newline-separated so rememberSaveable can keep them.
+    // Agents the user made in Create Agent. Newline-separated so
+    // rememberSaveable can keep them.
     var madeAgents by rememberSaveable { mutableStateOf("") }
     // A madeAgents string restored from an older build has lines without a
     // stable id: write their derived ids in once, so they never shift again.
@@ -445,7 +445,6 @@ fun DuaGenAINavHost(
         val migrated = withMadeAgentIds(madeAgents)
         if (migrated != madeAgents) madeAgents = migrated
     }
-    var madeArtifacts by rememberSaveable { mutableStateOf("") }
     var connectorState by rememberSaveable { mutableStateOf(DEFAULT_CONNECTOR_STATE) }
     var recentConnectors by rememberSaveable { mutableStateOf("") }
     var channelState by rememberSaveable { mutableStateOf(DEFAULT_CHANNEL_STATE) }
@@ -479,8 +478,9 @@ fun DuaGenAINavHost(
                 signedIn = sessionToken != null,
                 mode = mode,
                 // The SAME list Home renders — one source, so a history row and
-                // its Home row can never disagree about a name or a cube.
-                history = sampleChats,
+                // its Home row can never disagree about a name or a cube. Until
+                // real conversations exist, both render the honest empty state.
+                history = emptyList(),
                 onSelect = { destination ->
                     scope.launch { drawerState.close() }
                     when (destination) {
@@ -572,11 +572,6 @@ fun DuaGenAINavHost(
                     },
                     onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
                     onNewGroup = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP)) },
-                    onCreateArtifact = {
-                        val name = "New artifact ${linesOf(madeArtifacts).size + 1}"
-                        madeArtifacts = plusLine(madeArtifacts, name)
-                        navController.navigate(DuaGenAIRoutes.PROFILE_ARTIFACTS)
-                    },
                     filterActive = publicProfileOpen,
                     onFilterActiveChange = { publicProfileOpen = it },
                     onPublicProfileSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
@@ -607,7 +602,7 @@ fun DuaGenAINavHost(
                     signedIn = sessionToken != null,
                     chatCount = profileChatRows().size,
                     agentCount = profileAgentRows(linesOf(madeAgents)).size,
-                    artifactCount = profileArtifactRows(linesOf(madeArtifacts)).size,
+                    artifactCount = profileArtifactRows().size,
                     onOpenChats = { navController.navigate(DuaGenAIRoutes.PROFILE_CHATS) },
                     onOpenAgents = { navController.navigate(DuaGenAIRoutes.PROFILE_AGENTS) },
                     onOpenArtifacts = { navController.navigate(DuaGenAIRoutes.PROFILE_ARTIFACTS) },
@@ -627,11 +622,10 @@ fun DuaGenAINavHost(
                 )
             }
             composable(DuaGenAIRoutes.PROFILE_AGENTS) {
-                val rows = profileAgentRows(linesOf(madeAgents))
                 ProfileListScreen(
                     title = "Agents",
                     kicker = "Your agents",
-                    rows = rows,
+                    rows = profileAgentRows(linesOf(madeAgents)),
                     onBack = { navController.popBackStack() },
                     onOpenRow = { row ->
                         navController.navigate(DuaGenAIRoutes.chat(row.id, row.title))
@@ -642,7 +636,7 @@ fun DuaGenAINavHost(
                 ProfileListScreen(
                     title = "Artifacts",
                     kicker = "Saved outputs",
-                    rows = profileArtifactRows(linesOf(madeArtifacts)),
+                    rows = profileArtifactRows(),
                     onBack = { navController.popBackStack() },
                     onOpenRow = { _ -> },
                 )

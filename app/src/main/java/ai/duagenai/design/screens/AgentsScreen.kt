@@ -45,31 +45,13 @@ import androidx.compose.ui.text.style.TextOverflow
  *  `DuaGenAINavHost` wired the Agents tab to `composable(AGENTS) { AgentsScreen() }`,
  *  but `AgentsScreen` was never shipped, so the nav graph could not compile and
  *  the tab had nowhere to land. This is that destination: the list of agents the
- *  user manages, drawn from the same product model Home's Agent mode lists.
+ *  user manages.
  *
- *  It is deliberately read-only and data-free: the kit has no agent backend, so
- *  this screen renders the shipped sample agents and says so rather than
- *  pretending to fetch or to control anything.
+ *  It is deliberately data-free: the kit has no agent backend, so rather than
+ *  rendering a fake roster of agents that are "Working" or "Waiting on you",
+ *  the screen says honestly that there are no agents yet. Real agents appear
+ *  here when a backend provides them.
  * ==========================================================================*/
-
-/**
- * One agent the user manages. Mirrors Home's Agent-mode row. [chatId] is the
- * SAME stable id the drawer / Agent home use for this agent's thread, so the
- * card opens that thread and shows that thread's cube.
- */
-private data class ManagedAgent(
-    val chatId: String,
-    val name: String,
-    val role: String,
-    val status: String,
-)
-
-/** The sample roster. Same three agents Agent's own thread reports on. */
-private val managedAgents = listOf(
-    ManagedAgent("chat_slides_assistant", "Slides Assistant", "Builds and exports decks", "Working"),
-    ManagedAgent("chat_market_research", "Market Research", "Cites every claim", "Working"),
-    ManagedAgent("chat_accounting_assistant", "Accounting Assistant", "Reconciles invoices", "Waiting on you"),
-)
 
 /**
  * The Agents / Discover list card: `TeamilyShapes.card` on `bgSurface`, a 1dp
@@ -165,32 +147,21 @@ fun AgentsScreen(
                 .padding(horizontal = spacing.gutter, vertical = spacing.md),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "MANAGED",
-                    style = DuaGenAITextStyles.eyebrow,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // Sample agents, not the user's live agents yet.
-                Spacer(Modifier.width(spacing.xs))
-                DemoBadge()
-            }
-            managedAgents.forEach { agent ->
-                val cubeId = CubeCatalog.forEntity(agent.chatId)
-                TeamilyListCard(
-                    title = agent.name,
-                    subtitle = "${agent.role} \u00b7 ${agent.status}",
-                    onClick = { onOpenChat(agent.chatId, agent.name) },
-                    avatar = {
-                        CubeAvatar(
-                            cubeId = cubeId,
-                            size = 40.dp,
-                            shape = DuaGenAITheme.shapes.avatarList,
-                            contentDescription = "${agent.name} avatar, ${CubeIds.label(cubeId)}",
-                        )
-                    },
-                )
-            }
+            Text(
+                text = "MANAGED",
+                style = DuaGenAITextStyles.eyebrow,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = "No agents yet",
+                style = DuaGenAITextStyles.rowTitle,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Agents you add will show up here.",
+                style = DuaGenAITextStyles.snippet,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         }
     }

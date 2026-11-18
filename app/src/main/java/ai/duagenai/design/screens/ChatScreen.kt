@@ -4,6 +4,7 @@ import ai.duagenai.design.theme.DemoBadge
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -231,11 +233,13 @@ private fun nowLabel(): String =
     java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date())
 
 /**
- * Agent's own thread — the conversation the pinned card opens.
- *
- * It is written to Agent's role from the confirmed product model: Agent
- * multitask, controls other agents and can create new ones. The user asks for
+ * PREVIEW-ONLY fixture for Agent's thread — the conversation the pinned card
+ * opens, written to Agent's role from the product model: the user asks for
  * work, Agent reports what it did across the agents it manages.
+ *
+ * It seeds nothing in the real app: [ChatScreen] starts every thread empty
+ * and only the @Previews pass this list, so a design preview shows a
+ * conversation instead of a blank canvas.
  */
 private val agentThread = listOf(
     Message.User(
@@ -253,6 +257,7 @@ private val agentThread = listOf(
     ),
 )
 
+/** PREVIEW-ONLY fixture for an ordinary thread. See [agentThread]. */
 private val sampleThread = listOf(
     Message.User(
         "Hello! What tools and capabilities are available in this workspace?",
@@ -305,20 +310,31 @@ fun ChatScreen(
     chatDataSource: ChatDataSource? = null,
     /**
      * A NEW thread's first message (Dua home's composer Send). Non-null: the
-     * thread starts empty (no sample seed) and this is sent once, as if typed,
-     * so the reply lands here. Ignored once the thread has any message.
+     * thread starts empty (no seed) and this is sent once, as if typed, so the
+     * reply lands here. Ignored once the thread has any message.
      */
     initialMessage: String? = null,
+    /**
+     * The messages a thread starts with. EMPTY by default: a real conversation
+     * has no history until someone says something, so opening any thread shows
+     * an honest empty canvas with the composer — not a scripted fake dialogue.
+     * Only the @Previews pass [sampleThread] / [agentThread], purely so a
+     * design preview shows bubbles instead of a blank page.
+     */
+    seed: List<Message> = emptyList(),
 ) {
     val agentHeader = onOpenAgentProfile != null
-    // Agent's own thread is the one conversation whose content is not the
-    // generic sample: it is Agent reporting on the agents it controls. Every
-    // other id keeps the sample thread, so nothing else changes.
-    val seed = when {
-        initialMessage != null -> emptyList()
-        chatId == AGENT_CHAT_ID -> agentThread
-        else -> sampleThread
+    val profileClick = if (onOpenAgentProfile != null) {
+        Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
+    } else {
+        Modifier
     }
+    // An incoming first message starts an EMPTY thread and is sent once — it
+    // must never sit behind a scripted dialogue. Otherwise the thread shows
+    // exactly the caller's [seed], which defaults to empty.
+    val initialSeed = if (initialMessage != null) emptyList() else seed
+    // The thread's initial content comes ONLY from the caller. Nothing here
+    // invents a conversation.
     // Derived, never accepted as a parameter: the conversation's cube is a pure
     // function of its stable id, so this screen cannot drift from the Home row
     // that opened it — and it is not the user's saved cube.
@@ -340,8 +356,8 @@ fun ChatScreen(
     // The seed is rendered on the first frame (a pure read) and committed by the
     // effect below, so the thread is never briefly empty.
     val threads by transcriptStore.threads.collectAsState()
-    val messages: List<SavedMessage> = threads[chatId] ?: seed.map { it.toSaved() }
-    LaunchedEffect(chatId) { transcriptStore.ensure(chatId, seed.map { it.toSaved() }) }
+    val messages: List<SavedMessage> = threads[chatId] ?: initialSeed.map { it.toSaved() }
+    LaunchedEffect(chatId) { transcriptStore.ensure(chatId, initialSeed.map { it.toSaved() }) }
     // The composer's draft, saved the same way so a half-typed line survives a
     // rotation. Also keyed on `chatId`, so drafts do not leak between threads.
     // A draft is ONE short string, so the Bundle budget is a non-issue — this is
@@ -433,7 +449,7 @@ fun ChatScreen(
     // while the retained store still holds no message for this chat id.
     LaunchedEffect(chatId) {
         val first = initialMessage?.trim().orEmpty()
-        transcriptStore.ensure(chatId, seed.map { it.toSaved() })
+        transcriptStore.ensure(chatId, initialSeed.map { it.toSaved() })
         if (first.isNotEmpty() && transcriptStore.threads.value[chatId].isNullOrEmpty()) {
             draft = first
             send()
@@ -583,6 +599,46 @@ fun ChatScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
+            if (messages.isEmpty() && !agentTyping) {
+                // An honest empty thread: no scripted opener, just a hint that
+                // points at the composer. Centered in the pain area. The
+                // Personal Agent's quick-action chips live here too, so they
+                // stay on screen instead of being pushed out by this filler.
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillParentMaxSize()
+                            .padding(spacing.lg),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = "No messages yet",
+                            style = DuaGenAITextStyles.rowTitle,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(spacing.xs))
+                        Text(
+                            text = "Say something below to start the conversation.",
+                            style = DuaGenAITextStyles.snippet,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (isPersonal) {
+                            Spacer(Modifier.height(spacing.lg))
+                            QuickActionChips(
+                                label = "Try asking:",
+                                actions = PERSONAL_AGENT_QUICK_ACTIONS,
+                                onPick = { prompt ->
+                                    if (!agentTyping) {
+                                        draft = prompt
+                                        send()
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
             items(messages) { msg ->
                 when (msg.who) {
                     SavedMessage.AGENT -> AgentBubble(msg, cubeId, chatTitle)
@@ -592,9 +648,11 @@ fun ChatScreen(
             if (agentTyping) {
                 item { TypingBubble(cubeId, chatTitle) }
             }
-            // Personal Agent: the same quick-action chips as its demo screen.
-            // A chip sends its text like a typed message.
-            if (isPersonal) {
+            // Personal Agent, conversation underway: the same quick-action
+            // chips as its demo screen, under the messages. A chip sends its
+            // text like a typed message. (In an EMPTY thread the chips render
+            // inside the empty state above — this item would sit off screen.)
+            if (isPersonal && messages.isNotEmpty()) {
                 item {
                     QuickActionChips(
                         label = "Try asking:",
@@ -774,7 +832,7 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
 @Preview(name = "Chat — light — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ChatLight() = DuaGenAITheme(darkTheme = false) {
-    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = sampleThread)
 }
 
 @Preview(name = "Chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
@@ -782,17 +840,17 @@ private fun ChatLight() = DuaGenAITheme(darkTheme = false) {
 @Preview(name = "Chat — dark — foldable", showBackground = true, widthDp = 673, heightDp = 841)
 @Composable
 private fun ChatDark() = DuaGenAITheme(darkTheme = true) {
-    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = sampleThread)
 }
 
 @Preview(name = "Agent chat — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun AgentChatLight() = DuaGenAITheme(darkTheme = false) {
-    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE, seed = agentThread)
 }
 
 @Preview(name = "Agent chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun AgentChatDark() = DuaGenAITheme(darkTheme = true) {
-    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE, seed = agentThread)
 }
