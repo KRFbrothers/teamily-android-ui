@@ -85,30 +85,27 @@ internal data class ProfileListRow(
     val meta: String = "",
 )
 
-internal fun profileChatRows(): List<ProfileListRow> =
-    sampleChats.map { ProfileListRow(it.chatId, it.name, "Conversation") }
+/**
+ * The Profile "Chats" list. No fake conversations: empty until real chats
+ * exist, so the screen renders its honest empty state.
+ */
+internal fun profileChatRows(): List<ProfileListRow> = emptyList()
 
-internal fun profileAgentRows(created: List<String>): List<ProfileListRow> = buildList {
-    add(ProfileListRow(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE, PERSONAL_AGENT_PREVIEW))
-    add(ProfileListRow(AGENT_CHAT_ID, DUA_AGENT_TITLE, DUA_AGENT_SUBTITLE, DUA_AGENT_TIME))
-    agentHomeChats.forEach { chat ->
-        add(ProfileListRow(chat.chatId, chat.title, chat.subtitle, chat.time))
-    }
-    created.forEachIndexed { index, name ->
-        add(ProfileListRow("made_agent_$index", name, "Header menu se bana"))
-    }
-}
+/**
+ * The Profile "Agents" list: only the two pinned built-in assistants. No
+ * sample guild chats and no fabricated "New Agent N" rows — those were fake
+ * data pretending to be the user's agents.
+ */
+internal fun profileAgentRows(): List<ProfileListRow> = listOf(
+    ProfileListRow(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE, PERSONAL_AGENT_PREVIEW),
+    ProfileListRow(AGENT_CHAT_ID, DUA_AGENT_TITLE, DUA_AGENT_SUBTITLE, DUA_AGENT_TIME),
+)
 
-internal fun profileArtifactRows(created: List<String>): List<ProfileListRow> =
-    created.mapIndexed { index, name ->
-        ProfileListRow("made_art_$index", name, "Document")
-    }
+/** The Profile "Artifacts" list. Empty until the user really saves one. */
+internal fun profileArtifactRows(): List<ProfileListRow> = emptyList()
 
 internal fun linesOf(raw: String): List<String> =
     raw.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
-
-internal fun plusLine(raw: String, line: String): String =
-    if (raw.isBlank()) line else "$raw\n$line"
 
 internal data class ConnectorRow(
     val key: String,

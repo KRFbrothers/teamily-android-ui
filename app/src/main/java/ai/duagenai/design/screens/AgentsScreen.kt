@@ -26,22 +26,13 @@ import ai.duagenai.design.theme.LocalDuaGenAISpacing
  *  `DuaGenAINavHost` wired the Agents tab to `composable(AGENTS) { AgentsScreen() }`,
  *  but `AgentsScreen` was never shipped, so the nav graph could not compile and
  *  the tab had nowhere to land. This is that destination: the list of agents the
- *  user manages, drawn from the same product model Home's Agent mode lists.
+ *  user manages.
  *
- *  It is deliberately read-only and data-free: the kit has no agent backend, so
- *  this screen renders the shipped sample agents and says so rather than
- *  pretending to fetch or to control anything.
+ *  It is deliberately data-free: the kit has no agent backend, so rather than
+ *  rendering a fake roster of agents that are "Working" or "Waiting on you",
+ *  the screen says honestly that there are no agents yet. Real agents appear
+ *  here when a backend provides them.
  * ==========================================================================*/
-
-/** One agent the user manages. Mirrors Home's Agent-mode row. */
-private data class ManagedAgent(val name: String, val role: String, val status: String)
-
-/** The sample roster. Same three agents Agent's own thread reports on. */
-private val managedAgents = listOf(
-    ManagedAgent("Slides Assistant", "Builds and exports decks", "Working"),
-    ManagedAgent("Market Research", "Cites every claim", "Working"),
-    ManagedAgent("Accounting Assistant", "Reconciles invoices", "Waiting on you"),
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,24 +69,16 @@ fun AgentsScreen(modifier: Modifier = Modifier) {
                 style = DuaGenAITextStyles.eyebrow,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            managedAgents.forEach { agent ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = spacing.xs),
-                ) {
-                    Text(
-                        text = agent.name,
-                        style = DuaGenAITextStyles.rowTitle,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "${agent.role} \u00b7 ${agent.status}",
-                        style = DuaGenAITextStyles.snippet,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            Text(
+                text = "No agents yet",
+                style = DuaGenAITextStyles.rowTitle,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Agents you add will show up here.",
+                style = DuaGenAITextStyles.snippet,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

@@ -222,11 +222,13 @@ private fun nowLabel(): String =
     java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date())
 
 /**
- * Agent's own thread — the conversation the pinned card opens.
- *
- * It is written to Agent's role from the confirmed product model: Agent
- * multitask, controls other agents and can create new ones. The user asks for
+ * PREVIEW-ONLY fixture for Agent's thread — the conversation the pinned card
+ * opens, written to Agent's role from the product model: the user asks for
  * work, Agent reports what it did across the agents it manages.
+ *
+ * It seeds nothing in the real app: [ChatScreen] starts every thread empty
+ * and only the @Previews pass this list, so a design preview shows a
+ * conversation instead of a blank canvas.
  */
 private val agentThread = listOf(
     Message.User(
@@ -244,6 +246,7 @@ private val agentThread = listOf(
     ),
 )
 
+/** PREVIEW-ONLY fixture for an ordinary thread. See [agentThread]. */
 private val sampleThread = listOf(
     Message.User(
         "Draft a landing page for our AI meetup in Palo Alto — dark hero, teal accent, one CTA.",
@@ -291,16 +294,22 @@ fun ChatScreen(
     // session token exists, and the canned offline reply when it does not. A
     // test injects a fake; the default keeps every existing caller compiling.
     chatDataSource: ChatDataSource? = null,
+    /**
+     * The messages a thread starts with. EMPTY by default: a real conversation
+     * has no history until someone says something, so opening any thread shows
+     * an honest empty canvas with the composer — not a scripted fake dialogue.
+     * Only the @Previews pass [sampleThread] / [agentThread], purely so a
+     * design preview shows bubbles instead of a blank page.
+     */
+    seed: List<Message> = emptyList(),
 ) {
     val profileClick = if (onOpenAgentProfile != null) {
         Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
     } else {
         Modifier
     }
-    // Agent's own thread is the one conversation whose content is not the
-    // generic sample: it is Agent reporting on the agents it controls. Every
-    // other id keeps the sample thread, so nothing else changes.
-    val seed = if (chatId == AGENT_CHAT_ID) agentThread else sampleThread
+    // The thread's initial content comes ONLY from the caller's [seed], which
+    // defaults to empty. Nothing here invents a conversation.
     // Derived, never accepted as a parameter: the conversation's cube is a pure
     // function of its stable id, so this screen cannot drift from the Home row
     // that opened it — and it is not the user's saved cube.
@@ -492,6 +501,31 @@ fun ChatScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
+            if (messages.isEmpty() && !agentTyping) {
+                // An honest empty thread: no scripted opener, just a hint that
+                // points at the composer. Centered in the pain area.
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillParentMaxSize()
+                            .padding(spacing.lg),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            text = "No messages yet",
+                            style = DuaGenAITextStyles.rowTitle,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(spacing.xs))
+                        Text(
+                            text = "Say something below to start the conversation.",
+                            style = DuaGenAITextStyles.snippet,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
             items(messages) { msg ->
                 when (msg.who) {
                     SavedMessage.AGENT -> AgentBubble(msg, cubeId, chatTitle)
@@ -636,23 +670,23 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
 @Preview(name = "Chat — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ChatLight() = DuaGenAITheme(darkTheme = false) {
-    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = sampleThread)
 }
 
 @Preview(name = "Chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun ChatDark() = DuaGenAITheme(darkTheme = true) {
-    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer")
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = sampleThread)
 }
 
 @Preview(name = "Agent chat — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun AgentChatLight() = DuaGenAITheme(darkTheme = false) {
-    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE, seed = agentThread)
 }
 
 @Preview(name = "Agent chat — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun AgentChatDark() = DuaGenAITheme(darkTheme = true) {
-    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE)
+    ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE, seed = agentThread)
 }

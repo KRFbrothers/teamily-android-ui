@@ -235,12 +235,6 @@ fun SidebarDrawer(
                     style = DuaGenAITextStyles.eyebrow,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    text = "All",
-                    style = DuaGenAITextStyles.meta,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
 
             LazyColumn(
@@ -252,8 +246,20 @@ fun SidebarDrawer(
                 ),
                 verticalArrangement = Arrangement.spacedBy(spacing.xxs),
             ) {
-                items(history) { row ->
-                    DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
+                if (history.isEmpty()) {
+                    // Honest empty state: with no conversations there is no
+                    // history to list and no "All" to open either.
+                    item {
+                        Text(
+                            text = "No conversations yet",
+                            style = DuaGenAITextStyles.snippet,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    items(history) { row ->
+                        DrawerHistoryRow(row = row, onClick = { onOpenChat(row.chatId, row.name) })
+                    }
                 }
             }
 

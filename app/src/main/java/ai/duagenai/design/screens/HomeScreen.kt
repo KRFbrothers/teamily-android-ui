@@ -47,7 +47,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -59,8 +58,6 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -174,11 +171,12 @@ import ai.duagenai.design.theme.teamilyRestingShadow
  *      user's photo (a Painter supplied by the app), not a cube.
  *
  *  WHERE CHATS ARE OPENED FROM
- *      Dua's home is empty, so conversations are reached from the sidebar
- *      drawer's history rows — the same `sampleChats` list, the same per-chat
- *      cube. The drawer hands its row's `chatId` and `name` to `onOpenChat`, the
- *      nav host turns them into `chat/{chatId}`, and ChatScreen derives its cube
- *      from the SAME id with the SAME pure function.
+ *      Dua's home is empty. Until a real conversation exists there is nothing
+ *      to list anywhere: the drawer's history and Agent home's Chats section
+ *      both render the honest empty state. When conversations do exist, the
+ *      drawer hands a row's `chatId` and `name` to `onOpenChat`, the nav host
+ *      turns them into `chat/{chatId}`, and ChatScreen derives its cube from
+ *      the SAME id with the SAME pure function.
  * ==========================================================================*/
 
 /**
@@ -203,21 +201,10 @@ data class ChatRow(
 }
 
 /**
- * The sample conversations.
- *
- * `internal` rather than private because [SidebarDrawer] renders the same list
- * as its history section — one list, so the drawer and any other surface can
- * never disagree about a chat's name or its cube.
+ * One conversation in a list (the drawer's history). The type stays while the
+ * app ships no fake conversations: both the drawer and Agent home render the
+ * honest empty state until a real chat exists to put in a row.
  */
-internal val sampleChats = listOf(
-    ChatRow("chat_webpage_developer", "Webpage Developer"),
-    ChatRow("chat_design_team", "Design Team · 5"),
-    ChatRow("chat_slides_assistant", "Slides Assistant"),
-    ChatRow("chat_david_park", "David Park"),
-    ChatRow("chat_market_research", "Market Research"),
-    ChatRow("chat_accounting_assistant", "Accounting Assistant"),
-    ChatRow("chat_family", "Family · 8"),
-)
 
 /**
  * The bottom navigation destinations, in the reference's order.
@@ -264,15 +251,8 @@ fun HomeScreen(
      * The host routes [AGENT_CHAT_ID] through the same chat path.
      */
     onOpenDuaAgentChat: () -> Unit = {},
-    /**
-     * Opens one of the chat rows. Each row already has a stable id; the
-     * host uses the same chat route as the drawer history.
-     */
-    onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
-    /** Header "+" menu. The button's content description stays "New chat". */
-    onCreateAgent: () -> Unit = {},
+    /** Header "+" menu: "New Group". The button's description stays "New chat". */
     onNewGroup: () -> Unit = {},
-    onCreateArtifact: () -> Unit = {},
     /**
      * Search-row filter. When [onFilterActiveChange] is set, the host owns the
      * flag (it also opens the public profile). Null keeps the local toggle.
@@ -347,9 +327,7 @@ fun HomeScreen(
                  * No composer. */
                 AgentHomeTopBar(
                     onOpenDrawer = onOpenDrawer,
-                    onCreateAgent = onCreateAgent,
                     onNewGroup = onNewGroup,
-                    onCreateArtifact = onCreateArtifact,
                     userAvatar = userAvatar,
                 )
                 SearchRow(
@@ -370,7 +348,6 @@ fun HomeScreen(
                     AgentHomeList(
                         onOpenPersonalAgentChat = onOpenPersonalAgentChat,
                         onOpenDuaAgentChat = onOpenDuaAgentChat,
-                        onOpenListedChat = onOpenListedChat,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -927,79 +904,30 @@ private fun SendStopVoiceButton(mode: SendMode, onSend: () -> Unit, onStop: () -
  *  5-tab dock drawn OVER the list, so the last row sits under it.
  * ==========================================================================*/
 
-/** One canvas row on Agent home. Static sample copy from the reference. */
-internal data class AgentHomeChat(
-    val chatId: String,
-    val title: String,
-    val subtitle: String,
-    val time: String,
-)
-
-/** Chat id for the guild row. Its avatar is [GroupCluster], not a character. */
-internal const val FULL_STACK_GUILD_CHAT_ID = "chat_fullstack_guild"
-
-/** Agent home's chat rows, in the reference's order. The guild is last. */
-internal val agentHomeChats = listOf(
-    AgentHomeChat("chat_code_reviewer", "Code Reviewer", "You are now friends", "13:07"),
-    AgentHomeChat("chat_backend_architect", "Backend Architect", "You are now friends", "13:06"),
-    AgentHomeChat("chat_devops_automator", "DevOps Automator", "You are now friends", "13:05"),
-    AgentHomeChat("chat_api_tester", "API Tester", "You are now friends", "12:52"),
-    AgentHomeChat("chat_frontend_developer", "Frontend Developer", "You are now friends", "12:40"),
-    AgentHomeChat(
-        FULL_STACK_GUILD_CHAT_ID,
-        "Full-Stack Delivery Guild",
-        "Frontend Developer, Backend Architect…",
-        "Wed",
-    ),
-)
-
 /** Hero card title. The thread opened from the card uses the same string. */
-internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
-internal const val PERSONAL_AGENT_PREVIEW = "Delete ka option agent ki chat ke andar hai, \u2026"
-internal const val PERSONAL_AGENT_DATE = "Wed"
-
-/** Distinct 3D character icons for the five chat rows. Not the wireframe cube. */
-private val agentHomeAvatarRes = mapOf(
-    "chat_code_reviewer" to R.drawable.avatar_code_reviewer,
-    "chat_backend_architect" to R.drawable.avatar_backend_architect,
-    "chat_devops_automator" to R.drawable.avatar_devops_automator,
-    "chat_api_tester" to R.drawable.avatar_api_tester,
-    "chat_frontend_developer" to R.drawable.avatar_frontend_developer,
-)
+internal const val PERSONAL_AGENT_TITLE = "Personal Agent"
+/** Honest hero subtitle — a description of what the card opens, not a fake chat line. */
+internal const val PERSONAL_AGENT_PREVIEW = "Your own assistant — tap to chat"
+internal const val PERSONAL_AGENT_DATE = ""
 
 /** The pinned official agent row. */
 internal const val DUA_AGENT_TITLE = "Dua Agent"
 internal const val DUA_AGENT_SUBTITLE = "I'm Dua Agent \u2014 the official agent of Dua Gen AI"
-internal const val DUA_AGENT_TIME = "15:19"
+/** No fake timestamp on the pinned row: an empty [CanvasChatRow] time hides it. */
+internal const val DUA_AGENT_TIME = ""
 
 /** Header brand text. */
 internal const val APP_NAME = "Dua Gen AI"
 
 /**
  * Agent home's header: 48dp circular user avatar (opens the drawer) · 32dp
- * rounded-square app badge + 21sp bold "Dua Gen AI" · 48dp circular plus (New chat).
+ * rounded-square app badge + 21sp bold "Dua Gen AI" · 48dp circular plus (New group).
  * No Dua | Agent toggle here — the way back to Dua is the drawer's "Dua" row.
  */
-private data class HeaderMenuItem(val label: String, val kind: String?)
-
-private val HEADER_MENU = listOf(
-    HeaderMenuItem("Create Agent", "agent"),
-    HeaderMenuItem("New Group", "group"),
-    HeaderMenuItem("Add Contact", null),
-    HeaderMenuItem("Create Artifacts", "artifact"),
-    HeaderMenuItem("Create Automation", null),
-    HeaderMenuItem("Create Local Agent", null),
-    HeaderMenuItem("Start Video Meeting", null),
-    HeaderMenuItem("Join Video Meeting", null),
-    HeaderMenuItem("Referral Program", null),
-)
-
 @Composable
 private fun AgentHomeTopBar(
     onOpenDrawer: () -> Unit,
-    onCreateAgent: () -> Unit,
     onNewGroup: () -> Unit,
-    onCreateArtifact: () -> Unit,
     userAvatar: Painter?,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1068,17 +996,16 @@ private fun AgentHomeTopBar(
             )
         }
 
-        // RIGHT — plus. The accessible name stays "New chat" (one node). The
-        // tap opens the header menu instead of starting a blank thread.
+        // RIGHT — plus. Its one real action today is starting a new group, so
+        // the button does exactly that: no dropdown of dead menu items.
         Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-            var menuOpen by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .size(MinTouchTarget)
                     .clip(CircleShape)
                     .background(palette.plusFill)
-                    .clickable(role = Role.Button) { menuOpen = true }
-                    .semantics { contentDescription = "New chat" },
+                    .clickable(role = Role.Button) { onNewGroup() }
+                    .semantics { contentDescription = "New group" },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1087,21 +1014,6 @@ private fun AgentHomeTopBar(
                     tint = palette.plusIcon,
                     modifier = Modifier.size(24.dp),
                 )
-            }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                for (item in HEADER_MENU) {
-                    DropdownMenuItem(
-                        text = { Text(item.label) },
-                        onClick = {
-                            menuOpen = false
-                            when (item.kind) {
-                                "agent" -> onCreateAgent()
-                                "group" -> onNewGroup()
-                                "artifact" -> onCreateArtifact()
-                            }
-                        },
-                    )
-                }
             }
         }
     }
@@ -1315,15 +1227,17 @@ private fun PersonalAgentHeroCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.width(spacing.sm))
-                    Text(
-                        text = PERSONAL_AGENT_DATE,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (PERSONAL_AGENT_DATE.isNotEmpty()) {
+                        Spacer(Modifier.width(spacing.sm))
+                        Text(
+                            text = PERSONAL_AGENT_DATE,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.5.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -1430,17 +1344,6 @@ private fun botBadgeWithoutMint(context: android.content.Context): ImageBitmap {
 }
 
 /** One chat row's 3D character, cropped to the avatar circle. */
-@Composable
-private fun CharacterAvatar(chatId: String) {
-    val res = agentHomeAvatarRes[chatId] ?: return
-    Image(
-        painter = painterResource(res),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize().clip(CircleShape),
-    )
-}
-
 /**
  * One canvas row — no card box: avatar · title (+ verified ✓) / 1-line
  * subtitle · right-aligned time. 16dp side padding, sits on the canvas.
@@ -1487,15 +1390,17 @@ private fun CanvasChatRow(
                         VerifiedCheck()
                     }
                 }
-                Spacer(Modifier.width(spacing.sm))
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 12.5.sp,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (time.isNotEmpty()) {
+                    Spacer(Modifier.width(spacing.sm))
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.5.sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -1621,7 +1526,6 @@ private fun SectionHeader(
 private fun AgentHomeList(
     onOpenPersonalAgentChat: () -> Unit,
     onOpenDuaAgentChat: () -> Unit,
-    onOpenListedChat: (chatId: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1684,27 +1588,42 @@ private fun AgentHomeList(
                 )
                 SectionHeader(
                     icon = SectionIcon.Chat,
-                    label = "Chats \u00b7 ${agentHomeChats.size}",
+                    label = "Chats \u00b7 0",
                     expanded = chatsExpanded,
                     onToggle = { chatsExpanded = !chatsExpanded },
                 )
             }
         }
         if (chatsExpanded) {
-            items(agentHomeChats, key = { it.chatId }) { chat ->
-                CanvasChatRow(
-                    title = chat.title,
-                    subtitle = chat.subtitle,
-                    time = chat.time,
-                    onClick = { onOpenListedChat(chat.chatId, chat.title) },
+            // The honest empty state: until a real conversation exists there is
+            // nothing to list, so the section says so instead of showing rows
+            // of people and agents that are not there.
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gutter)
+                        .padding(top = 12.dp, bottom = 16.dp),
                 ) {
-                    if (chat.chatId == FULL_STACK_GUILD_CHAT_ID) {
-                        GroupCluster()
-                    } else {
-                        ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                            CharacterAvatar(chat.chatId)
-                        }
-                    }
+                    Text(
+                        text = "No conversations yet",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.5.sp,
+                            lineHeight = 20.sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Chats you start will appear here.",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

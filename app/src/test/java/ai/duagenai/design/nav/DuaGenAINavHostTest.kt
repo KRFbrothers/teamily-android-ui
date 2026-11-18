@@ -105,11 +105,16 @@ import org.robolectric.annotation.Config
  *  WHERE CHATS ARE OPENED FROM — this changed with the product model
  *  ---------------------------------------------------------------
  *  Dua's home is deliberately EMPTY (Dua is a chatbot, not an agent host), so
- *  there is no chat list on Home to tap. Conversations are reached from the
- *  sidebar drawer's history section, which renders the same `sampleChats` list
- *  with the same per-chat cubes. Every "open a chat" test therefore goes:
+ *  there is no chat list on Home to tap. And the app ships no sample
+ *  conversations: the drawer's history section renders the honest empty
+ *  state until real chats exist. The route plumbing those rows used to drive
+ *  is pinned by navigating straight to `chat/{chatId}?title={title}` — the
+ *  same thing a deep link or a future real row does:
  *
- *      tap "Open menu"  ->  tap the history row  ->  assert ChatScreen
+ *      navigate("chat/<id>?title=<title>")  ->  assert ChatScreen
+ *
+ *  One test pins the drawer's empty history; the rest pin the route, the
+ *  title's survival through `Uri.encode`, and the cube the thread draws.
  *
  *  WHY EVERY ASSERTION IS DISPLAY-AWARE
  *  ------------------------------------
@@ -130,11 +135,12 @@ import org.robolectric.annotation.Config
  *    2. The NavHostController is built BEFORE `setContent`, not inside it — a
  *       controller created in the composition lambda is rebuilt on every
  *       recomposition and the back stack silently resets.
- *    3. ChatScreen draws the SAME cube in five places (header + 2 agent bubbles
- *       + 2 user bubbles), so `onNodeWithContentDescription` would throw
- *       "expected exactly 1 node but found 5". Every cube assertion states the
- *       expected count instead of assuming one. That count is itself the
- *       assertion that no bubble fell back to the user's saved cube.
+ *    3. ChatScreen draws the SAME cube in the header and beside every message
+ *       once the conversation starts (a thread begins empty, so the tests send
+ *       one message and wait for the canned reply before counting bubble
+ *       cubes). Every cube assertion states the expected count instead of
+ *       assuming one. That count is itself the assertion that no bubble fell
+ *       back to the user's saved cube.
  *
  *  THE COMPOSER ON A THREAD
  *  ------------------------
@@ -230,11 +236,11 @@ private const val AGENT_COMPOSER_HINT = "Message $DUA_AGENT_TITLE\u2026"
  * Used to FIND the card: it is the one filled card on Agent home and tapping
  * it opens the Personal Agent thread. The title is unique to the card.
  */
-private const val AGENT_ROLE_LINE = "fareed's Personal Agent"
+private const val AGENT_ROLE_LINE = "Personal Agent"
 
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
-private const val CHATS_HEADER = "Chats \u00b7 6"
+private const val CHATS_HEADER = "Chats \u00b7 0"
 private const val APP_NAME_TEXT = "Dua Gen AI"
 private const val DUA_AGENT_ROW = "Dua Agent"
 
@@ -486,19 +492,23 @@ private const val SESSION_TOKEN_LABEL = "Session token"
 private const val EDIT_PROFILE_HELPER = "Profile editing is not available in this build."
 
 /**
- * Agent home's chat rows that are on screen above the floating dock.
- * Later rows sit under the dock, as in the reference.
+ * Names that came from the old mockup roster. The app ships NO sample
+ * conversations or agents, so these must be nowhere on screen — in Dua mode,
+ * in Agent mode, or in the drawer. The list is kept as the negative fixture.
  */
 private val MANAGED_AGENTS = listOf("Code Reviewer", "Backend Architect", "DevOps Automator", "API Tester")
 
 /**
- * How many cubes ChatScreen draws for one conversation.
+ * How many cubes ChatScreen draws beside the bubbles of a started
+ * conversation.
  *
- * `sampleThread` is User, Agent, User, Agent — two of each — plus the header.
- * If a bubble ever stopped using the thread's cube, this count would drop and
- * the test would say so.
+ * A thread now starts EMPTY — no seeded dialogue. Each test that counts
+ * bubble cubes sends one message first and waits for the canned offline
+ * reply, so the thread holds exactly one user bubble and one agent bubble:
+ * two cubes, beside the one in the header. If a bubble ever stopped using
+ * the thread's cube, this count would drop and the test would say so.
  */
-private const val THREAD_BUBBLE_CUBES = 4
+private const val THREAD_BUBBLE_CUBES = 2
 private const val THREAD_HEADER_CUBES = 1
 
 /**
@@ -900,11 +910,33 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
     }
 
-    /** Opens a conversation the way a user does: drawer -> history row. */
+    /**
+     * Opens a conversation by navigating straight to its chat route — what a
+     * real history row (or a deep link) does once conversations exist. The
+     * drawer ships no sample rows, so the UI path has nothing to tap yet;
+     * this keeps every route-plumbing test honest about what it drives.
+     */
     private fun openChatFromDrawer(chat: ChatCase) {
-        openDrawer()
-        compose.onNodeWithText(chat.title).performClick()
+        compose.runOnUiThread {
+            navController.navigate(DuaGenAIRoutes.chat(chat.chatId, chat.title))
+        }
         compose.waitForIdle()
+    }
+
+    /**
+     * Sends one message in the open thread and waits for the canned offline
+     * reply, leaving exactly one user bubble and one agent bubble — the state
+     * the bubble-cube count assertions expect.
+     */
+    private fun startConversation() {
+        compose.onNode(hasSetTextAction()).performTextInput("Test message")
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
+        compose.waitForIdle()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("I've picked that up", substring = true))
+                .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
+        }
     }
 
     // ------------------------------------------------- Dua mode is plain
@@ -948,7 +980,7 @@ class DuaGenAINavHostTest {
 
         // The top bar's right button is the gear, not the plus.
         assertVisibleDescCount("Settings", 1)
-        assertVisibleDescCount("New chat", 0)
+        assertVisibleDescCount("New group", 0)
 
         // Dua's pill carries no agent tools: Skills and MCP are Dua Agent
         // capabilities, so they are drawn only under a thread. Its Attach has no
@@ -976,15 +1008,18 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
 
         // The reference's chat-list home: search row, hero card, Pinned · 1
-        // with Dua Agent, the chat section with its rows, and the floating dock.
+        // with Dua Agent, the (empty) Chats section, and the floating dock.
         assertVisible("Search")
         assertVisible(AGENT_ROLE_LINE)
         assertVisible(PINNED_HEADER)
         assertVisible(DUA_AGENT_ROW)
         assertVisibleDescCount("Verified", 1)
         assertVisible(CHATS_HEADER)
+        // No fake conversations: the section says so, and none of the old
+        // sample rows is anywhere on screen.
+        assertVisible("No conversations yet")
         for (agent in MANAGED_AGENTS) {
-            assertVisible(agent)
+            assertNotVisible(agent)
         }
         // The old heavy agent list is gone.
         assertNotVisible("AGENTS \u00b7 3")
@@ -999,8 +1034,8 @@ class DuaGenAINavHostTest {
         assertNotVisible(DUA_ASK_HINT)
         assertNoComposer()
 
-        // And its right button is the plus, not the gear.
-        assertVisibleDescCount("New chat", 1)
+        // And its right button is the plus ("New group"), not the gear.
+        assertVisibleDescCount("New group", 1)
         assertVisibleDescCount("Settings", 0)
     }
 
@@ -1013,7 +1048,7 @@ class DuaGenAINavHostTest {
         assertVisible(APP_NAME_TEXT)
         assertNotVisible("Teamily AI")
         assertVisibleDescCount("Open menu", 1)
-        assertVisibleDescCount("New chat", 1)
+        assertVisibleDescCount("New group", 1)
         assertVisibleDescCount("Dua mode", 0)
         assertVisibleDescCount("Agent mode", 0)
 
@@ -1068,7 +1103,9 @@ class DuaGenAINavHostTest {
         for (agent in MANAGED_AGENTS) assertNotVisible(agent)
         compose.onNodeWithText(CHATS_HEADER).performClick()
         compose.waitForIdle()
-        assertVisible(MANAGED_AGENTS.first())
+        // Expanded again: still no fake rows, just the honest empty line.
+        assertVisible("No conversations yet")
+        for (agent in MANAGED_AGENTS) assertNotVisible(agent)
     }
 
     @Test
@@ -2348,31 +2385,22 @@ class DuaGenAINavHostTest {
     // ------------------------------------------- drawer -> thread
 
     @Test
-    fun theDrawerListsEveryChatWithItsOwnCube() {
+    fun theDrawerShowsTheHonestEmptyHistory() {
         launch()
         openDrawer()
 
+        // No sample conversations are shipped, so the history says so…
+        assertVisible("No conversations yet")
+
+        // …and none of the old fake rows — titles or their cubes — is drawn.
         for (chat in CHATS) {
-            // One avatar per history row, so exactly one visible node per label.
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
+            assertNotVisible(chat.title)
+            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 0)
         }
     }
 
     @Test
-    fun theDrawerRowsDoNotShareACube() {
-        launch()
-        openDrawer()
-
-        val distinct = CHATS.map { it.cubeId }.toSet()
-        assertEquals("the seven rows must carry seven different cubes", 7, distinct.size)
-
-        for (chat in CHATS) {
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 1)
-        }
-    }
-
-    @Test
-    fun tappingEachDrawerRowOpensThatChatWithTheSameCube() {
+    fun tappingEachChatRouteOpensThatChatWithTheSameCube() {
         launch()
 
         for (chat in CHATS) {
@@ -2381,13 +2409,15 @@ class DuaGenAINavHostTest {
             // ChatScreen is open…
             assertVisible(CHAT_MARKER)
 
-            // …with the shared composer under the conversation, its hint naming
-            // THIS thread.
+            // …with the shared composer under the (honest empty) conversation,
+            // its hint naming THIS thread.
             assertComposer(threadComposerHint(chat.title))
 
-            // …and it is drawing the SAME cube the row drew: once in the header,
-            // four times beside the messages.
+            // An empty thread draws the header cube only. Say something, wait
+            // for the canned reply, and the SAME cube appears beside both
+            // bubbles — the row's cube and the thread's cube are one value.
             assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            startConversation()
             assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
 
             // Back to Home for the next row — never a second setContent.
@@ -2402,8 +2432,9 @@ class DuaGenAINavHostTest {
         launch()
 
         openChatFromDrawer(CHATS.first { it.chatId == "chat_market_research" })
+        startConversation()
 
-        // Header + all four bubbles carry cube_06. If any bubble had kept the
+        // Header + both bubbles carry cube_06. If any bubble had kept the
         // user's saved cube, the bubble count would be short.
         assertVisibleDescCount(avatarLabel("Market Research", "cube_06"), THREAD_HEADER_CUBES)
         assertVisibleDescCount(bubbleLabel("Market Research", "cube_06"), THREAD_BUBBLE_CUBES)
@@ -2513,7 +2544,9 @@ class DuaGenAINavHostTest {
             compose.waitForIdle()
 
             assertVisible(CHAT_MARKER)
+            // Empty thread: the header cube only, until the conversation starts.
             assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            startConversation()
             assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
 
             compose.runOnUiThread { navController.popBackStack() }
@@ -2975,27 +3008,29 @@ class DuaGenAINavHostTest {
     }
 
     /** One of the listed chats opens its own existing thread id. */
+    /**
+     * Agent home lists no conversations until real ones exist, so there is no
+     * listed row to tap. Opening a listed chat's thread is pinned at the route
+     * level by [tappingEachChatRouteOpensThatChatWithTheSameCube]; here the
+     * product behaviour is the negative: the old sample row is gone.
+     */
     @Test
-    fun tappingAListedChatOpensThatThread() {
+    fun agentHomeListsNoFakeChatsToTap() {
         launch()
         switchTo(HomeMode.Agent)
 
-        compose.onNodeWithText("Code Reviewer").performClick()
-        compose.waitForIdle()
-
-        assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
-        val args = navController.currentBackStackEntry?.arguments
-        assertEquals("chat_code_reviewer", args?.getString("chatId"))
-        assertEquals("Code Reviewer", args?.getString("title"))
+        assertNotVisible("Code Reviewer")
+        assertVisible("No conversations yet")
+        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
     }
 
     /**
      * Agent's thread shows the conversation AND the composer.
      *
-     * The pain area holds Agent's and the user's messages, and the shared
-     * `DuaComposer` pill sits under them so the thread is usable. Both halves are
-     * asserted, because "the composer is there" is only meaningful if the
-     * conversation it belongs to is still there.
+     * A thread starts honestly empty — "No messages yet" — and the shared
+     * `DuaComposer` pill sits under it so the conversation can start. Both
+     * halves are asserted, because "the composer is there" is only meaningful
+     * if the conversation it belongs to is still there.
      */
     @Test
     fun agentsThreadShowsTheConversationAndTheComposer() {
@@ -3004,17 +3039,15 @@ class DuaGenAINavHostTest {
         compose.onNodeWithText(DUA_AGENT_ROW).performClick()
         compose.waitForIdle()
 
-        // The thread is open\u2026
+        // The thread is open…
         assertVisible(CHAT_MARKER)
 
-        // \u2026it is Dua Agent's, so its top bar carries that name\u2026
+        // …it is Dua Agent's, so its top bar carries that name…
         assertVisible(DUA_AGENT_TITLE)
 
-        // \u2026and the pain area holds both sides of the conversation. These are
-        // distinctive fragments of the first user line and the first agent line
-        // of `agentThread`.
-        assertVisibleSubstring("I need the Q3 launch handled")
-        assertVisibleSubstring("I've split that across three agents")
+        // …and the pain area is the honest empty thread, not a scripted
+        // dialogue. Saying something fills it — that flow has its own test.
+        assertVisible("No messages yet")
 
         // The composer is there, and its hint names Agent.
         assertComposer(AGENT_COMPOSER_HINT)
