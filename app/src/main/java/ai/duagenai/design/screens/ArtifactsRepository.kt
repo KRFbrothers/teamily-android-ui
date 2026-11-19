@@ -57,23 +57,17 @@ data class ArtifactItem(
     val title: String,
     val type: String,
     val timestamp: String,
-    /**
-     * The artifact's payload size in bytes.
-     *
-     * Added for audit fix #8: the preview caption must state the artifact's
-     * NAME, TYPE and SIZE, so the size has to be data, not a string the screen
-     * invents. [artifactSizeLabel] turns it into the caption's text.
-     */
     val sizeBytes: Long,
-    /**
-     * The artifact's public URL, or null when it has none.
-     *
-     * Added for the context menu's "Open in new tab" action: the item is only
-     * enabled when there is a URL to open, so the menu can never offer a tap
-     * that does nothing. Null is a real state (an artifact that was never
-     * published), not a missing value.
-     */
     val url: String? = null,
+) : Identifiable
+
+data class ArtifactVersionItem(
+    override val id: String,
+    val artifactId: String,
+    val versionNum: Int,
+    val content: String,
+    val promptNote: String? = null,
+    val createdAt: String = "",
 ) : Identifiable
 
 /**
@@ -159,6 +153,10 @@ interface ArtifactsDataSource : RemoteDataSource<ArtifactItem> {
 
     /** Removes an artifact by id. Throws on failure. */
     override suspend fun delete(id: String)
+
+    suspend fun fetchVersions(artifactId: String): List<ArtifactVersionItem> = emptyList()
+
+    suspend fun reviseArtifact(artifactId: String, instruction: String): Pair<ArtifactItem, ArtifactVersionItem>? = null
 }
 
 /**
@@ -203,6 +201,7 @@ class InMemoryArtifactsDataSource(
 ) : ArtifactsDataSource {
 
     private val items: MutableList<ArtifactItem> = seed.toMutableList()
+    private val versions = mutableMapOf<String, MutableList<ArtifactVersionItem>>()
 
     override suspend fun fetch(): List<ArtifactItem> {
         if (loadDelayMs > 0) delay(loadDelayMs)
@@ -217,6 +216,26 @@ class InMemoryArtifactsDataSource(
 
     override suspend fun delete(id: String) {
         items.removeAll { it.id == id }
+        versions.remove(id)
+    }
+
+    override suspend fun fetchVersions(artifactId: String): List<ArtifactVersionItem> =
+        versions[artifactId]?.toList().orEmpty()
+
+    override suspend fun reviseArtifact(artifactId: String, instruction: String): Pair<ArtifactItem, ArtifactVersionItem>? {
+        val artifact = items.firstOrNull { it.id == artifactId } ?: return null
+        val list = versions.getOrPut(artifactId) { mutableListOf() }
+        val nextVersionNum = list.size + 1
+        val version = ArtifactVersionItem(
+            id = java.util.UUID.randomUUID().toString(),
+            artifactId = artifactId,
+            versionNum = nextVersionNum,
+            content = "Revised: $instruction",
+            promptNote = instruction,
+            createdAt = nowLabel(),
+        )
+        list.add(0, version)
+        return artifact to version
     }
 }
 
@@ -299,6 +318,31 @@ class RemoteArtifactsDataSource(
         Unit
     }
 
+    override suspend fun fetchVersions(artifactId: String): List<ArtifactVersionItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow(
+            "GET",
+            "$baseUrl/${encodePathSegment(artifactId)}/versions",
+            label = "Artifact versions request",
+        )
+        parseArtifactVersions(body, artifactId)
+    }
+
+    override suspend fun reviseArtifact(
+        artifactId: String,
+        instruction: String,
+    ): Pair<ArtifactItem, ArtifactVersionItem>? = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("instruction", instruction)
+        }.toString()
+        val response = client.requestOrThrow(
+            "POST",
+            "$baseUrl/${encodePathSegment(artifactId)}/revise",
+            payload,
+            label = "Artifact revision request",
+        )
+        parseArtifactRevision(response, artifactId)
+    }
+
     /** Parses the list payload. Throws on malformed JSON. */
     private fun parseArtifacts(body: String): List<ArtifactItem> {
         // The live service wraps the list: `{"artifacts":[...]}`. A bare array
@@ -357,6 +401,55 @@ class RemoteArtifactsDataSource(
             url = o.optString("url", "").takeIf { it.isNotBlank() } ?: sent.url,
         )
     }
+
+    private fun parseArtifactVersions(body: String, fallbackArtifactId: String): List<ArtifactVersionItem> {
+        val array = unwrapList(body, key = "versions", label = "Artifact versions request")
+        val out = ArrayList<ArtifactVersionItem>(array.length())
+        for (i in 0 until array.length()) {
+            val o = array.optJSONObject(i) ?: continue
+            val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: continue
+            out += ArtifactVersionItem(
+                id = id,
+                artifactId = o.optString("artifactId", o.optString("artifact_id", fallbackArtifactId)),
+                versionNum = o.optInt("versionNum", o.optInt("version_num", 1)),
+                content = o.optString("content", ""),
+                promptNote = o.optString("promptNote", o.optString("prompt_note", "")).takeIf { it.isNotBlank() },
+                createdAt = o.optString("createdAt", o.optString("created_at", "")),
+            )
+        }
+        return out
+    }
+
+    private fun parseArtifactRevision(body: String, fallbackArtifactId: String): Pair<ArtifactItem, ArtifactVersionItem>? {
+        val text = body.trim()
+        if (!text.startsWith("{")) return null
+        val root = runCatching { JSONObject(text) }.getOrNull() ?: return null
+        val artObj = root.optJSONObject("artifact")
+        val verObj = root.optJSONObject("version") ?: return null
+        val artifact = if (artObj != null) {
+            val id = artObj.optString("id", fallbackArtifactId)
+            ArtifactItem(
+                id = id,
+                title = artObj.optString("title", "Untitled artifact"),
+                type = artObj.optString("type", "File"),
+                timestamp = artObj.optString("timestamp", ""),
+                sizeBytes = artObj.optLong("sizeBytes", 0L),
+                url = artObj.optString("url", "").takeIf { it.isNotBlank() },
+            )
+        } else {
+            ArtifactItem(id = fallbackArtifactId, title = "Artifact", type = "File", timestamp = "", sizeBytes = 0L)
+        }
+        val verId = verObj.optString("id", "").takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+        val version = ArtifactVersionItem(
+            id = verId,
+            artifactId = verObj.optString("artifactId", verObj.optString("artifact_id", fallbackArtifactId)),
+            versionNum = verObj.optInt("versionNum", verObj.optInt("version_num", 1)),
+            content = verObj.optString("content", ""),
+            promptNote = verObj.optString("promptNote", verObj.optString("prompt_note", "")).takeIf { it.isNotBlank() },
+            createdAt = verObj.optString("createdAt", verObj.optString("created_at", "")),
+        )
+        return artifact to version
+    }
 }
 
 /**
@@ -414,4 +507,15 @@ class ArtifactsRepository(
 
     /** Shown when an artifact could not be deleted. */
     override val deleteFailureFallback: String = "Artifact delete nahi ho paya."
+
+    /** Fetches version history for an artifact. */
+    suspend fun fetchVersions(artifactId: String): List<ArtifactVersionItem> =
+        (source as? ArtifactsDataSource)?.fetchVersions(artifactId) ?: emptyList()
+
+    /** Submits a revision prompt instruction on an artifact. */
+    suspend fun reviseArtifact(artifactId: String, instruction: String): Pair<ArtifactItem, ArtifactVersionItem>? {
+        val result = (source as? ArtifactsDataSource)?.reviseArtifact(artifactId, instruction) ?: return null
+        load()
+        return result
+    }
 }

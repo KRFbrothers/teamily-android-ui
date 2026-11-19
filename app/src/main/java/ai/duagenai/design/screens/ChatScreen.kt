@@ -181,6 +181,8 @@ data class SavedMessage(
     val who: String,
     val text: String,
     val time: String,
+    val agentId: String? = null,
+    val agentName: String? = null,
 ) : Parcelable {
     override fun describeContents(): Int = 0
 
@@ -188,6 +190,8 @@ data class SavedMessage(
         dest.writeString(who)
         dest.writeString(text)
         dest.writeString(time)
+        dest.writeString(agentId)
+        dest.writeString(agentName)
     }
 
     companion object {
@@ -201,6 +205,8 @@ data class SavedMessage(
                     who = source.readString().orEmpty(),
                     text = source.readString().orEmpty(),
                     time = source.readString().orEmpty(),
+                    agentId = source.readString(),
+                    agentName = source.readString(),
                 )
 
                 override fun newArray(size: Int): Array<SavedMessage?> = arrayOfNulls(size)
@@ -229,7 +235,7 @@ private const val AGENT_REPLY =
 private const val AGENT_REPLY_DELAY_MS = 900L
 
 /** The clock label a freshly sent message carries, e.g. "9:41 AM". */
-private fun nowLabel(): String =
+internal fun nowLabel(): String =
     java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date())
 
 /**
@@ -322,6 +328,7 @@ fun ChatScreen(
      * design preview shows bubbles instead of a blank page.
      */
     seed: List<Message> = emptyList(),
+    dynamicSkills: List<SkillItem>? = null,
 ) {
     val agentHeader = onOpenAgentProfile != null
     // An incoming first message starts an EMPTY thread and is sent once — it
@@ -377,6 +384,17 @@ fun ChatScreen(
     val mcp = if (onToggleMcp != null) mcpEnabled else localMcp
     val toggleMcp: (Boolean) -> Unit = onToggleMcp ?: { localMcp = it }
     val listState = rememberLazyListState()
+    var remoteSkills by remember { mutableStateOf<List<SkillItem>?>(null) }
+    LaunchedEffect(chatId) {
+        if (TokenStore.token != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    remoteSkills = RemoteSkillsDataSource().fetch(if (chatId == AGENT_CHAT_ID) "dua-agent" else null)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     // Composer sheets (+ / Skills / MCP) and the display-only mode pill.
     var sheet by rememberSaveable(chatId) { mutableStateOf(ComposerSheet.None) }
     var chatMode by rememberSaveable(chatId) {
@@ -423,19 +441,44 @@ fun ChatScreen(
                 agentTyping = false
                 transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, AGENT_REPLY, nowLabel()))
             } else {
-                val replyText = try {
+                val actualSource = source ?: RemoteChatDataSource()
+                var streamedAny = false
+                try {
                     withContext(Dispatchers.IO) {
-                        (source ?: RemoteChatDataSource()).sendMessage(chatId, text, skillSnapshot)
+                        actualSource.streamMessage(
+                            chatId = chatId,
+                            text = text,
+                            skills = skillSnapshot,
+                            onChunk = { agentId, agentName, delta ->
+                                streamedAny = true
+                                agentTyping = false
+                                transcriptStore.appendOrUpdateStreaming(
+                                    chatId = chatId,
+                                    agentId = agentId,
+                                    agentName = agentName,
+                                    delta = delta,
+                                    time = nowLabel(),
+                                )
+                            },
+                            onAgentDone = { _, _ ->
+                                agentTyping = false
+                            },
+                        )
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: ApiError) {
-                    e.userMessage
+                    if (!streamedAny) {
+                        transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, e.userMessage, nowLabel()))
+                    }
                 } catch (e: Exception) {
-                    e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
+                    if (!streamedAny) {
+                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
+                        transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, msg, nowLabel()))
+                    }
+                } finally {
+                    agentTyping = false
                 }
-                agentTyping = false
-                transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, replyText, nowLabel()))
             }
         }
     }
@@ -448,6 +491,16 @@ fun ChatScreen(
         if (first.isNotEmpty() && transcriptStore.threads.value[chatId].isNullOrEmpty()) {
             draft = first
             send()
+        } else if (TokenStore.token != null && !isPersonal && !isDuaAgent && !chatId.startsWith("chat_")) {
+            // Load persistent conversation history from GET /api/conversations/:id/messages
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val saved = RemoteConversationsDataSource().fetchMessages(chatId)
+                    if (saved.isNotEmpty()) {
+                        transcriptStore.ensure(chatId, saved)
+                    }
+                } catch (_: Exception) {}
+            }
         }
     }
 
@@ -680,6 +733,7 @@ fun ChatScreen(
             enabledSkillIds = skills,
             onToggleSkill = toggleSkill,
             onDismiss = { sheet = ComposerSheet.None },
+            skills = dynamicSkills ?: remoteSkills,
         )
         ComposerSheet.Mcp -> ComposerMcpSheet(
             mcpEnabled = mcp,
@@ -737,14 +791,15 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
 private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
+    val effectiveCubeId = if (!msg.agentId.isNullOrBlank()) CubeCatalog.forEntity(msg.agentId) else cubeId
+    val effectiveTitle = msg.agentName?.takeIf { it.isNotBlank() } ?: chatTitle
+
     Row(verticalAlignment = Alignment.Bottom) {
-        // Same conversation cube as the header and the user's bubbles — the old
-        // "W" letter box was a second avatar implementation living on this screen.
         CubeAvatar(
-            cubeId = cubeId,
+            cubeId = effectiveCubeId,
             size = 28.dp,
             shape = DuaGenAITheme.shapes.avatarMessage,
-            contentDescription = "$chatTitle, ${CubeIds.label(cubeId)}",
+            contentDescription = "$effectiveTitle, ${CubeIds.label(effectiveCubeId)}",
         )
         Spacer(Modifier.width(spacing.sm))
         Column {
@@ -763,8 +818,13 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
             }
             Spacer(Modifier.height(spacing.xxs))
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val metaText = if (!msg.agentName.isNullOrBlank()) {
+                    "${msg.agentName} \u00b7 ${msg.time}"
+                } else {
+                    msg.time
+                }
                 Text(
-                    text = msg.time,
+                    text = metaText,
                     style = DuaGenAITextStyles.meta,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

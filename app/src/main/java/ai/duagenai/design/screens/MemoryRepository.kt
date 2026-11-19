@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -56,6 +57,8 @@ data class MemoryItem(
      * Null is a real state (a memory that has no link), not a missing value.
      */
     val url: String? = null,
+    val scope: String = "global",
+    val sourceConversationId: String? = null,
 ) : Identifiable
 
 /**
@@ -127,6 +130,8 @@ interface MemoryDataSource : RemoteDataSource<MemoryItem> {
     /** Fetches the full list. Throws on network / parse failure. */
     override suspend fun fetch(): List<MemoryItem>
 
+    suspend fun fetch(scope: String? = null): List<MemoryItem> = fetch()
+
     /**
      * Inserts [item] and returns what the SERVER stored.
      *
@@ -139,6 +144,9 @@ interface MemoryDataSource : RemoteDataSource<MemoryItem> {
 
     /** Removes the memory with [id]. Throws on failure. */
     override suspend fun delete(id: String)
+
+    suspend fun updateScope(id: String, scope: String, sourceConversationId: String? = null): MemoryItem =
+        MemoryItem(id, "Memory", "", "", "Preference", scope = scope, sourceConversationId = sourceConversationId)
 }
 
 /**
@@ -194,38 +202,48 @@ class RemoteMemoryDataSource(
     val client: JsonHttpClient = HttpClientProvider.client,
 ) : MemoryDataSource {
 
-    override suspend fun fetch(): List<MemoryItem> = withContext(Dispatchers.IO) {
-        // requestOrThrow, not request: a typed [ApiError] means the Error state
-        // shows ApiError.userMessage, not the raw status string.
-        parseMemories(client.requestOrThrow("GET", baseUrl, label = "Memory request"))
+    override suspend fun fetch(): List<MemoryItem> = fetch(null)
+
+    override suspend fun fetch(scope: String?): List<MemoryItem> = withContext(Dispatchers.IO) {
+        val url = if (!scope.isNullOrBlank()) {
+            "$baseUrl?scope=${encodePathSegment(scope)}"
+        } else {
+            baseUrl
+        }
+        parseMemories(client.requestOrThrow("GET", url, label = "Memory request"))
+    }
+
+    override suspend fun updateScope(id: String, scope: String, sourceConversationId: String?): MemoryItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("scope", scope)
+            if (sourceConversationId != null) {
+                put("sourceConversationId", sourceConversationId)
+            } else {
+                put("sourceConversationId", JSONObject.NULL)
+            }
+        }.toString()
+        val response = client.requestOrThrow("PUT", "$baseUrl/${encodePathSegment(id)}", payload, label = "Memory scope update")
+        parseMemoryOrFallback(response, MemoryItem(id, "Memory", "", "", "Preference", scope = scope, sourceConversationId = sourceConversationId))
     }
 
     override suspend fun add(item: MemoryItem): MemoryItem = withContext(Dispatchers.IO) {
-        // Built with JSONObject, NOT string interpolation.
-        //
-        // WHY: a summary containing a quote or a newline used to produce invalid
-        // JSON, and a crafted value could inject extra fields into the body.
-        // JSONObject escapes every value, so the payload is always valid and a
-        // value can never become structure.
         val payload = JSONObject().apply {
             put("id", item.id)
             put("title", item.title)
             put("summary", item.summary)
             put("timestamp", item.timestamp)
             put("category", item.category)
-            // JSONObject.NULL, not the string "null".
             put("url", item.url ?: JSONObject.NULL)
+            put("scope", item.scope)
+            if (item.sourceConversationId != null) {
+                put("sourceConversationId", item.sourceConversationId)
+            }
         }.toString()
-        // requestOrThrow so a refused write surfaces as a typed ApiError.
         val response = client.requestOrThrow("POST", baseUrl, payload, label = "Memory request")
-        // The response is the SERVER's copy of the row — see the Artifacts twin
-        // for why discarding it lost the server-assigned id and timestamp.
         parseMemoryOrFallback(response, item)
     }
 
     override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        // The id is a PATH SEGMENT, so it must be percent-encoded — see the
-        // Artifacts twin for why an unencoded id changes the URL's structure.
         client.requestOrThrow(
             "DELETE",
             "$baseUrl/${encodePathSegment(id)}",
@@ -236,15 +254,9 @@ class RemoteMemoryDataSource(
 
     /** Parses the list payload. Throws on malformed JSON. */
     private fun parseMemories(body: String): List<MemoryItem> {
-        // The live service wraps the list: `{"memories":[...]}`. A bare array
-        // is still accepted (see [unwrapList]), and a 200 carrying
-        // `{"error":"..."}` becomes an ApiError instead of an empty list.
         val array = unwrapList(body, key = "memories", label = "Memory request")
         val out = ArrayList<MemoryItem>(array.length())
         for (i in 0 until array.length()) {
-            // PER-ITEM ISOLATION — see the Artifacts twin. One malformed row used
-            // to throw out of the whole parse and replace the entire list with an
-            // error screen; now it costs one row.
             val o = array.optJSONObject(i) ?: continue
             val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: continue
             out += MemoryItem(
@@ -253,10 +265,9 @@ class RemoteMemoryDataSource(
                 summary = o.optString("summary", ""),
                 timestamp = o.optString("timestamp", ""),
                 category = o.optString("category", "").ifBlank { "Note" },
-                // A blank or absent url is null, not an empty string: the screen
-                // branches on null to pick the detail-dialog fallback, so an
-                // empty string would slip past that check and open nothing.
                 url = o.optString("url", "").takeIf { it.isNotBlank() },
+                scope = o.optString("scope", "global"),
+                sourceConversationId = o.optString("sourceConversationId").takeIf { it.isNotBlank() && it != "null" },
             )
         }
         return out
@@ -264,10 +275,6 @@ class RemoteMemoryDataSource(
 
     /**
      * Parses the POST response into the stored item, falling back to [sent].
-     *
-     * Accepts the created object directly or wrapped in `{"memory":{...}}`. A
-     * write that SUCCEEDED must not be reported as a failure just because the
-     * response shape was unexpected.
      */
     private fun parseMemoryOrFallback(body: String, sent: MemoryItem): MemoryItem {
         val text = body.trim()
@@ -282,6 +289,8 @@ class RemoteMemoryDataSource(
             timestamp = o.optString("timestamp", "").ifBlank { sent.timestamp },
             category = o.optString("category", "").ifBlank { sent.category },
             url = o.optString("url", "").takeIf { it.isNotBlank() } ?: sent.url,
+            scope = o.optString("scope", sent.scope),
+            sourceConversationId = o.optString("sourceConversationId").takeIf { it.isNotBlank() && it != "null" } ?: sent.sourceConversationId,
         )
     }
 }
@@ -339,4 +348,22 @@ class MemoryRepository(
 
     /** Shown when a memory could not be deleted. */
     override val deleteFailureFallback: String = "Memory delete nahi ho payi."
+
+    suspend fun toggleScope(id: String, currentScope: String): WriteResult {
+        val newScope = if (currentScope.startsWith("group")) "global" else "group"
+        return try {
+            val updated = (source as? RemoteMemoryDataSource)?.updateScope(id, newScope)
+                ?: (source as? MemoryDataSource)?.updateScope(id, newScope)
+            if (updated != null) {
+                val current = (state.value as? MemoryUiState.Loaded)?.memories.orEmpty()
+                val next = current.map { if (it.id == id) updated else it }
+                _state.value = MemoryUiState.Loaded(next)
+            }
+            WriteResult.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            WriteResult.Failure(e.message ?: "Failed to update memory scope.")
+        }
+    }
 }

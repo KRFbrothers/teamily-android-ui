@@ -11,6 +11,8 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.cube.CubeAvatar
+import androidx.compose.foundation.shape.CircleShape
 import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -305,6 +307,7 @@ fun HomeScreen(
      */
     userAvatar: Painter? = null,
     hasUnreadMemory: Boolean = true,
+    conversations: List<ConversationItem> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     // Local only when the host does not own the flag. On means the public
@@ -435,6 +438,8 @@ fun HomeScreen(
                 ) {
                     AgentHomeList(
                         onOpenDuaAgentChat = onOpenDuaAgentChat,
+                        conversations = conversations,
+                        onOpenListedChat = onOpenListedChat,
                         modifier = Modifier.fillMaxSize(),
                     )
                     HomeBottomNav(
@@ -1774,6 +1779,8 @@ private fun SectionHeader(
 @Composable
 private fun AgentHomeList(
     onOpenDuaAgentChat: () -> Unit,
+    conversations: List<ConversationItem> = emptyList(),
+    onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -1819,42 +1826,60 @@ private fun AgentHomeList(
                 )
                 SectionHeader(
                     icon = SectionIcon.Chat,
-                    label = "Chats \u00b7 0",
+                    label = "Chats \u00b7 ${conversations.size}",
                     expanded = chatsExpanded,
                     onToggle = { chatsExpanded = !chatsExpanded },
                 )
             }
         }
         if (chatsExpanded) {
-            // The honest empty state: until a real conversation exists there is
-            // nothing to list, so the section says so instead of showing rows
-            // of people and agents that are not there.
-            item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter)
-                        .padding(top = 12.dp, bottom = 16.dp),
-                ) {
-                    Text(
-                        text = "No conversations yet",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 14.5.sp,
-                            lineHeight = 20.sp,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Chats you start will appear here.",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            if (conversations.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = spacing.gutter)
+                            .padding(top = 12.dp, bottom = 16.dp),
+                    ) {
+                        Text(
+                            text = "No conversations yet",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 14.5.sp,
+                                lineHeight = 20.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Chats you start will appear here.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                items(conversations.size, key = { conversations[it].id }) { index ->
+                    val item = conversations[index]
+                    CanvasChatRow(
+                        title = item.title,
+                        subtitle = item.lastMessagePreview.ifBlank { "Tap to open chat" },
+                        time = item.lastMessageAt,
+                        onClick = { onOpenListedChat(item.id, item.title) },
+                    ) {
+                        ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
+                            CubeAvatar(
+                                cubeId = item.toChatRow().cubeId,
+                                size = 40.dp,
+                                shape = CircleShape,
+                                contentDescription = item.title,
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -1,9 +1,13 @@
 package ai.duagenai.design.screens
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 /* ============================================================================
  *  The shared repository engine — load / refresh / add / delete, once.
@@ -119,7 +123,7 @@ sealed interface WriteResult {
  *   client by default; the in-memory sources are the demo defaults.
  */
 abstract class BaseRemoteRepository<T : Identifiable, S>(
-    private val source: RemoteDataSource<T>,
+    protected val source: RemoteDataSource<T>,
 ) {
 
     // ---- the three state constructors plus the list accessor: the ONLY
@@ -216,7 +220,7 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
     // ---- has finished constructing — is safe. A subclass must never read its
     // ---- own fields from the state constructors.
 
-    private val _state = MutableStateFlow(loadingState())
+    protected val _state = MutableStateFlow(loadingState())
 
     /** The current state. The screen collects this; it never reads the source. */
     val state: StateFlow<S> = _state.asStateFlow()
@@ -408,4 +412,879 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
             WriteResult.Failure(message)
         }
     }
+}
+
+/* ============================================================================
+ *  Conversations & Chat Messages
+ * ==========================================================================*/
+
+data class ConversationItem(
+    override val id: String,
+    val title: String,
+    val agentId: String = "dua-agent",
+    val pinned: Boolean = false,
+    val isGroup: Boolean = false,
+    val lastMessagePreview: String = "",
+    val lastMessageAt: String = "",
+    val createdAt: String = "",
+    val updatedAt: String = "",
+) : Identifiable {
+    fun toChatRow(): ChatRow = ChatRow(chatId = id, name = title)
+}
+
+data class ConversationAgentItem(
+    val conversationId: String,
+    val agentId: String,
+    val addedAt: String = "",
+)
+
+sealed interface ConversationsUiState {
+    object Loading : ConversationsUiState
+    data class Loaded(val conversations: List<ConversationItem>) : ConversationsUiState
+    data class Error(val message: String, val retryable: Boolean = true) : ConversationsUiState
+}
+
+interface ConversationsDataSource : RemoteDataSource<ConversationItem> {
+    suspend fun fetch(query: String? = null): List<ConversationItem>
+    suspend fun togglePin(id: String, pinned: Boolean): ConversationItem
+    suspend fun fetchMessages(id: String, limit: Int = 200, before: String? = null): List<SavedMessage>
+    suspend fun fetchAgents(id: String): List<ConversationAgentItem>
+    suspend fun addAgent(id: String, agentId: String): ConversationAgentItem
+    suspend fun removeAgent(id: String, agentId: String)
+}
+
+class InMemoryConversationsDataSource(
+    seed: List<ConversationItem> = emptyList(),
+) : ConversationsDataSource {
+    private val items = seed.toMutableList()
+    private val messages = mutableMapOf<String, MutableList<SavedMessage>>()
+    private val agents = mutableMapOf<String, MutableList<ConversationAgentItem>>()
+
+    override suspend fun fetch(): List<ConversationItem> = items.toList()
+    override suspend fun fetch(query: String?): List<ConversationItem> =
+        if (query.isNullOrBlank()) items.toList() else items.filter { it.title.contains(query, ignoreCase = true) }
+
+    override suspend fun add(item: ConversationItem): ConversationItem {
+        items.removeAll { it.id == item.id }
+        items.add(0, item)
+        return item
+    }
+
+    override suspend fun delete(id: String) {
+        items.removeAll { it.id == id }
+        messages.remove(id)
+        agents.remove(id)
+    }
+
+    override suspend fun togglePin(id: String, pinned: Boolean): ConversationItem {
+        val index = items.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            val updated = items[index].copy(pinned = pinned)
+            items[index] = updated
+            return updated
+        }
+        val fallback = ConversationItem(id = id, title = "Chat", pinned = pinned)
+        items.add(0, fallback)
+        return fallback
+    }
+
+    override suspend fun fetchMessages(id: String, limit: Int, before: String?): List<SavedMessage> =
+        messages[id]?.toList().orEmpty()
+
+    override suspend fun fetchAgents(id: String): List<ConversationAgentItem> =
+        agents[id]?.toList().orEmpty()
+
+    override suspend fun addAgent(id: String, agentId: String): ConversationAgentItem {
+        val agent = ConversationAgentItem(id, agentId, nowLabel())
+        agents.getOrPut(id) { mutableListOf() }.add(agent)
+        return agent
+    }
+
+    override suspend fun removeAgent(id: String, agentId: String) {
+        agents[id]?.removeAll { it.agentId == agentId }
+    }
+}
+
+class RemoteConversationsDataSource(
+    private val client: JsonHttpClient = HttpClientProvider.client,
+) : ConversationsDataSource {
+    override suspend fun fetch(): List<ConversationItem> = fetch(null)
+
+    override suspend fun fetch(query: String?): List<ConversationItem> = withContext(Dispatchers.IO) {
+        val path = if (!query.isNullOrBlank()) {
+            "/api/conversations?q=${encodePathSegment(query)}&limit=100"
+        } else {
+            "/api/conversations?limit=100"
+        }
+        val body = client.requestOrThrow("GET", ApiConfig.url(path), label = "Conversations request")
+        parseConversations(body)
+    }
+
+    override suspend fun add(item: ConversationItem): ConversationItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            if (item.id.isNotBlank() && !item.id.startsWith("chat_")) put("id", item.id)
+            put("title", item.title)
+            put("agentId", item.agentId)
+        }.toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/conversations"), payload, label = "Create conversation")
+        parseSingleConversation(body) ?: item
+    }
+
+    override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/conversations/${encodePathSegment(id)}"), label = "Delete conversation")
+        Unit
+    }
+
+    override suspend fun togglePin(id: String, pinned: Boolean): ConversationItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("pinned", pinned).toString()
+        val body = client.requestOrThrow("PUT", ApiConfig.url("/api/conversations/${encodePathSegment(id)}/pin"), payload, label = "Pin conversation")
+        parseSingleConversation(body) ?: ConversationItem(id = id, title = "Chat", pinned = pinned)
+    }
+
+    override suspend fun fetchMessages(id: String, limit: Int, before: String?): List<SavedMessage> = withContext(Dispatchers.IO) {
+        val query = buildString {
+            append("?limit=").append(limit)
+            if (!before.isNullOrBlank()) append("&before=").append(encodePathSegment(before))
+        }
+        val body = client.requestOrThrow("GET", ApiConfig.url("/api/conversations/${encodePathSegment(id)}/messages$query"), label = "Conversation messages")
+        parseMessages(body)
+    }
+
+    override suspend fun fetchAgents(id: String): List<ConversationAgentItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow("GET", ApiConfig.url("/api/conversations/${encodePathSegment(id)}/agents"), label = "Conversation agents")
+        parseConversationAgents(body)
+    }
+
+    override suspend fun addAgent(id: String, agentId: String): ConversationAgentItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("agentId", agentId).toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/conversations/${encodePathSegment(id)}/agents"), payload, label = "Add conversation agent")
+        parseSingleConversationAgent(body) ?: ConversationAgentItem(id, agentId)
+    }
+
+    override suspend fun removeAgent(id: String, agentId: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/conversations/${encodePathSegment(id)}/agents/${encodePathSegment(agentId)}"), label = "Remove conversation agent")
+        Unit
+    }
+}
+
+fun parseConversations(body: String): List<ConversationItem> {
+    val arr = unwrapList(body, "conversations", "Conversations")
+    val list = ArrayList<ConversationItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += ConversationItem(
+            id = obj.optString("id"),
+            title = obj.optString("title", "New chat"),
+            agentId = obj.optString("agentId", "dua-agent"),
+            pinned = obj.optBoolean("pinned", false),
+            lastMessagePreview = obj.optString("lastMessagePreview", ""),
+            lastMessageAt = obj.optString("lastMessageAt", ""),
+            createdAt = obj.optString("createdAt", ""),
+        )
+    }
+    return list
+}
+
+fun parseSingleConversation(body: String): ConversationItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("conversation") ?: root
+    ConversationItem(
+        id = obj.optString("id"),
+        title = obj.optString("title", "New chat"),
+        agentId = obj.optString("agentId", "dua-agent"),
+        pinned = obj.optBoolean("pinned", false),
+        lastMessagePreview = obj.optString("lastMessagePreview", ""),
+        lastMessageAt = obj.optString("lastMessageAt", ""),
+        createdAt = obj.optString("createdAt", ""),
+    )
+}.getOrNull()
+
+fun parseMessages(body: String): List<SavedMessage> {
+    val arr = unwrapList(body, "messages", "Messages")
+    val list = ArrayList<SavedMessage>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        val role = obj.optString("role", "user")
+        val content = obj.optString("content", "")
+        val createdAt = obj.optString("createdAt", "")
+        val agentId = obj.optString("agentId").takeIf { it.isNotBlank() && it != "null" }
+        val agentName = when (agentId) {
+            "dua-agent" -> "Dua Agent"
+            "personal-agent" -> "Personal Agent"
+            else -> agentId
+        }
+        val who = if (role.equals("user", ignoreCase = true)) SavedMessage.USER else SavedMessage.AGENT
+        list += SavedMessage(
+            who = who,
+            text = content,
+            time = formatIsoTime(createdAt),
+            agentId = agentId,
+            agentName = agentName,
+        )
+    }
+    return list
+}
+
+fun parseConversationAgents(body: String): List<ConversationAgentItem> {
+    val arr = unwrapList(body, "agents", "Conversation agents")
+    val list = ArrayList<ConversationAgentItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += ConversationAgentItem(
+            conversationId = obj.optString("conversationId"),
+            agentId = obj.optString("agentId"),
+            addedAt = obj.optString("addedAt"),
+        )
+    }
+    return list
+}
+
+fun parseSingleConversationAgent(body: String): ConversationAgentItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("agent") ?: root
+    ConversationAgentItem(
+        conversationId = obj.optString("conversationId"),
+        agentId = obj.optString("agentId"),
+        addedAt = obj.optString("addedAt"),
+    )
+}.getOrNull()
+
+internal fun formatIsoTime(iso: String): String {
+    if (iso.isBlank()) return nowLabel()
+    return try {
+        if (iso.contains("T") && iso.length >= 16) {
+            iso.substringAfter("T").take(5)
+        } else {
+            iso
+        }
+    } catch (_: Exception) {
+        nowLabel()
+    }
+}
+
+class ConversationsRepository(
+    dataSource: ConversationsDataSource? = null,
+) : BaseRemoteRepository<ConversationItem, ConversationsUiState>(
+    source = dataSource ?: (if (TokenStore.token != null) RemoteConversationsDataSource() else InMemoryConversationsDataSource()),
+) {
+    override fun loadingState(): ConversationsUiState = ConversationsUiState.Loading
+    override fun loadedState(items: List<ConversationItem>): ConversationsUiState = ConversationsUiState.Loaded(items)
+    override fun errorState(message: String, retryable: Boolean): ConversationsUiState = ConversationsUiState.Error(message, retryable)
+    override fun itemsOf(state: ConversationsUiState): List<ConversationItem>? = (state as? ConversationsUiState.Loaded)?.conversations
+    override fun withId(item: ConversationItem, id: String): ConversationItem = item.copy(id = id)
+    override val errorFallback: String = "Conversations load nahi ho paye."
+
+    val conversationsSource: ConversationsDataSource get() = source as ConversationsDataSource
+
+    suspend fun filter(query: String?): List<ConversationItem> {
+        return conversationsSource.fetch(query)
+    }
+
+    suspend fun createConversation(title: String, agentId: String = "dua-agent", id: String? = null): ConversationItem {
+        val conv = ConversationItem(
+            id = id ?: java.util.UUID.randomUUID().toString(),
+            title = title,
+            agentId = agentId,
+            createdAt = nowLabel(),
+        )
+        conversationsSource.add(conv)
+        val current = (state.value as? ConversationsUiState.Loaded)?.conversations.orEmpty()
+        _state.value = ConversationsUiState.Loaded(listOf(conv) + current)
+        return conv
+    }
+
+    suspend fun togglePin(id: String, pinned: Boolean): WriteResult {
+        return try {
+            val updated = conversationsSource.togglePin(id, pinned)
+            val current = (state.value as? ConversationsUiState.Loaded)?.conversations.orEmpty()
+            val next = current.map { if (it.id == id) updated else it }
+            _state.value = ConversationsUiState.Loaded(next)
+            WriteResult.Success
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            WriteResult.Failure(e.message ?: "Failed to update pin.")
+        }
+    }
+
+    suspend fun fetchMessages(id: String): List<SavedMessage> = conversationsSource.fetchMessages(id)
+    suspend fun fetchAgents(id: String): List<ConversationAgentItem> = conversationsSource.fetchAgents(id)
+    suspend fun addAgent(id: String, agentId: String): ConversationAgentItem = conversationsSource.addAgent(id, agentId)
+    suspend fun removeAgent(id: String, agentId: String) = conversationsSource.removeAgent(id, agentId)
+}
+
+/* ============================================================================
+ *  Agents, Instructions, & Triggers
+ * ==========================================================================*/
+
+data class AgentItem(
+    override val id: String,
+    val name: String,
+    val description: String = "",
+    val mode: String = "auto",
+    val systemPrompt: String = "",
+    val model: String? = null,
+    val pinned: Boolean = false,
+    val isOfficial: Boolean = false,
+    val icon: String? = null,
+    val color: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = "",
+) : Identifiable
+
+data class AgentInstructionItem(
+    override val id: String,
+    val agentId: String,
+    val instruction: String,
+    val isActive: Boolean = true,
+    val createdAt: String = "",
+) : Identifiable
+
+data class AgentTriggerItem(
+    override val id: String,
+    val agentId: String,
+    val conversationId: String? = null,
+    val triggerType: String = "schedule",
+    val cronExpr: String? = null,
+    val prompt: String = "",
+    val enabled: Boolean = true,
+    val lastRunAt: String? = null,
+    val createdAt: String = "",
+) : Identifiable
+
+sealed interface AgentsUiState {
+    object Loading : AgentsUiState
+    data class Loaded(val agents: List<AgentItem>) : AgentsUiState
+    data class Error(val message: String, val retryable: Boolean = true) : AgentsUiState
+}
+
+interface AgentsDataSource : RemoteDataSource<AgentItem> {
+    suspend fun update(item: AgentItem): AgentItem
+    suspend fun generatePrompt(description: String, name: String = "", mode: String = "auto"): String
+    suspend fun fetchInstructions(agentId: String): List<AgentInstructionItem>
+    suspend fun addInstruction(agentId: String, instruction: String, isActive: Boolean = true): AgentInstructionItem
+    suspend fun updateInstruction(agentId: String, instructionId: String, instruction: String, isActive: Boolean): AgentInstructionItem
+    suspend fun deleteInstruction(agentId: String, instructionId: String)
+    suspend fun fetchTriggers(agentId: String): List<AgentTriggerItem>
+    suspend fun addTrigger(agentId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem
+    suspend fun updateTrigger(agentId: String, triggerId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem
+    suspend fun deleteTrigger(agentId: String, triggerId: String)
+    suspend fun runTrigger(agentId: String, triggerId: String): AgentTriggerItem
+}
+
+class InMemoryAgentsDataSource(
+    seed: List<AgentItem> = emptyList(),
+) : AgentsDataSource {
+    private val items = seed.toMutableList()
+    private val instructions = mutableMapOf<String, MutableList<AgentInstructionItem>>()
+    private val triggers = mutableMapOf<String, MutableList<AgentTriggerItem>>()
+
+    override suspend fun fetch(): List<AgentItem> = items.toList()
+    override suspend fun add(item: AgentItem): AgentItem {
+        items.removeAll { it.id == item.id }
+        items.add(item)
+        return item
+    }
+    override suspend fun update(item: AgentItem): AgentItem {
+        val idx = items.indexOfFirst { it.id == item.id }
+        if (idx >= 0) items[idx] = item else items.add(item)
+        return item
+    }
+    override suspend fun delete(id: String) {
+        if (id == "personal-agent" || id == "dua-agent") {
+            throw IllegalStateException("Official agents cannot be deleted.")
+        }
+        items.removeAll { it.id == id }
+    }
+    override suspend fun generatePrompt(description: String, name: String, mode: String): String =
+        "You are $name, a specialized assistant designed to $description."
+    override suspend fun fetchInstructions(agentId: String): List<AgentInstructionItem> =
+        instructions[agentId]?.toList().orEmpty()
+    override suspend fun addInstruction(agentId: String, instruction: String, isActive: Boolean): AgentInstructionItem {
+        val item = AgentInstructionItem(java.util.UUID.randomUUID().toString(), agentId, instruction, isActive)
+        instructions.getOrPut(agentId) { mutableListOf() }.add(item)
+        return item
+    }
+    override suspend fun updateInstruction(agentId: String, instructionId: String, instruction: String, isActive: Boolean): AgentInstructionItem {
+        val list = instructions.getOrPut(agentId) { mutableListOf() }
+        val idx = list.indexOfFirst { it.id == instructionId }
+        val updated = AgentInstructionItem(instructionId, agentId, instruction, isActive)
+        if (idx >= 0) list[idx] = updated else list.add(updated)
+        return updated
+    }
+    override suspend fun deleteInstruction(agentId: String, instructionId: String) {
+        instructions[agentId]?.removeAll { it.id == instructionId }
+    }
+    override suspend fun fetchTriggers(agentId: String): List<AgentTriggerItem> =
+        triggers[agentId]?.toList().orEmpty()
+    override suspend fun addTrigger(agentId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem {
+        val item = AgentTriggerItem(java.util.UUID.randomUUID().toString(), agentId, conversationId, triggerType, cronExpr, prompt, enabled)
+        triggers.getOrPut(agentId) { mutableListOf() }.add(item)
+        return item
+    }
+    override suspend fun updateTrigger(agentId: String, triggerId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem {
+        val list = triggers.getOrPut(agentId) { mutableListOf() }
+        val idx = list.indexOfFirst { it.id == triggerId }
+        val updated = AgentTriggerItem(triggerId, agentId, conversationId, triggerType, cronExpr, prompt, enabled)
+        if (idx >= 0) list[idx] = updated else list.add(updated)
+        return updated
+    }
+    override suspend fun deleteTrigger(agentId: String, triggerId: String) {
+        triggers[agentId]?.removeAll { it.id == triggerId }
+    }
+    override suspend fun runTrigger(agentId: String, triggerId: String): AgentTriggerItem {
+        val list = triggers.getOrPut(agentId) { mutableListOf() }
+        val item = list.firstOrNull { it.id == triggerId } ?: AgentTriggerItem(triggerId, agentId, prompt = "Run")
+        val updated = item.copy(lastRunAt = nowLabel())
+        val idx = list.indexOfFirst { it.id == triggerId }
+        if (idx >= 0) list[idx] = updated
+        return updated
+    }
+}
+
+class RemoteAgentsDataSource(
+    private val client: JsonHttpClient = HttpClientProvider.client,
+) : AgentsDataSource {
+    override suspend fun fetch(): List<AgentItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow("GET", ApiConfig.url("/api/agents"), label = "Agents request")
+        parseAgents(body)
+    }
+
+    override suspend fun add(item: AgentItem): AgentItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            if (item.id.isNotBlank()) put("id", item.id)
+            put("name", item.name)
+            put("description", item.description)
+            put("mode", item.mode)
+            put("systemPrompt", item.systemPrompt)
+            put("pinned", item.pinned)
+        }.toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/agents"), payload, label = "Create agent")
+        parseSingleAgent(body) ?: item
+    }
+
+    override suspend fun update(item: AgentItem): AgentItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("name", item.name)
+            put("description", item.description)
+            put("mode", item.mode)
+            put("systemPrompt", item.systemPrompt)
+            put("pinned", item.pinned)
+        }.toString()
+        val body = client.requestOrThrow("PUT", ApiConfig.url("/api/agents/${encodePathSegment(item.id)}"), payload, label = "Update agent")
+        parseSingleAgent(body) ?: item
+    }
+
+    override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/agents/${encodePathSegment(id)}"), label = "Delete agent")
+        Unit
+    }
+
+    override suspend fun generatePrompt(description: String, name: String, mode: String): String = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("description", description).put("name", name).put("mode", mode).toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/agents/generate-prompt"), payload, label = "Generate agent prompt")
+        JSONObject(body).optString("systemPrompt")
+    }
+
+    override suspend fun fetchInstructions(agentId: String): List<AgentInstructionItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow("GET", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/instructions"), label = "Agent instructions")
+        parseInstructions(body)
+    }
+
+    override suspend fun addInstruction(agentId: String, instruction: String, isActive: Boolean): AgentInstructionItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("instruction", instruction).put("isActive", isActive).toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/instructions"), payload, label = "Add instruction")
+        parseSingleInstruction(body) ?: AgentInstructionItem(java.util.UUID.randomUUID().toString(), agentId, instruction, isActive)
+    }
+
+    override suspend fun updateInstruction(agentId: String, instructionId: String, instruction: String, isActive: Boolean): AgentInstructionItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("instruction", instruction).put("isActive", isActive).toString()
+        val body = client.requestOrThrow("PUT", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/instructions/${encodePathSegment(instructionId)}"), payload, label = "Update instruction")
+        parseSingleInstruction(body) ?: AgentInstructionItem(instructionId, agentId, instruction, isActive)
+    }
+
+    override suspend fun deleteInstruction(agentId: String, instructionId: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/instructions/${encodePathSegment(instructionId)}"), label = "Delete instruction")
+        Unit
+    }
+
+    override suspend fun fetchTriggers(agentId: String): List<AgentTriggerItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow("GET", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/triggers"), label = "Agent triggers")
+        parseTriggers(body)
+    }
+
+    override suspend fun addTrigger(agentId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("triggerType", triggerType)
+            cronExpr?.let { put("cronExpr", it) }
+            put("prompt", prompt)
+            conversationId?.let { put("conversationId", it) }
+            put("enabled", enabled)
+        }.toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/triggers"), payload, label = "Add trigger")
+        parseSingleTrigger(body) ?: AgentTriggerItem(java.util.UUID.randomUUID().toString(), agentId, conversationId, triggerType, cronExpr, prompt, enabled)
+    }
+
+    override suspend fun updateTrigger(agentId: String, triggerId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("triggerType", triggerType)
+            cronExpr?.let { put("cronExpr", it) }
+            put("prompt", prompt)
+            conversationId?.let { put("conversationId", it) }
+            put("enabled", enabled)
+        }.toString()
+        val body = client.requestOrThrow("PUT", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/triggers/${encodePathSegment(triggerId)}"), payload, label = "Update trigger")
+        parseSingleTrigger(body) ?: AgentTriggerItem(triggerId, agentId, conversationId, triggerType, cronExpr, prompt, enabled)
+    }
+
+    override suspend fun deleteTrigger(agentId: String, triggerId: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/triggers/${encodePathSegment(triggerId)}"), label = "Delete trigger")
+        Unit
+    }
+
+    override suspend fun runTrigger(agentId: String, triggerId: String): AgentTriggerItem = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/agents/${encodePathSegment(agentId)}/triggers/${encodePathSegment(triggerId)}/run"), "{}", label = "Run trigger")
+        parseSingleTrigger(body) ?: AgentTriggerItem(triggerId, agentId, prompt = "Run")
+    }
+}
+
+fun parseAgents(body: String): List<AgentItem> {
+    val arr = unwrapList(body, "agents", "Agents")
+    val list = ArrayList<AgentItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += AgentItem(
+            id = obj.optString("id"),
+            name = obj.optString("name"),
+            description = obj.optString("description", ""),
+            mode = obj.optString("mode", "auto"),
+            systemPrompt = obj.optString("systemPrompt", ""),
+            model = obj.optString("model").takeIf { it.isNotBlank() && it != "null" },
+            pinned = obj.optBoolean("pinned", false),
+            isOfficial = obj.optBoolean("isOfficial", false),
+            createdAt = obj.optString("createdAt", ""),
+            updatedAt = obj.optString("updatedAt", ""),
+        )
+    }
+    return list
+}
+
+fun parseSingleAgent(body: String): AgentItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("agent") ?: root
+    AgentItem(
+        id = obj.optString("id"),
+        name = obj.optString("name"),
+        description = obj.optString("description", ""),
+        mode = obj.optString("mode", "auto"),
+        systemPrompt = obj.optString("systemPrompt", ""),
+        model = obj.optString("model").takeIf { it.isNotBlank() && it != "null" },
+        pinned = obj.optBoolean("pinned", false),
+        isOfficial = obj.optBoolean("isOfficial", false),
+        createdAt = obj.optString("createdAt", ""),
+        updatedAt = obj.optString("updatedAt", ""),
+    )
+}.getOrNull()
+
+fun parseInstructions(body: String): List<AgentInstructionItem> {
+    val arr = unwrapList(body, "instructions", "Instructions")
+    val list = ArrayList<AgentInstructionItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += AgentInstructionItem(
+            id = obj.optString("id"),
+            agentId = obj.optString("agentId"),
+            instruction = obj.optString("instruction"),
+            isActive = obj.optBoolean("isActive", true),
+            createdAt = obj.optString("createdAt", ""),
+        )
+    }
+    return list
+}
+
+fun parseSingleInstruction(body: String): AgentInstructionItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("instruction") ?: root
+    AgentInstructionItem(
+        id = obj.optString("id"),
+        agentId = obj.optString("agentId"),
+        instruction = obj.optString("instruction"),
+        isActive = obj.optBoolean("isActive", true),
+        createdAt = obj.optString("createdAt", ""),
+    )
+}.getOrNull()
+
+fun parseTriggers(body: String): List<AgentTriggerItem> {
+    val arr = unwrapList(body, "triggers", "Triggers")
+    val list = ArrayList<AgentTriggerItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += AgentTriggerItem(
+            id = obj.optString("id"),
+            agentId = obj.optString("agentId"),
+            conversationId = obj.optString("conversationId").takeIf { it.isNotBlank() && it != "null" },
+            triggerType = obj.optString("triggerType", "schedule"),
+            cronExpr = obj.optString("cronExpr").takeIf { it.isNotBlank() && it != "null" },
+            prompt = obj.optString("prompt"),
+            enabled = obj.optBoolean("enabled", true),
+            lastRunAt = obj.optString("lastRunAt").takeIf { it.isNotBlank() && it != "null" },
+            createdAt = obj.optString("createdAt", ""),
+        )
+    }
+    return list
+}
+
+fun parseSingleTrigger(body: String): AgentTriggerItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("trigger") ?: root
+    AgentTriggerItem(
+        id = obj.optString("id"),
+        agentId = obj.optString("agentId"),
+        conversationId = obj.optString("conversationId").takeIf { it.isNotBlank() && it != "null" },
+        triggerType = obj.optString("triggerType", "schedule"),
+        cronExpr = obj.optString("cronExpr").takeIf { it.isNotBlank() && it != "null" },
+        prompt = obj.optString("prompt"),
+        enabled = obj.optBoolean("enabled", true),
+        lastRunAt = obj.optString("lastRunAt").takeIf { it.isNotBlank() && it != "null" },
+        createdAt = obj.optString("createdAt", ""),
+    )
+}.getOrNull()
+
+class AgentsRepository(
+    dataSource: AgentsDataSource? = null,
+) : BaseRemoteRepository<AgentItem, AgentsUiState>(
+    source = dataSource ?: (if (TokenStore.token != null) RemoteAgentsDataSource() else InMemoryAgentsDataSource()),
+) {
+    override fun loadingState(): AgentsUiState = AgentsUiState.Loading
+    override fun loadedState(items: List<AgentItem>): AgentsUiState = AgentsUiState.Loaded(items)
+    override fun errorState(message: String, retryable: Boolean): AgentsUiState = AgentsUiState.Error(message, retryable)
+    override fun itemsOf(state: AgentsUiState): List<AgentItem>? = (state as? AgentsUiState.Loaded)?.agents
+    override fun withId(item: AgentItem, id: String): AgentItem = item.copy(id = id)
+    override val errorFallback: String = "Agents load nahi ho paye."
+
+    val agentsSource: AgentsDataSource get() = source as AgentsDataSource
+
+    suspend fun update(item: AgentItem): WriteResult = try {
+        val updated = agentsSource.update(item)
+        val current = (state.value as? AgentsUiState.Loaded)?.agents.orEmpty()
+        val next = current.map { if (it.id == item.id) updated else it }
+        _state.value = AgentsUiState.Loaded(next)
+        WriteResult.Success
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        WriteResult.Failure(e.message ?: "Failed to update agent.")
+    }
+
+    suspend fun generatePrompt(description: String, name: String = "", mode: String = "auto"): String =
+        agentsSource.generatePrompt(description, name, mode)
+
+    suspend fun fetchInstructions(agentId: String): List<AgentInstructionItem> = agentsSource.fetchInstructions(agentId)
+    suspend fun addInstruction(agentId: String, instruction: String, isActive: Boolean = true): AgentInstructionItem =
+        agentsSource.addInstruction(agentId, instruction, isActive)
+    suspend fun updateInstruction(agentId: String, instructionId: String, instruction: String, isActive: Boolean): AgentInstructionItem =
+        agentsSource.updateInstruction(agentId, instructionId, instruction, isActive)
+    suspend fun deleteInstruction(agentId: String, instructionId: String) =
+        agentsSource.deleteInstruction(agentId, instructionId)
+
+    suspend fun fetchTriggers(agentId: String): List<AgentTriggerItem> = agentsSource.fetchTriggers(agentId)
+    suspend fun addTrigger(agentId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem =
+        agentsSource.addTrigger(agentId, triggerType, cronExpr, prompt, conversationId, enabled)
+    suspend fun updateTrigger(agentId: String, triggerId: String, triggerType: String, cronExpr: String?, prompt: String, conversationId: String?, enabled: Boolean): AgentTriggerItem =
+        agentsSource.updateTrigger(agentId, triggerId, triggerType, cronExpr, prompt, conversationId, enabled)
+    suspend fun deleteTrigger(agentId: String, triggerId: String) =
+        agentsSource.deleteTrigger(agentId, triggerId)
+    suspend fun runTrigger(agentId: String, triggerId: String): AgentTriggerItem =
+        agentsSource.runTrigger(agentId, triggerId)
+}
+
+/* ============================================================================
+ *  Skills
+ * ==========================================================================*/
+
+data class SkillItem(
+    override val id: String,
+    val agentId: String = "dua-agent",
+    val title: String,
+    val summary: String = "",
+    val body: String = "",
+    val enabled: Boolean = true,
+    val isStarter: Boolean = false,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
+) : Identifiable {
+    val name: String get() = title
+    val description: String get() = summary
+}
+
+sealed interface SkillsUiState {
+    object Loading : SkillsUiState
+    data class Loaded(val skills: List<SkillItem>) : SkillsUiState
+    data class Error(val message: String, val retryable: Boolean = true) : SkillsUiState
+}
+
+interface SkillsDataSource : RemoteDataSource<SkillItem> {
+    suspend fun fetch(agentId: String? = null): List<SkillItem>
+    suspend fun update(item: SkillItem): SkillItem
+    suspend fun generateSkill(description: String, title: String = ""): SkillItem
+}
+
+class InMemorySkillsDataSource(
+    seed: List<SkillItem> = DuaAgentSkills.all.map {
+        SkillItem(
+            id = it.id,
+            title = it.title,
+            summary = it.summary,
+            enabled = true,
+            isStarter = true,
+        )
+    },
+) : SkillsDataSource {
+    private val items = seed.toMutableList()
+
+    override suspend fun fetch(): List<SkillItem> = items.toList()
+    override suspend fun fetch(agentId: String?): List<SkillItem> =
+        if (agentId.isNullOrBlank()) items.toList() else items.filter { it.agentId == agentId }
+
+    override suspend fun add(item: SkillItem): SkillItem {
+        items.removeAll { it.id == item.id }
+        items.add(item)
+        return item
+    }
+
+    override suspend fun update(item: SkillItem): SkillItem {
+        val idx = items.indexOfFirst { it.id == item.id }
+        if (idx >= 0) items[idx] = item else items.add(item)
+        return item
+    }
+
+    override suspend fun delete(id: String) {
+        val skill = items.firstOrNull { it.id == id }
+        if (skill?.isStarter == true) throw IllegalStateException("Starter skills cannot be deleted.")
+        items.removeAll { it.id == id }
+    }
+
+    override suspend fun generateSkill(description: String, title: String): SkillItem =
+        SkillItem(
+            id = if (title.isNotBlank()) title.lowercase().replace(" ", "-") else "custom-skill",
+            title = title.ifBlank { "Custom Skill" },
+            summary = description.take(60),
+            body = "Instructions for $description",
+        )
+}
+
+class RemoteSkillsDataSource(
+    private val client: JsonHttpClient = HttpClientProvider.client,
+) : SkillsDataSource {
+    override suspend fun fetch(): List<SkillItem> = fetch(null)
+
+    override suspend fun fetch(agentId: String?): List<SkillItem> = withContext(Dispatchers.IO) {
+        val path = if (!agentId.isNullOrBlank()) "/api/skills?agent_id=${encodePathSegment(agentId)}" else "/api/skills"
+        val body = client.requestOrThrow("GET", ApiConfig.url(path), label = "Skills request")
+        parseSkills(body)
+    }
+
+    override suspend fun add(item: SkillItem): SkillItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            if (item.id.isNotBlank()) put("id", item.id)
+            put("agentId", item.agentId)
+            put("title", item.title)
+            put("summary", item.summary)
+            put("body", item.body)
+            put("enabled", item.enabled)
+        }.toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/skills"), payload, label = "Create skill")
+        parseSingleSkill(body) ?: item
+    }
+
+    override suspend fun update(item: SkillItem): SkillItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("title", item.title)
+            put("summary", item.summary)
+            put("body", item.body)
+            put("enabled", item.enabled)
+            put("agentId", item.agentId)
+        }.toString()
+        val body = client.requestOrThrow("PUT", ApiConfig.url("/api/skills/${encodePathSegment(item.id)}"), payload, label = "Update skill")
+        parseSingleSkill(body) ?: item
+    }
+
+    override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        client.requestOrThrow("DELETE", ApiConfig.url("/api/skills/${encodePathSegment(id)}"), label = "Delete skill")
+        Unit
+    }
+
+    override suspend fun generateSkill(description: String, title: String): SkillItem = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("description", description).put("title", title).toString()
+        val body = client.requestOrThrow("POST", ApiConfig.url("/api/skills/generate"), payload, label = "Generate skill")
+        parseSingleSkill(body) ?: SkillItem(id = "custom-skill", title = title.ifBlank { "Custom Skill" }, summary = description)
+    }
+}
+
+fun parseSkills(body: String): List<SkillItem> {
+    val arr = unwrapList(body, "skills", "Skills")
+    val list = ArrayList<SkillItem>(arr.length())
+    for (i in 0 until arr.length()) {
+        val obj = arr.optJSONObject(i) ?: continue
+        list += SkillItem(
+            id = obj.optString("id"),
+            agentId = obj.optString("agentId", "dua-agent"),
+            title = obj.optString("title"),
+            summary = obj.optString("summary", ""),
+            body = obj.optString("body", ""),
+            enabled = obj.optBoolean("enabled", true),
+            isStarter = obj.optBoolean("isStarter", false),
+            createdAt = obj.optString("createdAt").takeIf { it.isNotBlank() && it != "null" },
+            updatedAt = obj.optString("updatedAt").takeIf { it.isNotBlank() && it != "null" },
+        )
+    }
+    return list
+}
+
+fun parseSingleSkill(body: String): SkillItem? = runCatching {
+    val root = JSONObject(body)
+    val obj = root.optJSONObject("skill") ?: root
+    SkillItem(
+        id = obj.optString("id"),
+        agentId = obj.optString("agentId", "dua-agent"),
+        title = obj.optString("title"),
+        summary = obj.optString("summary", ""),
+        body = obj.optString("body", ""),
+        enabled = obj.optBoolean("enabled", true),
+        isStarter = obj.optBoolean("isStarter", false),
+        createdAt = obj.optString("createdAt").takeIf { it.isNotBlank() && it != "null" },
+        updatedAt = obj.optString("updatedAt").takeIf { it.isNotBlank() && it != "null" },
+    )
+}.getOrNull()
+
+class SkillsRepository(
+    dataSource: SkillsDataSource? = null,
+) : BaseRemoteRepository<SkillItem, SkillsUiState>(
+    source = dataSource ?: (if (TokenStore.token != null) RemoteSkillsDataSource() else InMemorySkillsDataSource()),
+) {
+    override fun loadingState(): SkillsUiState = SkillsUiState.Loading
+    override fun loadedState(items: List<SkillItem>): SkillsUiState = SkillsUiState.Loaded(items)
+    override fun errorState(message: String, retryable: Boolean): SkillsUiState = SkillsUiState.Error(message, retryable)
+    override fun itemsOf(state: SkillsUiState): List<SkillItem>? = (state as? SkillsUiState.Loaded)?.skills
+    override fun withId(item: SkillItem, id: String): SkillItem = item.copy(id = id)
+    override val errorFallback: String = "Skills load nahi ho paye."
+
+    val skillsSource: SkillsDataSource get() = source as SkillsDataSource
+
+    suspend fun fetchForAgent(agentId: String): List<SkillItem> = skillsSource.fetch(agentId)
+
+    suspend fun update(item: SkillItem): WriteResult = try {
+        val updated = skillsSource.update(item)
+        val current = (state.value as? SkillsUiState.Loaded)?.skills.orEmpty()
+        val next = current.map { if (it.id == item.id) updated else it }
+        _state.value = SkillsUiState.Loaded(next)
+        WriteResult.Success
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        WriteResult.Failure(e.message ?: "Failed to update skill.")
+    }
+
+    suspend fun generateSkill(description: String, title: String = ""): SkillItem =
+        skillsSource.generateSkill(description, title)
 }
