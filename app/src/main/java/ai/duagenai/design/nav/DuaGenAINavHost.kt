@@ -67,6 +67,19 @@ import ai.duagenai.design.screens.DuaAgentNewGroupScreen
 import ai.duagenai.design.screens.DuaAgentOverviewScreen
 import ai.duagenai.design.screens.DuaAgentProfileScreen
 import ai.duagenai.design.screens.DuaAgentWorkspaceScreen
+import ai.duagenai.design.screens.ConversationsRepository
+import ai.duagenai.design.screens.ConversationsUiState
+import ai.duagenai.design.screens.ConversationItem
+import ai.duagenai.design.screens.RemoteConversationsDataSource
+import ai.duagenai.design.screens.AgentsRepository
+import ai.duagenai.design.screens.AgentsUiState
+import ai.duagenai.design.screens.AgentItem
+import ai.duagenai.design.screens.RemoteAgentsDataSource
+import ai.duagenai.design.screens.SkillsRepository
+import ai.duagenai.design.screens.SkillsUiState
+import ai.duagenai.design.screens.SkillItem
+import ai.duagenai.design.screens.RemoteSkillsDataSource
+import ai.duagenai.design.screens.ChatRow
 import ai.duagenai.design.screens.DuaAgentSkills
 import ai.duagenai.design.screens.ChatTranscriptStore
 import ai.duagenai.design.screens.isAgentChatId
@@ -366,6 +379,35 @@ fun DuaGenAINavHost(
             seed = signedOutMemories,
         )
     }
+    val conversationsRepository = remember(sessionToken) {
+        ConversationsRepository(
+            dataSource = if (sessionToken != null) RemoteConversationsDataSource() else null,
+        )
+    }
+    val agentsRepository = remember(sessionToken) {
+        AgentsRepository(
+            dataSource = if (sessionToken != null) RemoteAgentsDataSource() else null,
+        )
+    }
+    val skillsRepository = remember(sessionToken) {
+        SkillsRepository(
+            dataSource = if (sessionToken != null) RemoteSkillsDataSource() else null,
+        )
+    }
+
+    LaunchedEffect(conversationsRepository) { conversationsRepository.load() }
+    LaunchedEffect(agentsRepository) { agentsRepository.load() }
+    LaunchedEffect(skillsRepository) { skillsRepository.load() }
+
+    val conversationsState by conversationsRepository.state.collectAsStateWithLifecycle()
+    val conversations = (conversationsState as? ConversationsUiState.Loaded)?.conversations.orEmpty()
+
+    val agentsState by agentsRepository.state.collectAsStateWithLifecycle()
+    val remoteAgents = (agentsState as? AgentsUiState.Loaded)?.agents.orEmpty()
+
+    val skillsState by skillsRepository.state.collectAsStateWithLifecycle()
+    val remoteSkills = (skillsState as? SkillsUiState.Loaded)?.skills.orEmpty()
+
     val scope = rememberCoroutineScope()
     // ONE transcript store for every thread, scoped to the host (not to a
     // chat's back-stack entry), so an agent profile's "Clear Chat History"
@@ -478,9 +520,10 @@ fun DuaGenAINavHost(
                 signedIn = sessionToken != null,
                 mode = mode,
                 // The SAME list Home renders — one source, so a history row and
-                // its Home row can never disagree about a name or a cube. Until
-                // real conversations exist, both render the honest empty state.
-                history = emptyList(),
+                // its Home row can never disagree about a name or a cube.
+                history = remember(conversations) {
+                    conversations.map { ChatRow(it.id, it.title) }
+                },
                 onSelect = { destination ->
                     scope.launch { drawerState.close() }
                     when (destination) {
@@ -570,6 +613,7 @@ fun DuaGenAINavHost(
                     onOpenListedChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
+                    conversations = conversations,
                     onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
                     onNewGroup = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP)) },
                     filterActive = publicProfileOpen,
@@ -680,6 +724,18 @@ fun DuaGenAINavHost(
             composable(DuaGenAIRoutes.CREATE_AGENT) {
                 CreateAgentScreen(
                     onCreate = { name, silhouette, swatch ->
+                        scope.launch {
+                            agentsRepository.add(
+                                AgentItem(
+                                    id = "agent_${java.util.UUID.randomUUID()}",
+                                    name = name,
+                                    description = "Custom Agent ($name)",
+                                    mode = "agent",
+                                    icon = silhouette.name,
+                                    color = swatch.name,
+                                )
+                            )
+                        }
                         madeAgents = plusLine(
                             withMadeAgentIds(madeAgents),
                             madeAgentLine(name, silhouette.name, swatch.name),
@@ -750,6 +806,7 @@ fun DuaGenAINavHost(
                     },
                     mcpEnabled = mcpEnabled,
                     onToggleMcp = { mcpEnabled = it },
+                    dynamicSkills = remoteSkills,
                     transcriptStore = transcriptStore,
                     // EVERY agent thread has a profile: the header pill's avatar
                     // and name open THIS agent's profile; Invite its New Group.
@@ -798,12 +855,15 @@ fun DuaGenAINavHost(
                     onMutedChange = { on -> scope.launch { settings.setAgentMuted(id, on) } },
                     pinned = id in pinnedAgents,
                     onPinnedChange = { on -> scope.launch { settings.setAgentPinned(id, on) } },
+                    skillsList = remoteSkills,
+                    onAddSkill = { navController.navigate(DuaGenAIRoutes.SETTINGS_SKILLS) },
                     onClearHistory = { transcriptStore.clear(id) },
                     canDelete = isUserMadeAgent(id),
                     onDelete = {
                         // Only made agents reach here: drop ITS line (by stable
                         // id, so no other agent shifts), its transcript and its
                         // flags, then return to Home.
+                        scope.launch { agentsRepository.delete(id) }
                         madeAgents = withoutMadeAgent(madeAgents, id)
                         transcriptStore.clear(id)
                         scope.launch { settings.forgetAgent(id) }
@@ -863,7 +923,20 @@ fun DuaGenAINavHost(
                     agentId = entry.agentId(),
                     agentName = entry.agentName(),
                     onClose = { navController.popBackStack() },
-                    onCreate = { navController.popBackStack() },
+                    onCreate = {
+                        val newGroupId = java.util.UUID.randomUUID().toString()
+                        scope.launch {
+                            conversationsRepository.add(
+                                ConversationItem(
+                                    id = newGroupId,
+                                    title = "Agent Team",
+                                    isGroup = true,
+                                )
+                            )
+                        }
+                        navController.popBackStack()
+                        navController.navigate(DuaGenAIRoutes.chat(newGroupId, "Agent Team"))
+                    },
                 )
             }
 
@@ -872,6 +945,8 @@ fun DuaGenAINavHost(
             // Agents: each card opens that agent's thread on the shared chat route.
             composable(DuaGenAIRoutes.AGENTS) {
                 AgentsScreen(
+                    agents = remoteAgents,
+                    onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
                     bottomBar = tabDock,
                     onOpenChat = { chatId, title ->
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))

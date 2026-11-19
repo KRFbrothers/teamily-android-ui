@@ -18,6 +18,19 @@ import org.json.JSONObject
  *  account endpoints and the session JSON shape from dua-backend's contract.
  * ==========================================================================*/
 
+data class NotificationItem(
+    val id: String,
+    val title: String,
+    val body: String,
+    val status: String = "unread",
+    val createdAt: String = "",
+)
+
+data class BackendConfig(
+    val realtimeEnabled: Boolean = false,
+    val passwordResetEnabled: Boolean = true,
+)
+
 /**
  * The account endpoints: email sign-in and sign-out.
  *
@@ -91,5 +104,98 @@ class RemoteAccountDataSource(
         }
         val toRethrow = cancelled
         if (toRethrow != null) throw toRethrow
+    }
+
+    /** Requests a password reset link for [email]. */
+    suspend fun resetPassword(email: String): Boolean = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("email", email.trim())
+        }.toString()
+        val body = client.requestOrThrow(
+            method = "POST",
+            url = ApiConfig.url("/api/auth/reset-password"),
+            body = payload,
+            label = "Password reset",
+        )
+        runCatching { JSONObject(body).optBoolean("ok", true) }.getOrDefault(true)
+    }
+
+    /** Registers a device push token (FCM). */
+    suspend fun registerDevice(
+        token: String,
+        platform: String = "android",
+        deviceName: String = "Android Device",
+    ): Boolean = withContext(Dispatchers.IO) {
+        val payload = JSONObject().apply {
+            put("token", token.trim())
+            put("platform", platform)
+            put("deviceName", deviceName)
+        }.toString()
+        val body = client.requestOrThrow(
+            method = "POST",
+            url = ApiConfig.url("/api/devices/register"),
+            body = payload,
+            label = "Register device",
+        )
+        body.isNotBlank()
+    }
+
+    /** Unregisters a device push token. */
+    suspend fun unregisterDevice(token: String): Boolean = withContext(Dispatchers.IO) {
+        client.requestOrThrow(
+            method = "DELETE",
+            url = ApiConfig.url("/api/devices/${encodePathSegment(token.trim())}"),
+            label = "Unregister device",
+        )
+        true
+    }
+
+    /** Fetches system notifications. */
+    suspend fun fetchNotifications(): List<NotificationItem> = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow(
+            method = "GET",
+            url = ApiConfig.url("/api/notifications"),
+            label = "Notifications",
+        )
+        val array = unwrapList(body, key = "notifications", label = "Notifications")
+        val out = ArrayList<NotificationItem>(array.length())
+        for (i in 0 until array.length()) {
+            val o = array.optJSONObject(i) ?: continue
+            val id = o.optString("id", "").takeIf { it.isNotBlank() } ?: continue
+            out += NotificationItem(
+                id = id,
+                title = o.optString("title", "Notification"),
+                body = o.optString("body", o.optString("message", "")),
+                status = o.optString("status", "unread"),
+                createdAt = o.optString("createdAt", o.optString("created_at", "")),
+            )
+        }
+        out
+    }
+
+    /** Marks a notification as read. */
+    suspend fun markNotificationRead(id: String): Boolean = withContext(Dispatchers.IO) {
+        client.requestOrThrow(
+            method = "PUT",
+            url = ApiConfig.url("/api/notifications/${encodePathSegment(id)}/read"),
+            label = "Mark notification read",
+        )
+        true
+    }
+
+    /** Fetches backend configuration and feature flags. */
+    suspend fun fetchConfig(): BackendConfig = withContext(Dispatchers.IO) {
+        val body = client.requestOrThrow(
+            method = "GET",
+            url = ApiConfig.url("/api/config"),
+            label = "Config",
+        )
+        val root = runCatching { JSONObject(body) }.getOrNull()
+        val realtimeObj = root?.optJSONObject("realtime")
+        val realtimeEnabled = realtimeObj?.optBoolean("enabled", false) ?: false
+        BackendConfig(
+            realtimeEnabled = realtimeEnabled,
+            passwordResetEnabled = true,
+        )
     }
 }

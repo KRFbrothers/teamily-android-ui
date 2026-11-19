@@ -39,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -242,6 +243,7 @@ fun ArtifactsScreen(
     // Local UI state: the menu is a transient surface, not something a
     // rotation should resurrect.
     var menuFor by remember { mutableStateOf<ArtifactItem?>(null) }
+    var revisionSubject by remember { mutableStateOf<ArtifactItem?>(null) }
 
     // The type filter (fix #7) and which card is being previewed (fix #8). Both
     // `rememberSaveable`, the same pattern the picker's search uses, so a
@@ -432,6 +434,10 @@ fun ArtifactsScreen(
                                             // this is belt-and-braces.
                                             urlOpener.open(artifact.url)
                                         },
+                                        onRevise = {
+                                            menuFor = null
+                                            revisionSubject = artifact
+                                        },
                                         onDelete = {
                                             menuFor = null
                                             pendingDeleteId = artifact.id
@@ -506,6 +512,18 @@ fun ArtifactsScreen(
                 TextButton(onClick = { pendingDeleteId = null }) {
                     Text("Cancel")
                 }
+            },
+        )
+    }
+
+    if (revisionSubject != null) {
+        val artifact = revisionSubject!!
+        ArtifactRevisionSheet(
+            artifact = artifact,
+            onDismiss = { revisionSubject = null },
+            onFetchVersions = { repository.fetchVersions(artifact.id) },
+            onRevise = { instruction ->
+                repository.reviseArtifact(artifact.id, instruction)
             },
         )
     }
@@ -683,6 +701,7 @@ private fun SwipeToDeleteArtifactCard(
     onMenuDismiss: () -> Unit,
     onOpen: () -> Unit,
     onOpenInNewTab: () -> Unit,
+    onRevise: () -> Unit = {},
     onDelete: () -> Unit,
     onSwipeDelete: () -> Unit,
 ) {
@@ -734,6 +753,7 @@ private fun SwipeToDeleteArtifactCard(
                 onDismiss = onMenuDismiss,
                 onOpen = onOpen,
                 onOpenInNewTab = onOpenInNewTab,
+                onRevise = onRevise,
                 onDelete = onDelete,
             )
         }
@@ -763,6 +783,7 @@ private fun ArtifactContextMenu(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onOpenInNewTab: () -> Unit,
+    onRevise: () -> Unit = {},
     onDelete: () -> Unit,
 ) {
     // The URL is the item's own precondition: no URL, no enabled action.
@@ -812,6 +833,13 @@ private fun ArtifactContextMenu(
                     contentDescription = "Open ${artifact.title} in new tab"
                     if (!hasUrl) disabled()
                 },
+        )
+        DropdownMenuItem(
+            text = { Text("Revisions & History", style = DuaGenAITextStyles.rowTitle) },
+            onClick = onRevise,
+            modifier = Modifier
+                .minTouchTarget()
+                .semantics { contentDescription = "View revisions for ${artifact.title}" },
         )
         // Share is inert in this build. It is DISABLED rather than a no-op tap,
         // and the helper line says why — audit fix #9's rule applied to a menu
@@ -1302,6 +1330,175 @@ private fun ArtifactsLight() = DuaGenAITheme(darkTheme = false) {
 @Composable
 private fun ArtifactsDark() = DuaGenAITheme(darkTheme = true) {
     ArtifactsScreen(repository = ArtifactsRepository(seed = demoArtifacts, loadDelayMs = 0))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ArtifactRevisionSheet(
+    artifact: ArtifactItem,
+    onDismiss: () -> Unit,
+    onFetchVersions: suspend () -> List<ArtifactVersionItem>,
+    onRevise: suspend (String) -> Pair<ArtifactItem, ArtifactVersionItem>?,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val scope = rememberCoroutineScope()
+    var versions by remember { mutableStateOf<List<ArtifactVersionItem>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var instructionText by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+
+    LaunchedEffect(artifact.id) {
+        isLoading = true
+        versions = onFetchVersions()
+        isLoading = false
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = spacing.gutter)
+                .padding(bottom = spacing.xxl),
+        ) {
+            Text(
+                text = "${artifact.title} · Revisions",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(modifier = Modifier.height(spacing.sm))
+            Text(
+                text = "Current Type: ${artifact.type} · ${artifactSizeLabel(artifact.sizeBytes)}",
+                style = DuaGenAITextStyles.meta,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(modifier = Modifier.height(spacing.md))
+
+            OutlinedTextField(
+                value = instructionText,
+                onValueChange = { instructionText = it },
+                label = { Text("Quick Revision Instruction") },
+                placeholder = { Text("e.g. Make header bold and add executive summary") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 3,
+                enabled = !isSubmitting,
+            )
+
+            Spacer(modifier = Modifier.height(spacing.sm))
+
+            Button(
+                onClick = {
+                    val prompt = instructionText.trim()
+                    if (prompt.isNotBlank()) {
+                        scope.launch {
+                            isSubmitting = true
+                            val result = onRevise(prompt)
+                            if (result != null) {
+                                instructionText = ""
+                                versions = onFetchVersions()
+                            }
+                            isSubmitting = false
+                        }
+                    }
+                },
+                enabled = instructionText.isNotBlank() && !isSubmitting,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) {
+                if (isSubmitting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(modifier = Modifier.width(spacing.xs))
+                    Text("Revising...")
+                } else {
+                    Text("Revise with AI")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(spacing.md))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(spacing.sm))
+
+            Text(
+                text = "Version History (${versions.size})",
+                style = DuaGenAITextStyles.rowTitle,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Spacer(modifier = Modifier.height(spacing.xs))
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = spacing.md),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            } else if (versions.isEmpty()) {
+                Text(
+                    text = "No previous revisions recorded yet.",
+                    style = DuaGenAITextStyles.meta,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = spacing.sm),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                ) {
+                    items(versions, key = { it.id }) { ver ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = DuaGenAITheme.shapes.card,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        ) {
+                            Column(modifier = Modifier.padding(spacing.sm)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = "Version ${ver.versionNum}",
+                                        style = DuaGenAITextStyles.rowTitle,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                    if (ver.createdAt.isNotBlank()) {
+                                        Text(
+                                            text = ver.createdAt,
+                                            style = DuaGenAITextStyles.meta,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                ver.promptNote?.takeIf { it.isNotBlank() }?.let { note ->
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Instruction: $note",
+                                        style = DuaGenAITextStyles.meta,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Preview(name = "Artifacts — empty — light", showBackground = true, widthDp = 390, heightDp = 844)

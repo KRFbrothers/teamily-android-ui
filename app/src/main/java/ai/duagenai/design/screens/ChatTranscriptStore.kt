@@ -92,6 +92,36 @@ class ChatTranscriptStore : ViewModel() {
     }
 
     /**
+     * Appends a chunk to the active streaming agent message for [agentId], or starts a new
+     * message if the last message in the thread is from another role or a different agent.
+     */
+    fun appendOrUpdateStreaming(
+        chatId: String,
+        agentId: String?,
+        agentName: String?,
+        delta: String,
+        time: String,
+    ) {
+        _threads.update { current ->
+            val existing = current[chatId].orEmpty()
+            val last = existing.lastOrNull()
+            if (last != null && last.who == SavedMessage.AGENT && last.agentId == agentId) {
+                val updatedLast = last.copy(text = last.text + delta)
+                current + (chatId to (existing.dropLast(1) + updatedLast))
+            } else {
+                val newMsg = SavedMessage(
+                    who = SavedMessage.AGENT,
+                    text = delta,
+                    time = time,
+                    agentId = agentId,
+                    agentName = agentName,
+                )
+                current + (chatId to (existing + newMsg))
+            }
+        }
+    }
+
+    /**
      * Empties a thread's transcript (the agent profile's "Clear Chat History").
      * The key stays, mapped to an empty list, so [ensure] does not re-seed
      * the sample conversation the next time the thread opens.
@@ -128,6 +158,19 @@ class ChatTranscriptStore : ViewModel() {
  */
 interface ChatDataSource {
     suspend fun sendMessage(chatId: String, text: String, skills: Set<String>): String
+
+    suspend fun streamMessage(
+        chatId: String,
+        text: String,
+        skills: Set<String>,
+        onChunk: (agentId: String?, agentName: String?, delta: String) -> Unit = { _, _, _ -> },
+        onAgentDone: (agentId: String?, agentName: String?) -> Unit = { _, _ -> },
+    ): String {
+        val reply = sendMessage(chatId, text, skills)
+        onChunk(null, null, reply)
+        onAgentDone(null, null)
+        return reply
+    }
 }
 
 /**
@@ -150,11 +193,85 @@ class RemoteChatDataSource(
         text: String,
         skills: Set<String>,
     ): String = withContext(Dispatchers.IO) {
-        val agent = chatId == AGENT_CHAT_ID
+        val isEngine = chatId == AGENT_CHAT_ID
+        val url = if (isEngine) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
+        val payload = buildChatPayload(chatId, text, skills, stream = isEngine)
+        val body = client.requestOrThrow("POST", url, payload.toString(), label = "Chat request")
+        if (isEngine) parseAgentReply(body) else plainChatText(body)
+    }
+
+    override suspend fun streamMessage(
+        chatId: String,
+        text: String,
+        skills: Set<String>,
+        onChunk: (agentId: String?, agentName: String?, delta: String) -> Unit,
+        onAgentDone: (agentId: String?, agentName: String?) -> Unit,
+    ): String = withContext(Dispatchers.IO) {
+        val isEngine = chatId == AGENT_CHAT_ID
+        val payload = buildChatPayload(chatId, text, skills, stream = true)
+        val url = if (isEngine) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
+
+        val accumulated = StringBuilder()
+        var sawAnyChunk = false
+
+        try {
+            client.stream("POST", url, payload.toString(), label = "Chat request") { line ->
+                val trimmed = line.trim()
+                if (trimmed.startsWith("data:")) {
+                    val rawData = trimmed.removePrefix("data:").trim()
+                    if (rawData.isNotEmpty() && rawData != "[DONE]") {
+                        val obj = runCatching { JSONObject(rawData) }.getOrNull()
+                        if (obj != null) {
+                            val type = obj.optString("type")
+                            val agentId = obj.optString("agentId").takeIf { it.isNotBlank() && it != "null" }
+                            val agentName = obj.optString("agentName").takeIf { it.isNotBlank() && it != "null" }
+                            when (type) {
+                                "text" -> {
+                                    val delta = obj.optString("delta").ifEmpty { obj.optString("text") }
+                                    if (delta.isNotEmpty()) {
+                                        sawAnyChunk = true
+                                        accumulated.append(delta)
+                                        onChunk(agentId, agentName, delta)
+                                    }
+                                }
+                                "agent_done" -> {
+                                    onAgentDone(agentId, agentName)
+                                }
+                                "done" -> {
+                                    onAgentDone(agentId, agentName)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            if (!sawAnyChunk) {
+                val nonStreamPayload = buildChatPayload(chatId, text, skills, stream = false)
+                val body = client.requestOrThrow("POST", url, nonStreamPayload.toString(), label = "Chat request")
+                val fallbackText = if (isEngine) parseAgentReply(body) else plainChatText(body)
+                accumulated.append(fallbackText)
+                onChunk(null, null, fallbackText)
+                onAgentDone(null, null)
+            } else {
+                throw e
+            }
+        }
+
+        accumulated.toString()
+    }
+
+    private fun buildChatPayload(
+        chatId: String,
+        text: String,
+        skills: Set<String>,
+        stream: Boolean,
+    ): JSONObject {
+        val isEngine = chatId == AGENT_CHAT_ID
         val payload = JSONObject()
             .put("model", "Dua")
-            .put("mode", if (agent) "agent" else "auto")
-            .put("stream", agent)
+            .put("mode", if (isEngine) "agent" else "auto")
+            .put("stream", stream)
             .put(
                 "messages",
                 JSONArray().put(
@@ -163,12 +280,15 @@ class RemoteChatDataSource(
                         .put("text", text),
                 ),
             )
-        if (agent) {
+
+        if (!isEngine && chatId != PERSONAL_AGENT_CHAT_ID && !chatId.startsWith("chat_")) {
+            payload.put("conversation_id", chatId)
+        }
+
+        if (isEngine) {
             payload.put("skills", skillIds(skills))
         }
-        val url = if (agent) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
-        val body = client.requestOrThrow("POST", url, payload.toString(), label = "Chat request")
-        if (agent) parseAgentReply(body) else plainChatText(body)
+        return payload
     }
 }
 

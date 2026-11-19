@@ -511,6 +511,12 @@ fun MemoryScreen(
                                             menuFor = null
                                             pendingDeleteId = memory.id
                                         },
+                                        onToggleScope = {
+                                            menuFor = null
+                                            scope.launch {
+                                                repository.toggleScope(memory.id, memory.scope)
+                                            }
+                                        },
                                         // A plain tap opens the detail dialog,
                                         // which is where the "Open source" button
                                         // lives when the memory has a URL.
@@ -818,6 +824,7 @@ private fun SwipeToDeleteMemoryRow(
     onMenuDismiss: () -> Unit,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
+    onToggleScope: () -> Unit,
     onOpenDetail: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -859,7 +866,7 @@ private fun SwipeToDeleteMemoryRow(
             MemoryCard(
                 memory = memory,
                 onLongPress = onLongPress,
-                // A plain tap opens the DETAIL dialog \u2014 the same surface the
+                // A plain tap opens the DETAIL dialog — the same surface the
                 // menu's URL-less "Open" falls back to. It is the one place the
                 // "Open source" button lives, so a memory with a URL is reachable
                 // by tap as well as by long-press.
@@ -871,6 +878,7 @@ private fun SwipeToDeleteMemoryRow(
                 onDismiss = onMenuDismiss,
                 onOpen = onOpen,
                 onDelete = onDelete,
+                onToggleScope = onToggleScope,
             )
         }
     }
@@ -879,16 +887,11 @@ private fun SwipeToDeleteMemoryRow(
 /**
  * The long-press context menu (this fix).
  *
- * Two actions, in Material 3's order — the safe one first, the destructive one
- * last behind a divider:
- *   • Open   -> hands the memory's URL to the SHARED [UrlOpener]; when there is
- *               no URL the screen falls back to the detail dialog, so the tap is
- *               never a silent no-op
+ * Actions:
+ *   • Open           -> hands the memory's URL to the SHARED [UrlOpener]
+ *   • Toggle Scope   -> switch between Global and Group
  *   • ── divider ──
- *   • Delete -> opens the SAME confirmation the swipe opens
- *
- * This is the same shape the Artifacts context menu uses, so the two surfaces
- * read alike. Every item is a 48dp touch target.
+ *   • Delete         -> opens the SAME confirmation the swipe opens
  */
 @Composable
 private fun MemoryContextMenu(
@@ -897,6 +900,7 @@ private fun MemoryContextMenu(
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
+    onToggleScope: () -> Unit = {},
 ) {
     DropdownMenu(
         expanded = expanded,
@@ -909,6 +913,17 @@ private fun MemoryContextMenu(
             modifier = Modifier
                 .minTouchTarget()
                 .semantics { contentDescription = "Open ${memory.title}" },
+        )
+        val scopeLabel = if (memory.scope.startsWith("group")) "Make Global" else "Make Group"
+        DropdownMenuItem(
+            text = { Text(scopeLabel, style = DuaGenAITextStyles.rowTitle) },
+            onClick = {
+                onToggleScope()
+                onDismiss()
+            },
+            modifier = Modifier
+                .minTouchTarget()
+                .semantics { contentDescription = "$scopeLabel ${memory.title}" },
         )
         // The destructive action is separated from the safe one, per M3.
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

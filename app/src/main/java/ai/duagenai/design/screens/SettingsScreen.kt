@@ -347,6 +347,16 @@ internal fun AccountSignInDialog(
                 }
             }
         },
+        onResetPassword = { email, onResult ->
+            scope.launch {
+                try {
+                    accountDataSource.resetPassword(email)
+                    onResult("Password reset email sent.")
+                } catch (e: Exception) {
+                    onResult(e.message ?: "Password reset failed.")
+                }
+            }
+        },
     )
 }
 
@@ -361,11 +371,13 @@ internal fun AccountSignInDialog(
 private fun SignInDialog(
     onDismiss: () -> Unit,
     onSubmit: (email: String, password: String, onResult: (String?) -> Unit) -> Unit,
+    onResetPassword: ((email: String, onResult: (String?) -> Unit) -> Unit)? = null,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var infoMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -377,6 +389,7 @@ private fun SignInDialog(
                     onValueChange = {
                         email = it
                         error = null
+                        infoMessage = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
@@ -389,6 +402,7 @@ private fun SignInDialog(
                     onValueChange = {
                         password = it
                         error = null
+                        infoMessage = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
@@ -397,6 +411,31 @@ private fun SignInDialog(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
+                if (onResetPassword != null && email.isNotBlank()) {
+                    TextButton(
+                        onClick = {
+                            busy = true
+                            error = null
+                            infoMessage = null
+                            onResetPassword(email) { res ->
+                                busy = false
+                                infoMessage = res
+                            }
+                        },
+                        enabled = !busy,
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Text("Forgot password?", style = DuaGenAITextStyles.meta)
+                    }
+                }
+                val info = infoMessage
+                if (info != null) {
+                    Text(
+                        text = info,
+                        style = DuaGenAITextStyles.meta,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 val message = error
                 if (message != null) {
                     Text(
@@ -413,6 +452,7 @@ private fun SignInDialog(
                 onClick = {
                     busy = true
                     error = null
+                    infoMessage = null
                     onSubmit(email, password) { failure ->
                         busy = false
                         error = failure

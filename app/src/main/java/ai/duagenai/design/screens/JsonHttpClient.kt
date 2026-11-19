@@ -204,6 +204,21 @@ fun interface HttpTransport {
      *   transport can assert exactly which token a call carried.
      */
     fun execute(method: String, url: String, body: String?, token: String?): String
+
+    /**
+     * Performs one request and delivers streamed lines to [onLine].
+     * Defaults to executing and splitting the response body by line sequence.
+     */
+    fun stream(
+        method: String,
+        url: String,
+        body: String?,
+        token: String?,
+        onLine: (String) -> Unit,
+    ) {
+        val result = execute(method, url, body, token)
+        result.lineSequence().forEach(onLine)
+    }
 }
 
 /**
@@ -271,6 +286,47 @@ class UrlConnectionTransport(
                 throw HttpStatusException(code, errorBody)
             }
             return connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    override fun stream(
+        method: String,
+        url: String,
+        body: String?,
+        token: String?,
+        onLine: (String) -> Unit,
+    ) {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
+            setRequestProperty("Accept", "text/event-stream")
+            setRequestProperty("X-Dua-Native", "1")
+            sanitizeToken(token)?.let { setRequestProperty("Authorization", "Bearer $it") }
+            instanceFollowRedirects = false
+            if (body != null) {
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+        }
+        try {
+            if (body != null) {
+                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            }
+            val code = connection.responseCode
+            if (code !in 200..299) {
+                val errorBody = runCatching {
+                    connection.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+                }.getOrNull()
+                throw HttpStatusException(code, errorBody)
+            }
+            connection.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                for (line in lines) {
+                    onLine(line)
+                }
+            }
         } finally {
             connection.disconnect()
         }
@@ -389,6 +445,41 @@ class JsonHttpClient(
 
         // Unreachable in practice (the loop either returns or throws), but the
         // compiler needs a terminal statement.
+        throw lastError ?: ApiError.forNetworkFailure(effectiveLabel)
+    }
+
+    /**
+     * Performs a streaming request (SSE) delivering lines to [onLine].
+     */
+    fun stream(
+        method: String,
+        url: String,
+        body: String? = null,
+        label: String? = null,
+        onLine: (String) -> Unit,
+    ) {
+        val effectiveLabel = label ?: this.label
+        val attempts = retryPolicy.attemptsFor(method)
+        var lastError: ApiError? = null
+
+        for (attempt in 1..attempts) {
+            try {
+                transport.stream(method, url, body, authToken(), onLine)
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpStatusException) {
+                val error = ApiError.forStatus(e.code, effectiveLabel, errorMessageOf(e.body))
+                lastError = error
+                if (!error.retryable || attempt == attempts) throw error
+            } catch (e: IOException) {
+                val error = ApiError.forNetworkFailure(effectiveLabel)
+                lastError = error
+                if (attempt == attempts) throw error
+            }
+            retryPolicy.backoffBeforeRetry(attempt)
+        }
+
         throw lastError ?: ApiError.forNetworkFailure(effectiveLabel)
     }
 

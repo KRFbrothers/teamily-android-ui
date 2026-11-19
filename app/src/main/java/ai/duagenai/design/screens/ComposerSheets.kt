@@ -208,6 +208,7 @@ internal fun ComposerSkillsSheet(
     enabledSkillIds: Set<String>,
     onToggleSkill: (String) -> Unit,
     onDismiss: () -> Unit,
+    skills: List<SkillItem>? = null,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -215,13 +216,24 @@ internal fun ComposerSkillsSheet(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         SheetColumn(title = "Skills") {
-            DuaAgentSkills.all.forEach { skill ->
-                SwitchRow(
-                    title = skill.title,
-                    summary = skill.summary,
-                    checked = skill.id in enabledSkillIds,
-                    onCheckedChange = { onToggleSkill(skill.id) },
-                )
+            if (!skills.isNullOrEmpty()) {
+                skills.forEach { skill ->
+                    SwitchRow(
+                        title = skill.title,
+                        summary = skill.summary.ifBlank { null },
+                        checked = skill.id in enabledSkillIds,
+                        onCheckedChange = { onToggleSkill(skill.id) },
+                    )
+                }
+            } else {
+                DuaAgentSkills.all.forEach { skill ->
+                    SwitchRow(
+                        title = skill.title,
+                        summary = skill.summary,
+                        checked = skill.id in enabledSkillIds,
+                        onCheckedChange = { onToggleSkill(skill.id) },
+                    )
+                }
             }
         }
     }

@@ -692,6 +692,11 @@ fun DuaAgentProfileScreen(
     agentName: String = DUA_AGENT_TITLE,
     agentId: String = AGENT_CHAT_ID,
     onOpenOverview: () -> Unit = {},
+    skillsList: List<SkillItem> = emptyList(),
+    instructionsList: List<AgentInstructionItem> = emptyList(),
+    triggersList: List<AgentTriggerItem> = emptyList(),
+    onAddSkill: () -> Unit = {},
+    onRunTrigger: (String) -> Unit = {},
     muted: Boolean = false,
     onMutedChange: ((Boolean) -> Unit)? = null,
     pinned: Boolean = false,
@@ -802,21 +807,35 @@ fun DuaAgentProfileScreen(
                         trail = Trail.Toggle, checked = on("translate"), onToggle = { toggles["translate"] = it },
                     )
                     ProfileRow(c, 87.dp, "channels", "Channels", subtitle = "0 connected", trail = Trail.ChevDown)
+                    val skillCount = if (skillsList.isNotEmpty()) skillsList.size else 1
                     ProfileRow(
-                        c, if (skills) 47.dp else 95.dp, "puzzle", "Skills", subtitle = "1 active skill",
+                        c, if (skills) 47.dp else 95.dp, "puzzle", "Skills", subtitle = "$skillCount active skill${if (skillCount != 1) "s" else ""}",
                         trail = if (skills) Trail.ChevUp else Trail.ChevDown, onClick = { skills = !skills },
                     )
                     if (skills) {
-                        Box(Modifier.fillMaxWidth().height(100.dp)) {
-                            Well("bolt", c.well, c.wellInk, Modifier.offset(37.dp, 0.dp), size = 28.dp, iconSize = 16.dp)
-                            Text("[agent-skill-id]", style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(81.dp, (-1).dp))
-                            Text(
-                                "[agent-skill-description]", style = t(12, 16), color = c.ink2, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(81.dp, 19.dp).padding(end = 101.dp),
-                            )
-                            Box(Modifier.offset(y = 56.dp)) { PillButton("+  Add Skill", c) }
+                        if (skillsList.isNotEmpty()) {
+                            for (item in skillsList) {
+                                Box(Modifier.fillMaxWidth().height(48.dp)) {
+                                    Well("bolt", c.well, c.wellInk, Modifier.offset(37.dp, 0.dp), size = 28.dp, iconSize = 16.dp)
+                                    Text(item.name, style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(81.dp, (-1).dp))
+                                    Text(
+                                        item.description, style = t(12, 16), color = c.ink2, maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(81.dp, 19.dp).padding(end = 40.dp),
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(Modifier.fillMaxWidth().height(60.dp)) {
+                                Well("bolt", c.well, c.wellInk, Modifier.offset(37.dp, 0.dp), size = 28.dp, iconSize = 16.dp)
+                                Text("[agent-skill-id]", style = t(14, 20, true), color = c.ink, modifier = Modifier.offset(81.dp, (-1).dp))
+                                Text(
+                                    "[agent-skill-description]", style = t(12, 16), color = c.ink2, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis, modifier = Modifier.offset(81.dp, 19.dp).padding(end = 101.dp),
+                                )
+                            }
                         }
-                        Spacer(Modifier.height(58.dp))
+                        Box(Modifier.padding(top = 8.dp, bottom = 12.dp)) { PillButton("+  Add Skill", c, onAddSkill) }
+                        Spacer(Modifier.height(16.dp))
                     }
                     ProfileRow(
                         c, if (connectors) 48.dp else 77.dp, "link", "Connectors", c.wellConnectors, c.wellConnectorsInk,

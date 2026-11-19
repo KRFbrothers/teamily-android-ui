@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
@@ -27,7 +28,14 @@ import ai.duagenai.design.theme.MaxContentWidth
 import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import ai.duagenai.design.cube.CubeAvatar
+import ai.duagenai.design.cube.CubeCatalog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Surface
 import androidx.compose.ui.unit.dp
@@ -104,10 +112,11 @@ internal fun TeamilyListCard(
 @Composable
 fun AgentsScreen(
     modifier: Modifier = Modifier,
+    agents: List<AgentItem> = emptyList(),
+    onCreateAgent: () -> Unit = {},
     /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
     bottomBar: @Composable () -> Unit = {},
     /** Opens the agent's thread on the shared `chat/{chatId}?title=` route. */
-    @Suppress("UNUSED_PARAMETER")
     onOpenChat: (chatId: String, title: String) -> Unit = { _, _ -> },
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -125,6 +134,15 @@ fun AgentsScreen(
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 },
+                actions = {
+                    IconButton(onClick = onCreateAgent) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = "New Agent",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -137,29 +155,54 @@ fun AgentsScreen(
                 .padding(inner),
             contentAlignment = Alignment.TopCenter,
         ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = MaxContentWidth)
-                .fillMaxSize()
-                .padding(horizontal = spacing.gutter, vertical = spacing.md),
-            verticalArrangement = Arrangement.spacedBy(spacing.md),
-        ) {
-            Text(
-                text = "MANAGED",
-                style = DuaGenAITextStyles.eyebrow,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "No agents yet",
-                style = DuaGenAITextStyles.rowTitle,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Agents you add will show up here.",
-                style = DuaGenAITextStyles.snippet,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            Column(
+                modifier = Modifier
+                    .widthIn(max = MaxContentWidth)
+                    .fillMaxSize()
+                    .padding(horizontal = spacing.gutter, vertical = spacing.md),
+                verticalArrangement = Arrangement.spacedBy(spacing.md),
+            ) {
+                Text(
+                    text = "MANAGED",
+                    style = DuaGenAITextStyles.eyebrow,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (agents.isEmpty()) {
+                    Text(
+                        text = "No agents yet",
+                        style = DuaGenAITextStyles.rowTitle,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Agents you add will show up here.",
+                        style = DuaGenAITextStyles.snippet,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp),
+                    ) {
+                        items(agents.size, key = { agents[it].id }) { idx ->
+                            val agent = agents[idx]
+                            TeamilyListCard(
+                                title = agent.name,
+                                subtitle = agent.description.ifBlank { "Mode: ${agent.mode}" },
+                                onClick = { onOpenChat(agent.id, agent.name) },
+                                avatar = {
+                                    CubeAvatar(
+                                        cubeId = CubeCatalog.forEntity(agent.id),
+                                        size = 40.dp,
+                                        shape = CircleShape,
+                                        contentDescription = agent.name,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
