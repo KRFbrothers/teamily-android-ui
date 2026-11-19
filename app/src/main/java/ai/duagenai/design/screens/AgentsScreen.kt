@@ -3,7 +3,6 @@ package ai.duagenai.design.screens
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
-import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,9 +27,6 @@ import ai.duagenai.design.theme.MaxContentWidth
 import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeCatalog
-import ai.duagenai.design.cube.CubeIds
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Surface
@@ -111,6 +107,7 @@ fun AgentsScreen(
     /** The app's bottom dock. The nav host passes the shared [HomeBottomNav]. */
     bottomBar: @Composable () -> Unit = {},
     /** Opens the agent's thread on the shared `chat/{chatId}?title=` route. */
+    @Suppress("UNUSED_PARAMETER")
     onOpenChat: (chatId: String, title: String) -> Unit = { _, _ -> },
 ) {
     val spacing = LocalDuaGenAISpacing.current

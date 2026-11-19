@@ -278,6 +278,7 @@ fun HomeScreen(
      * host uses the same chat route as the drawer history. No rows exist
      * yet — kept as the seam a real chat list will use.
      */
+    @Suppress("UNUSED_PARAMETER")
     onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
     /**
      * Dua home's composer Send. Receives the trimmed first message; the host
@@ -2022,13 +2023,13 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
                 val head = Path().apply {
                     moveTo(w * 0.32f, h * 0.30f)
                     lineTo(w * 0.68f, h * 0.30f)
-                    quadraticBezierTo(w * 0.80f, h * 0.30f, w * 0.80f, h * 0.42f)
+                    quadraticTo(w * 0.80f, h * 0.30f, w * 0.80f, h * 0.42f)
                     lineTo(w * 0.80f, h * 0.70f)
-                    quadraticBezierTo(w * 0.80f, h * 0.82f, w * 0.68f, h * 0.82f)
+                    quadraticTo(w * 0.80f, h * 0.82f, w * 0.68f, h * 0.82f)
                     lineTo(w * 0.32f, h * 0.82f)
-                    quadraticBezierTo(w * 0.20f, h * 0.82f, w * 0.20f, h * 0.70f)
+                    quadraticTo(w * 0.20f, h * 0.82f, w * 0.20f, h * 0.70f)
                     lineTo(w * 0.20f, h * 0.42f)
-                    quadraticBezierTo(w * 0.20f, h * 0.30f, w * 0.32f, h * 0.30f)
+                    quadraticTo(w * 0.20f, h * 0.30f, w * 0.32f, h * 0.30f)
                     close()
                 }
                 drawPath(head, color = tint, style = stroke)
