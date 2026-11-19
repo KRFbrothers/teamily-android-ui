@@ -3551,6 +3551,9 @@ class DuaGenAINavHostTest {
         compose.activity.onBackPressedDispatcher.onBackPressed()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.SETTINGS, currentRoute())
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodes(hasText("Dark")).fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("Dark").performScrollTo()
         compose.waitForIdle()
         assertVisible("Dark")
