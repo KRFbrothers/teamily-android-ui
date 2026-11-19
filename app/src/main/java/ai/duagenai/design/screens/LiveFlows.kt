@@ -22,27 +22,43 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Api
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -50,6 +66,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -81,6 +98,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.teamilyPalette
 import kotlinx.coroutines.launch
 
 /* ============================================================================
@@ -1105,6 +1123,38 @@ internal fun ChannelsScreen(
     }
 }
 
+internal data class McpServerItem(
+    val id: String,
+    val name: String,
+    val command: String,
+    val transport: String,
+    val enabled: Boolean,
+    val toolCount: Int,
+)
+
+internal data class AdkBuiltInTool(
+    val id: String,
+    val name: String,
+    val description: String,
+    val enabled: Boolean = true,
+)
+
+private val DEFAULT_ADK_TOOLS = listOf(
+    AdkBuiltInTool("google_search", "Google Search", "Live real-time web search and information retrieval"),
+    AdkBuiltInTool("fetch_url", "Web Page Reader", "Extract markdown content from public web pages"),
+    AdkBuiltInTool("run_python", "Python Sandbox", "Run dynamic calculations, data transforms and scripts"),
+    AdkBuiltInTool("generate_image", "Image Studio", "Generate visuals and edit UI assets from text prompts"),
+    AdkBuiltInTool("remember", "Vector Memory", "Persist conversational facts to long-term memory"),
+    AdkBuiltInTool("recall", "Memory Recall", "Query relevant user context from past sessions"),
+    AdkBuiltInTool("search_documents", "Document Index", "Search workspace reference documents and manuals"),
+)
+
+private val DEFAULT_MCP_SERVERS = listOf(
+    McpServerItem("sqlite", "SQLite Explorer", "sqlite3 memory.db", "stdio", true, 4),
+    McpServerItem("rea", "REA Agents", "npx rea-agents", "stdio", true, 12),
+    McpServerItem("web-search", "WebMCP Hub", "http://localhost:3000/sse", "sse", false, 3),
+)
+
 @Composable
 internal fun SkillConfigScreen(
     enabledIds: Set<String>,
@@ -1112,32 +1162,471 @@ internal fun SkillConfigScreen(
     onBack: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    FlowPage(title = "Skill Configuration", onBack = onBack) {
+    val palette = teamilyPalette()
+
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(0) } // 0: All, 1: Personas, 2: Built-in, 3: MCP
+    var activeTools by rememberSaveable { mutableStateOf(DEFAULT_ADK_TOOLS.map { it.id }.toSet()) }
+    var mcpServers by rememberSaveable { mutableStateOf(DEFAULT_MCP_SERVERS) }
+    var showAddMcpDialog by rememberSaveable { mutableStateOf(false) }
+
+    val categories = listOf("All", "Personas (${DuaAgentSkills.all.size})", "Built-in (${DEFAULT_ADK_TOOLS.size})", "MCP Servers (${mcpServers.size})")
+
+    val query = searchQuery.trim().lowercase()
+
+    FlowPage(title = "Tool & Skill Configuration", onBack = onBack) {
         Column(
             Modifier
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = spacing.xxl),
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            Note("Yahi skills Dua Agent ki chat mein lagti hain.")
-            for (skill in DuaAgentSkills.all) {
-                val on = skill.id in enabledIds
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .sizeIn(minHeight = 48.dp)
-                        .toggleable(value = on, role = Role.Switch, onValueChange = { onToggle(skill.id) })
-                        .semantics { contentDescription = skill.title }
-                        .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
+            // Hero Status & Summary Card
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter, vertical = spacing.sm),
+                shape = RoundedCornerShape(16.dp),
+                color = palette.cardHeroColor,
+                border = BorderStroke(1.dp, palette.heroCardBorder),
+            ) {
+                Column(
+                    modifier = Modifier.padding(spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(skill.title, style = DuaGenAITextStyles.rowTitle, color = MaterialTheme.colorScheme.onSurface)
-                        Text(skill.summary, style = DuaGenAITextStyles.snippet, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                        ) {
+                            Icon(
+                                Icons.Outlined.Tune,
+                                contentDescription = null,
+                                tint = palette.signalGreen,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                text = "Agent Capability Engine",
+                                style = DuaGenAITextStyles.rowTitle,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = palette.signalGreen.copy(alpha = 0.15f),
+                        ) {
+                            Text(
+                                text = "${enabledIds.size + activeTools.size} Active",
+                                style = DuaGenAITextStyles.meta,
+                                color = palette.signalGreen,
+                                modifier = Modifier.padding(horizontal = spacing.sm, vertical = spacing.xxs),
+                            )
+                        }
                     }
-                    Switch(checked = on, onCheckedChange = null)
+                    Text(
+                        text = "Configure personas, native ADK execution tools, and Model Context Protocol (MCP) servers connected to Dua Agent.",
+                        style = DuaGenAITextStyles.snippet,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter)
+                    .semantics { contentDescription = "Search skills and tools" },
+                placeholder = { Text("Search tools, skills, or MCP...") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            )
+
+            // Category Filter Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = spacing.gutter),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+            ) {
+                categories.forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = selectedCategory == index,
+                        onClick = { selectedCategory = index },
+                        label = { Text(label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = palette.surfaceRecessed,
+                            selectedLabelColor = palette.signalGreen,
+                        ),
+                        border = if (selectedCategory == index) BorderStroke(1.dp, palette.signalGreen) else null,
+                    )
+                }
+            }
+
+            // Section 1: Personas (Dua Agent Skills)
+            if (selectedCategory == 0 || selectedCategory == 1) {
+                val matchingSkills = DuaAgentSkills.all.filter {
+                    query.isEmpty() || it.title.lowercase().contains(query) || it.summary.lowercase().contains(query)
+                }
+
+                if (matchingSkills.isNotEmpty()) {
+                    SectionLabel("Specialized Personas")
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = spacing.gutter),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+                    ) {
+                        for (skill in matchingSkills) {
+                            val on = skill.id in enabledIds
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(
+                                        value = on,
+                                        role = Role.Switch,
+                                        onValueChange = { onToggle(skill.id) },
+                                    )
+                                    .semantics { contentDescription = "${skill.title} persona" },
+                                shape = RoundedCornerShape(12.dp),
+                                color = palette.surfaceRecessed,
+                                border = BorderStroke(1.dp, if (on) palette.signalGreen.copy(alpha = 0.5f) else palette.border),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .sizeIn(minHeight = 48.dp)
+                                        .padding(horizontal = spacing.md, vertical = spacing.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (on) palette.signalGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.size(36.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Outlined.SmartToy,
+                                                contentDescription = null,
+                                                tint = if (on) palette.signalGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                        ) {
+                                            Text(
+                                                text = skill.title,
+                                                style = DuaGenAITextStyles.rowTitle,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                            if (on) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = palette.signalGreen.copy(alpha = 0.15f),
+                                                ) {
+                                                    Text(
+                                                        text = "Active",
+                                                        style = DuaGenAITextStyles.meta,
+                                                        color = palette.signalGreen,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = skill.summary,
+                                            style = DuaGenAITextStyles.snippet,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = on,
+                                        onCheckedChange = null,
+                                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 2: Built-in ADK Tools
+            if (selectedCategory == 0 || selectedCategory == 2) {
+                val matchingTools = DEFAULT_ADK_TOOLS.filter {
+                    query.isEmpty() || it.name.lowercase().contains(query) || it.description.lowercase().contains(query)
+                }
+
+                if (matchingTools.isNotEmpty()) {
+                    SectionLabel("Native Engine Tools")
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = spacing.gutter),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+                    ) {
+                        for (tool in matchingTools) {
+                            val on = tool.id in activeTools
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(
+                                        value = on,
+                                        role = Role.Switch,
+                                        onValueChange = {
+                                            activeTools = if (on) activeTools - tool.id else activeTools + tool.id
+                                        },
+                                    )
+                                    .semantics { contentDescription = "${tool.name} tool" },
+                                shape = RoundedCornerShape(12.dp),
+                                color = palette.surfaceRecessed,
+                                border = BorderStroke(1.dp, palette.border),
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .sizeIn(minHeight = 48.dp)
+                                        .padding(horizontal = spacing.md, vertical = spacing.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.size(36.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Outlined.Code,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            text = tool.name,
+                                            style = DuaGenAITextStyles.rowTitle,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Text(
+                                            text = tool.description,
+                                            style = DuaGenAITextStyles.snippet,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = on,
+                                        onCheckedChange = null,
+                                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 3: Model Context Protocol (MCP) Servers
+            if (selectedCategory == 0 || selectedCategory == 3) {
+                val matchingServers = mcpServers.filter {
+                    query.isEmpty() || it.name.lowercase().contains(query) || it.command.lowercase().contains(query)
+                }
+
+                SectionLabel("Model Context Protocol (MCP) Servers")
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = spacing.gutter),
+                    verticalArrangement = Arrangement.spacedBy(spacing.sm),
+                ) {
+                    for (server in matchingServers) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = palette.surfaceRecessed,
+                            border = BorderStroke(1.dp, palette.border),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sizeIn(minHeight = 48.dp)
+                                    .padding(horizontal = spacing.md, vertical = spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (server.enabled) palette.signalGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Outlined.Dns,
+                                            contentDescription = null,
+                                            tint = if (server.enabled) palette.signalGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                    ) {
+                                        Text(
+                                            text = server.name,
+                                            style = DuaGenAITextStyles.rowTitle,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                        ) {
+                                            Text(
+                                                text = "${server.toolCount} tools",
+                                                style = DuaGenAITextStyles.meta,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "${server.transport.uppercase()} • ${server.command}",
+                                        style = DuaGenAITextStyles.snippet,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = server.enabled,
+                                    onCheckedChange = { checked ->
+                                        mcpServers = mcpServers.map { if (it.id == server.id) it.copy(enabled = checked) else it }
+                                    },
+                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    // Add MCP Server Action Button
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = { showAddMcpDialog = true })
+                            .semantics { contentDescription = "Add MCP Server" },
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, palette.signalGreen.copy(alpha = 0.6f)),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sizeIn(minHeight = 48.dp)
+                                .padding(spacing.md),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Filled.Add,
+                                contentDescription = null,
+                                tint = palette.signalGreen,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(spacing.xs))
+                            Text(
+                                text = "Add MCP Server",
+                                style = DuaGenAITextStyles.rowTitle,
+                                color = palette.signalGreen,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Note("Configured tools & MCP servers are automatically exposed to Dua Agent in Agent Engine mode.")
         }
+    }
+
+    if (showAddMcpDialog) {
+        var serverName by rememberSaveable { mutableStateOf("") }
+        var serverCommand by rememberSaveable { mutableStateOf("") }
+        var serverTransport by rememberSaveable { mutableStateOf("stdio") }
+
+        AlertDialog(
+            onDismissRequest = { showAddMcpDialog = false },
+            title = { Text("Add MCP Server") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    OutlinedTextField(
+                        value = serverName,
+                        onValueChange = { serverName = it },
+                        label = { Text("Server Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = serverCommand,
+                        onValueChange = { serverCommand = it },
+                        label = { Text("Command / URL") },
+                        placeholder = { Text("e.g. npx -y @modelcontextprotocol/server-postgres") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = serverName.isNotBlank() && serverCommand.isNotBlank(),
+                    onClick = {
+                        val newServer = McpServerItem(
+                            id = serverName.lowercase().replace(" ", "-"),
+                            name = serverName.trim(),
+                            command = serverCommand.trim(),
+                            transport = serverTransport,
+                            enabled = true,
+                            toolCount = 1,
+                        )
+                        mcpServers = mcpServers + newServer
+                        showAddMcpDialog = false
+                    },
+                ) {
+                    Text("Add Server")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddMcpDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 
