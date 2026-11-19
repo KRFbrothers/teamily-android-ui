@@ -324,11 +324,6 @@ fun ChatScreen(
     seed: List<Message> = emptyList(),
 ) {
     val agentHeader = onOpenAgentProfile != null
-    val profileClick = if (onOpenAgentProfile != null) {
-        Modifier.clickable(onClickLabel = "Open Dua Agent profile", role = Role.Button, onClick = onOpenAgentProfile)
-    } else {
-        Modifier
-    }
     // An incoming first message starts an EMPTY thread and is sent once — it
     // must never sit behind a scripted dialogue. Otherwise the thread shows
     // exactly the caller's [seed], which defaults to empty.

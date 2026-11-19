@@ -4343,6 +4343,7 @@ class DuaGenAINavHostTest {
      * their own load / refresh / add / delete — they inherit ONE engine. If
      * either stopped extending [BaseRemoteRepository], this fails.
      */
+    @Suppress("USELESS_IS_CHECK")
     @Test
     fun bothRepositoriesShareTheBaseClass() {
         assertTrue(
@@ -4687,7 +4688,7 @@ class DuaGenAINavHostTest {
         assertEquals("access-123", TokenStore.state.value)
         assertEquals("POST", transport.calls[0].first)
         assertEquals("https://api.example/api/account/email-login", transport.calls[0].second)
-        val sent = JSONObject(transport.bodies[0])
+        val sent = JSONObject(transport.bodies[0]!!)
         assertEquals("owner@dua.ai", sent.getString("email"))
         assertEquals("secret", sent.getString("password"))
     }
@@ -4763,7 +4764,7 @@ class DuaGenAINavHostTest {
         assertEquals("https://api.example/api/chat", transport.calls[0].second)
         assertEquals("https://engine.example/api/chat", transport.calls[1].second)
 
-        val autoBody = JSONObject(transport.bodies[0])
+        val autoBody = JSONObject(transport.bodies[0]!!)
         assertEquals("Dua", autoBody.getString("model"))
         assertEquals("auto", autoBody.getString("mode"))
         assertEquals(false, autoBody.getBoolean("stream"))
@@ -4772,7 +4773,7 @@ class DuaGenAINavHostTest {
         assertEquals("user", autoMessage.getString("role"))
         assertEquals("Hi there", autoMessage.getString("text"))
 
-        val agentBody = JSONObject(transport.bodies[1])
+        val agentBody = JSONObject(transport.bodies[1]!!)
         assertEquals("agent", agentBody.getString("mode"))
         assertEquals(true, agentBody.getBoolean("stream"))
         val sentSkills = agentBody.getJSONArray("skills")
