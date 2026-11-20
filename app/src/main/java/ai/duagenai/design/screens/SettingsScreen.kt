@@ -51,7 +51,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
@@ -90,7 +90,6 @@ const val SETTINGS_ACCOUNT_HELPER = "Account editing is not available in this bu
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    cubeId: String = CubeIds.DEFAULT,
     photoPath: String? = null,
     photoVersion: Long = 0L,
     displayName: String = "",
@@ -130,10 +129,11 @@ fun SettingsScreen(
 
     val headerName = displayName.ifBlank { stringResource(R.string.profile_not_signed_in) }
     val openProfileLabel = stringResource(R.string.profile_open)
+    val look = LocalBotAppearance.current
     val avatarCd = if (photoPath != null) {
         stringResource(R.string.profile_photo_cd)
     } else {
-        stringResource(R.string.profile_avatar_cd, CubeIds.label(cubeId))
+        stringResource(R.string.profile_avatar_cd, "${look.shape.label}, ${look.color.label}")
     }
 
     Scaffold(
@@ -201,7 +201,6 @@ fun SettingsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         ProfileOrCubeAvatar(
-                            cubeId = cubeId,
                             photoPath = photoPath,
                             photoVersion = photoVersion,
                             size = 96.dp,

@@ -46,9 +46,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeCatalog
-import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import kotlinx.coroutines.launch
 import ai.duagenai.design.R
 import androidx.compose.runtime.Composable
@@ -373,12 +372,12 @@ internal fun AgentAvatar(agentId: String, name: String, size: Dp, modifier: Modi
             modifier = modifier.size(size).clip(CircleShape),
         )
     } else {
-        val cube = CubeCatalog.forEntity(agentId)
-        CubeAvatar(
-            cubeId = cube,
+        val look = LocalBotAppearance.current
+        BabyGrokMark(
+            shape = look.shape,
+            color = look.color,
             size = size,
-            shape = CircleShape,
-            contentDescription = "$name avatar, ${CubeIds.label(cube)}",
+            contentDescription = "$name avatar, ${look.shape.label}",
             modifier = modifier,
         )
     }

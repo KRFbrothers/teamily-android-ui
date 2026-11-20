@@ -13,7 +13,6 @@ package ai.duagenai.design.screens
 
 import ai.duagenai.design.bot.BabyGrokMark
 import ai.duagenai.design.bot.LocalBotAppearance
-import ai.duagenai.design.cube.CubeAvatar
 import androidx.compose.foundation.shape.CircleShape
 import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.BorderStroke
@@ -124,7 +123,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
-import ai.duagenai.design.cube.CubeCatalog
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
@@ -213,14 +211,9 @@ enum class HomeMode(val label: String) {
 }
 
 data class ChatRow(
-    /** Stable identity of the conversation. Its cube is derived from this, so it
-     *  must never be built from the display name or the list position. */
     val chatId: String,
     val name: String,
-) {
-    /** This chat's own cube — fixed for the lifetime of [chatId]. */
-    val cubeId: String get() = CubeCatalog.forEntity(chatId)
-}
+)
 
 /**
  * One conversation in a list (the drawer's history). The type stays while the
@@ -1877,10 +1870,11 @@ private fun AgentHomeList(
                         onClick = { onOpenListedChat(item.id, item.title) },
                     ) {
                         ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                            CubeAvatar(
-                                cubeId = item.toChatRow().cubeId,
+                            val look = LocalBotAppearance.current
+                            BabyGrokMark(
+                                shape = look.shape,
+                                color = look.color,
                                 size = 40.dp,
-                                shape = CircleShape,
                                 contentDescription = item.title,
                             )
                         }

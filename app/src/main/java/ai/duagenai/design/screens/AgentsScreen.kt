@@ -29,9 +29,8 @@ import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeCatalog
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.IconButton
@@ -191,10 +190,11 @@ fun AgentsScreen(
                                 subtitle = agent.description.ifBlank { "Mode: ${agent.mode}" },
                                 onClick = { onOpenChat(agent.id, agent.name) },
                                 avatar = {
-                                    CubeAvatar(
-                                        cubeId = CubeCatalog.forEntity(agent.id),
+                                    val look = LocalBotAppearance.current
+                                    BabyGrokMark(
+                                        shape = look.shape,
+                                        color = look.color,
                                         size = 40.dp,
-                                        shape = CircleShape,
                                         contentDescription = agent.name,
                                     )
                                 },
