@@ -1,5 +1,6 @@
 package ai.duagenai.design.nav
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
@@ -38,6 +39,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import ai.duagenai.design.bot.BotColor
+import ai.duagenai.design.bot.BotLook
+import ai.duagenai.design.bot.BotShape
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.cube.CreateAgentScreen
 import ai.duagenai.design.cube.CubePickerScreen
@@ -230,8 +235,12 @@ object DuaGenAIRoutes {
      * Builds one of the AGENT_* routes for [agentId] / [name]. Both are
      * URL-encoded, like [chat], because a name can hold `/`, `?` or `&`.
      */
-    fun agent(route: String, agentId: String = AGENT_CHAT_ID, name: String = DUA_AGENT_TITLE): String =
-        route.substringBefore('?') + "?agentId=${Uri.encode(agentId)}&name=${Uri.encode(name)}"
+    fun agent(route: String): String = agent(route, AGENT_CHAT_ID, DUA_AGENT_TITLE)
+    fun agent(route: String, agentId: String): String = agent(route, agentId, DUA_AGENT_TITLE)
+    fun agent(route: String, agentId: String, name: String): String {
+        val base = route.substringBefore('?')
+        return "$base?agentId=${Uri.encode(agentId)}&name=${Uri.encode(name)}"
+    }
     /** Create Agent: opened only from Agent home's plus menu. */
     const val CREATE_AGENT = "agent/create"
     const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
@@ -429,6 +438,8 @@ fun DuaGenAINavHost(
     // value because the `Flow<T>` overload of `collectAsStateWithLifecycle` has
     // no default — the same reason `savedCubeId` passes one above.
     val themeMode by settings.themeMode.collectAsStateWithLifecycle(ThemeMode.System)
+    val botShape by settings.botShape.collectAsStateWithLifecycle(BotShape.DEFAULT)
+    val botColor by settings.botColor.collectAsStateWithLifecycle(BotColor.DEFAULT)
     val storageUsedGb by settings.storageUsedGb
         .collectAsStateWithLifecycle(SettingsStore.DEFAULT_STORAGE_USED_GB)
     val storageTotalGb by settings.storageTotalGb
@@ -455,7 +466,7 @@ fun DuaGenAINavHost(
     // Dua home's top bar has the Dua | Agent switch; from Agent home the
     // drawer's Dua | Agent toggle (TalkBack: "Switch to Dua mode") switches back.
     var mode by rememberSaveable { mutableStateOf(HomeMode.Dua) }
-    // The thread composer's agent tools — which Dua Agent skills are on and
+// The thread composer's agent tools — which Dua Agent skills are on and
     // whether MCP tools are enabled. Hoisted here (not per thread) so the choice
     // is one app-wide setting every thread's composer reads. Default: all five
     // skills on, MCP on. Saved as a List so it survives rotation.
@@ -505,7 +516,10 @@ fun DuaGenAINavHost(
 
     DuaGenAITheme(darkTheme = isDark) {
     val layoutDirection = if (languageId == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
-    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides layoutDirection,
+        LocalBotAppearance provides BotLook(botShape, botColor),
+    ) {
     ModalNavigationDrawer(
         modifier = modifier,
         drawerState = drawerState,
@@ -692,6 +706,10 @@ fun DuaGenAINavHost(
                     // Persist through the existing store; the Flow re-emits and
                     // the Profile row's subtitle updates on its own.
                     onSelect = { mode -> scope.launch { settings.setThemeMode(mode) } },
+                    shape = botShape,
+                    color = botColor,
+                    onShape = { picked -> scope.launch { settings.setBotShape(picked) } },
+                    onColor = { picked -> scope.launch { settings.setBotColor(picked) } },
                     onBack = { navController.popBackStack() },
                 )
             }

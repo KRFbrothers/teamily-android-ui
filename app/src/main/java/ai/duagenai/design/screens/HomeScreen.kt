@@ -11,6 +11,8 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.cube.CubeAvatar
 import androidx.compose.foundation.shape.CircleShape
 import ai.duagenai.design.theme.DemoBadge
@@ -1525,14 +1527,17 @@ private fun ChatAvatar(
     }
 }
 
-/** 3D bot image (`dua_bot_badge`) cropped to a circle. Hero avatar and its mini-badge. */
+/**
+ * Personal Agent avatar. Draws the Appearance pick (Grok Bot shape + color).
+ * Decorative: the row already names the agent.
+ */
 @Composable
 internal fun BotBadge(size: Dp) {
-    Image(
-        painter = painterResource(R.drawable.dua_bot_badge),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.size(size).clip(CircleShape),
+    val look = LocalBotAppearance.current
+    BabyGrokMark(
+        shape = look.shape,
+        color = look.color,
+        size = size,
     )
 }
 
