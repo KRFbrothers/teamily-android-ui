@@ -400,9 +400,11 @@ fun DuaGenAINavHost(
 
     val conversationsState by conversationsRepository.state.collectAsStateWithLifecycle()
     val conversations = (conversationsState as? ConversationsUiState.Loaded)?.conversations.orEmpty()
+    val conversationsRefreshing by conversationsRepository.isRefreshing.collectAsStateWithLifecycle()
 
     val agentsState by agentsRepository.state.collectAsStateWithLifecycle()
     val remoteAgents = (agentsState as? AgentsUiState.Loaded)?.agents.orEmpty()
+    val agentsRefreshing by agentsRepository.isRefreshing.collectAsStateWithLifecycle()
 
     val skillsState by skillsRepository.state.collectAsStateWithLifecycle()
     val remoteSkills = (skillsState as? SkillsUiState.Loaded)?.skills.orEmpty()
@@ -606,6 +608,13 @@ fun DuaGenAINavHost(
                         navController.navigate(DuaGenAIRoutes.chat(chatId, title))
                     },
                     conversations = conversations,
+                    isRefreshing = conversationsRefreshing || agentsRefreshing,
+                    onRefresh = {
+                        scope.launch {
+                            conversationsRepository.refresh()
+                            agentsRepository.refresh()
+                        }
+                    },
                     onCreateAgent = { navController.navigate(DuaGenAIRoutes.CREATE_AGENT) },
                     onNewGroup = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_NEW_GROUP)) },
                     filterActive = publicProfileOpen,
