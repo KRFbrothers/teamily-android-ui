@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
  *  disagreed with the zip, the zip value is used.
  *    brand   logoMint #42D982 · signalGreen #00D95A · accent #087C45
  *            accentHover #118A51 · accentPressed #066A3B · accentSoft #EEF8F2
- *            brandGradient (--nv-primary-fill) #0B8249 -> #087C45
+ *            brandGradient = DuagenAIPrimaryGradient (green #087C45 -> mint #42D982)
  *    light   atmosphere: #E8F3EC ellipse at 8% 92%, transparent at 52%, over #FAFBFA
  *            bgElevated #F6F8F5 · chromeFill/composerBg #EEF2EF
  *            border #DDE6E0 · borderStrong #C9D5CD · textPrimary #182B23
@@ -146,7 +146,7 @@ val TeamilyDarkPalette = TeamilyPalette(
         1f to Color(0x941B231E),
     ),
     // Elevated surface (dark).
-    bgElevated = Color(0xFF272E2B),
+    bgElevated = DuagenAISurfaceDarkHigh,
     // --nv-glass-surface dark
     cardGradient = Brush.verticalGradient(
         listOf(
@@ -173,54 +173,49 @@ val TeamilyDarkPalette = TeamilyPalette(
     composerBg = Color(0xFF222D27),
     bottomnavBg = Color(0xFF1A231E),
     // Live measured primary text: #F7F9F7 (R=247, G=249, B=247)
-    textPrimary = Color(0xFFF7F9F7),
+    textPrimary = DuagenAIInkDark,
     // Section labels on the home list, sampled 8 Nov 2026: #B4BFB8
-    textSecondary = Color(0xFFB4BFB8),
+    textSecondary = DuagenAIInk2Dark,
     // --nv-glass-rim dark: #d1dad338
     border = Color(0x38D1DAD3),
     borderStrong = null,
     // Filter circle / round icon button fill.
-    chromeFill = Color(0xFF323B36),
+    chromeFill = DuagenAISurfaceDarkHighest,
     // Header add button. Fill #CBE7D2, glyph #17201B.
-    plusFill = Color(0xFFCBE7D2),
-    plusIcon = Color(0xFF17201B),
+    plusFill = DuagenAIGreenDark,
+    plusIcon = DuagenAIGreenDarkOn,
     // Selected tab bubble #545B56, label #F7F9F7. Idle icons #EDF1ED.
     navSelected = Color(0xFF545B56),
     navSelectedContent = Color(0xFFF7F9F7),
     iconIdle = Color(0xFFEDF1ED),
-    accent = Color(0xFF087C45),
+    accent = DuagenAIGreen,
     // Dark --nv-green-600 / -800 / -50 (same ramp steps as the light values).
     accentHover = Color(0xFF91D9A8),
     accentPressed = Color(0xFFC0F0CD),
-    accentSoft = Color(0xFF183826),
+    accentSoft = DuagenAIBrandSoftDark,
     // Dark --action-primary-text.
     accentContrast = Color(0xFF17201B),
     // --nv-brand-product / --nv-signal
-    logoMint = Color(0xFF42D982),
+    logoMint = DuagenAIMint,
     signalGreen = Color(0xFF00D95A),
-    // Rich emerald primary fill, same as light: #0B8249 -> #087C45 (white glyph).
-    gradientStart = Color(0xFF0B8249),
-    gradientEnd = Color(0xFF087C45),
-    brandGradient = Brush.verticalGradient(
-        listOf(Color(0xFF0B8249), Color(0xFF087C45)),
-    ),
-    // AMOLED bubbles: deep green user bubble, surface-toned agent bubble.
-    bubbleUser = Color(0xFF1E4632),
-    bubbleUserText = Color(0xFFFFFFFF),
-    bubbleAgent = Color(0xFF1A231E),
-    bubbleAgentText = Color(0xFFEAF0EC),
-    sendButton = Color(0xFF087C45),
-    sendButtonIcon = Color(0xFFFFFFFF),
+    gradientStart = DuagenAIGreen,
+    gradientEnd = DuagenAIMint,
+    brandGradient = DuagenAIPrimaryGradient,
+    bubbleUser = DuagenAIGreen,
+    bubbleUserText = DuagenAIGreenOn,
+    bubbleAgent = DuagenAISurfaceDark,
+    bubbleAgentText = DuagenAIInkDark,
+    sendButton = DuagenAIGreen,
+    sendButtonIcon = DuagenAIGreenOn,
     // Blank chat page. Right side stays #171C19. Lower left lifts to #222926.
     chatCanvas = Color(0xFF171C19),
     chatGlow = Color(0xFF222926),
     // Dark --nv-error-600 / -50 / -700.
-    danger = Color(0xFFF4A59C),
-    dangerSoft = Color(0xFF472925),
-    dangerInk = Color(0xFFE78E83),
-    primarySoft = Color(0xFF235039),
-    // Dark --nv-green-700.
-    primaryInk = Color(0xFFA2E4B6),
+    danger = DuagenAIErrorDark,
+    dangerSoft = DuagenAIErrorDarkSoft,
+    dangerInk = DuagenAIErrorDarkInk,
+    primarySoft = DuagenAIGreenDarkSoft,
+    primaryInk = DuagenAIGreenDarkInk,
     // Dark --nv-field-edge.
     fieldEdge = Color(0xFFAEBBB1),
     tileCyan = Color(0xFF3EC0EA),
@@ -252,19 +247,19 @@ val TeamilyDarkPalette = TeamilyPalette(
 
 val TeamilyLightPalette = TeamilyPalette(
     // HTML phone `--canvas` (#EEF2EF). Cards stay white (`bgSurface`).
-    bgCanvas = Color(0xFFEEF2EF),
-    bgCanvasTop = Color(0xFFEEF2EF),
-    bgCanvasBottom = Color(0xFFEEF2EF),
+    bgCanvas = DuagenAICanvas,
+    bgCanvasTop = DuagenAICanvas,
+    bgCanvasBottom = DuagenAICanvas,
     bgCanvasGradient = Brush.verticalGradient(
         listOf(Color(0xFFEEF2EF), Color(0xFFEEF2EF)),
     ),
-    bgSurface = Color(0xFFFFFFFF),
+    bgSurface = DuagenAISurface,
     surfaceGradient = Brush.verticalGradient(
         0f to Color(0xB8FFFFFF),
         0.48f to Color(0x8AF7FBF9),
         1f to Color(0x7AECF3EF),
     ),
-    bgElevated = Color(0xFFF6F8F5),
+    bgElevated = DuagenAISurfaceLow,
     cardGradient = Brush.verticalGradient(
         listOf(
             Color(0xBDFAFCFB),
@@ -277,7 +272,7 @@ val TeamilyLightPalette = TeamilyPalette(
         0.35f to Color(0xFFE8EDE9),
         1f to Color(0xFFCFD9D2),
     ),
-    cardHeroColor = Color(0xFFDDF3E5),
+    cardHeroColor = DuagenAIGreenSoft,
     heroCardBorder = Color(0x18AEBBB1),
     surfaceRecessed = Color(0xFFF2F4F3),
     statusbarBg = Color(0xFFFAFBFA),
@@ -285,47 +280,42 @@ val TeamilyLightPalette = TeamilyPalette(
     // Same fill as the round icon buttons (chromeFill).
     composerBg = Color(0xFFEEF2EF),
     bottomnavBg = Color(0xFFF8FAF8),
-    textPrimary = Color(0xFF182B23),
-    textSecondary = Color(0xFF5C6D63),
-    border = Color(0xFFDDE6E0),
+    textPrimary = DuagenAIInk,
+    textSecondary = DuagenAIInk2,
+    border = DuagenAILine,
     borderStrong = Color(0xFFC9D5CD),
     chromeFill = Color(0xFFEEF2EF),
     // Light add button is solid green #0A8048 with a white glyph.
-    plusFill = Color(0xFF0A8048),
-    plusIcon = Color(0xFFFFFFFF),
-    // Selected tab is the same pale green as the pinned card. Label is #066A3B.
-    navSelected = Color(0xFFDDF3E5),
-    navSelectedContent = Color(0xFF066A3B),
+    plusFill = DuagenAIGreen,
+    plusIcon = DuagenAIGreenOn,
+    navSelected = DuagenAIGreenSoft,
+    navSelectedContent = DuagenAIGreenInk,
     iconIdle = Color(0xFF26372E),
-    accent = Color(0xFF087C45),
+    accent = DuagenAIGreen,
     accentHover = Color(0xFF118A51),
-    accentPressed = Color(0xFF066A3B),
-    accentSoft = Color(0xFFEEF8F2),
-    accentContrast = Color(0xFFFFFFFF),
-    logoMint = Color(0xFF42D982),
+    accentPressed = DuagenAIGreenInk,
+    accentSoft = DuagenAIGreenSoft,
+    accentContrast = DuagenAIGreenOn,
+    logoMint = DuagenAIMint,
     signalGreen = Color(0xFF00D95A),
-    // --nv-primary-fill: linear-gradient(180deg, #0b8249 0%, #087c45 100%)
-    gradientStart = Color(0xFF0B8249),
-    gradientEnd = Color(0xFF087C45),
-    brandGradient = Brush.verticalGradient(
-        listOf(Color(0xFF0B8249), Color(0xFF087C45)),
-    ),
-    bubbleUser = Color(0xFFDDF3E5),
-    bubbleUserText = Color(0xFF182B23),
-    bubbleAgent = Color(0xFFF0F2F0),
-    bubbleAgentText = Color(0xFF182B23),
-    sendButton = Color(0xFF087C45),
-    sendButtonIcon = Color(0xFFFFFFFF),
+    gradientStart = DuagenAIGreen,
+    gradientEnd = DuagenAIMint,
+    brandGradient = DuagenAIPrimaryGradient,
+    bubbleUser = DuagenAIGreen,
+    bubbleUserText = DuagenAIGreenOn,
+    bubbleAgent = DuagenAISurfaceHigh,
+    bubbleAgentText = DuagenAIInk,
+    sendButton = DuagenAIGreen,
+    sendButtonIcon = DuagenAIGreenOn,
     chatCanvas = Color(0xFFFFFFFF),
     chatGlow = Color(0xFFFFFFFF),
     // --nv-error-600 / -50 / -700.
-    danger = Color(0xFFC93434),
-    dangerSoft = Color(0xFFFDEEEE),
-    dangerInk = Color(0xFFB12C2C),
-    primarySoft = Color(0xFFDDF3E5),
-    primaryInk = Color(0xFF066A3B),
-    // --nv-field-edge = --nv-neutral-500.
-    fieldEdge = Color(0xFF5C6D63),
+    danger = DuagenAIError,
+    dangerSoft = DuagenAIErrorSoft,
+    dangerInk = DuagenAIErrorInk,
+    primarySoft = DuagenAIGreenSoft,
+    primaryInk = DuagenAIGreenInk,
+    fieldEdge = DuagenAILineStrong,
     tileCyan = Color(0xFF3EC0EA),
     tileYellow = Color(0xFFF6C945),
     tileViolet = Color(0xFF9A7BFF),
@@ -340,9 +330,8 @@ val TeamilyLightPalette = TeamilyPalette(
     atmosphereBase = Color(0xFFEEF2EF),
     atmosphereStop = 0.52f,
     // --nv-green-700 (light --text-brand / active ink); #42D982 on #EEF2EF is 1.62:1.
-    toolActive = Color(0xFF087C45),
-    // Light --nv-green-700, the same ramp step as the measured dark dot.
-    notificationDot = Color(0xFF087C45),
+    toolActive = DuagenAIGreen,
+    notificationDot = DuagenAIGreen,
     // --nv-notification-outline = --nv-neutral-0.
     notificationOutline = Color(0xFFFFFFFF),
     avatarOnlineRing = Color(0xFFEEF2EF),
@@ -364,12 +353,11 @@ object TeamilyShapes {
     val lg = RoundedCornerShape(16.dp)
     /** `--nv-radius-xl` 20px — pinned agent, Memory and Artifact cards. */
     val card = RoundedCornerShape(20.dp)
-    /** `--nv-radius-xl` 20px — user chat bubble, with the `--kit-radius-tail`
-     *  6px corner at the bottom end (beside the user's avatar). */
-    val userBubble = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp)
-    /** `--nv-radius-2xl` 24px — bottom sheets. */
+    /** User chat bubble. v4 tail is 6dp on an 18dp bubble. */
+    val userBubble = DuagenAIShapeTokens.chatBubbleMe
+    /** Bottom sheets and the side drawer. */
     val sheet = RoundedCornerShape(24.dp)
-    /** `--kit-radius-composer` = `--nv-radius-3xl` 32px. */
+    /** Composer field. Kept at 32dp so the dock and chat bar keep their height. */
     val composer = RoundedCornerShape(32.dp)
     /** `--nv-radius-3xl` 32px. */
     val hero = RoundedCornerShape(32.dp)
