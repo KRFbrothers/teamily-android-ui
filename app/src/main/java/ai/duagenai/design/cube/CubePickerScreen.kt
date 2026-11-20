@@ -15,10 +15,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +43,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,7 +73,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -172,16 +180,92 @@ fun CreateAgentScreen(
                 .padding(horizontal = spacing.gutter, vertical = spacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // The big preview: the only place with eyes, and it morphs.
-            SilhouetteAvatar(
-                silhouette = silhouette,
-                fill = swatch.color(palette),
-                size = 132.dp,
-                shape = RectangleShape,
-                contentDescription = "Agent preview: ${silhouette.label}, ${swatch.label}",
-                showEyes = true,
-                animateMorph = true,
+            // The big preview: interactive with hover/press feedback and a subtle edit badge.
+            val avatarInteraction = remember { MutableInteractionSource() }
+            val isHovered by avatarInteraction.collectIsHoveredAsState()
+            val isPressed by avatarInteraction.collectIsPressedAsState()
+            val activeFeedback = isHovered || isPressed
+            val avatarScale by animateFloatAsState(
+                targetValue = when {
+                    isPressed -> 0.96f
+                    isHovered -> 1.04f
+                    else -> 1f
+                },
+                animationSpec = TeamilyMotion.standardSpring(),
+                label = "createAgentAvatarScale",
             )
+            val badgeAlpha by animateFloatAsState(
+                targetValue = if (activeFeedback) 1f else 0.88f,
+                animationSpec = tween(TeamilyMotion.durationSmall),
+                label = "createAgentEditBadgeAlpha",
+            )
+            val ringAlpha by animateFloatAsState(
+                targetValue = if (activeFeedback) 0.35f else 0f,
+                animationSpec = tween(TeamilyMotion.durationSmall),
+                label = "createAgentRingAlpha",
+            )
+            val allSilhouettes = remember { AgentSilhouette.values().toList() }
+            val cycleSilhouette: () -> Unit = {
+                val nextIndex = (allSilhouettes.indexOf(silhouette) + 1) % allSilhouettes.size
+                silhouette = allSilhouettes[nextIndex]
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(144.dp)
+                    .graphicsLayer {
+                        scaleX = avatarScale
+                        scaleY = avatarScale
+                    }
+                    .clip(CircleShape)
+                    .hoverable(interactionSource = avatarInteraction)
+                    .clickable(
+                        interactionSource = avatarInteraction,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = cycleSilhouette,
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = ringAlpha),
+                        shape = CircleShape,
+                    )
+                    .testTag("create_agent_avatar_preview"),
+                contentAlignment = Alignment.Center,
+            ) {
+                SilhouetteAvatar(
+                    silhouette = silhouette,
+                    fill = swatch.color(palette),
+                    size = 132.dp,
+                    shape = RectangleShape,
+                    contentDescription = "Agent preview: ${silhouette.label}, ${swatch.label}",
+                    showEyes = true,
+                    animateMorph = true,
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .size(32.dp)
+                        .graphicsLayer { alpha = badgeAlpha }
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(
+                            width = 1.dp,
+                            color = DuaGenAITheme.colors.hairline,
+                            shape = CircleShape,
+                        )
+                        .testTag("create_agent_avatar_edit_badge"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
 
             Spacer(Modifier.height(spacing.lg))
 

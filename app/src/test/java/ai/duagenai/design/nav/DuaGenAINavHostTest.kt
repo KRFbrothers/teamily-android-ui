@@ -1297,6 +1297,10 @@ class DuaGenAINavHostTest {
         AgentSwatch.values().forEach { assertVisibleDescCount("Color: ${it.label}", 1) }
         compose.onNodeWithContentDescription("Shape: ${AgentSilhouette.DEFAULT.label}").assertIsSelected()
         compose.onNodeWithContentDescription("Color: ${AgentSwatch.DEFAULT.label}").assertIsSelected()
+        compose.onNodeWithTag("create_agent_avatar_edit_badge", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("create_agent_avatar_preview").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Shape: ${AgentSilhouette.Drop.label}").assertIsSelected()
     }
 
     /** Create stays disabled for an empty and for a whitespace-only name. */
