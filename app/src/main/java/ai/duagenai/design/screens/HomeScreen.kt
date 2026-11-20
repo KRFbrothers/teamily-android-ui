@@ -325,13 +325,14 @@ fun HomeScreen(
     val snackbarScope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.composer_coming_soon)
 
+    val isLightAgentHome = mode == HomeMode.Agent && palette.borderStrong != null
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Teamily canvas: the zip `--nv-atmosphere` glow at 8%/92%. Drawn
-            // BEFORE the inset padding, so it also fills the transparent
-            // status bar (true edge-to-edge, no separate band).
-            .teamilyCanvas(palette)
+            .then(
+                if (isLightAgentHome) Modifier.background(palette.bgSurface)
+                else Modifier.teamilyCanvas(palette),
+            )
             // Keeps the header below the status bar and the camera cutout. The
             // dock still applies its own navigation-bar inset, so the bottom
             // is not padded twice.
@@ -421,8 +422,8 @@ fun HomeScreen(
                 PersonalAgentHeroCard(
                     onClick = onOpenPersonalAgentChat,
                     modifier = Modifier.padding(
-                        start = LocalDuaGenAISpacing.current.gutter,
-                        end = LocalDuaGenAISpacing.current.gutter,
+                        start = 10.dp,
+                        end = 10.dp,
                         bottom = 6.dp,
                     ),
                 )
@@ -1073,7 +1074,7 @@ private fun AgentHomeTopBar(
             .fillMaxWidth()
             .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
     ) {
-        // LEFT — the user's photo: 40.dp visual circle inside 48.dp touch target.
+        // LEFT — the user's photo: 42.dp clean visual circle inside 48.dp touch target (no online dot, matching Teamily AI).
         val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
         Box(
             modifier = Modifier
@@ -1083,7 +1084,7 @@ private fun AgentHomeTopBar(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
                     .background(palette.chromeFill)
                     .clickable(role = Role.Button, onClick = onOpenDrawer)
@@ -1096,18 +1097,6 @@ private fun AgentHomeTopBar(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // 11.dp online indicator anchored cleanly on the 40.dp circle's top-right rim.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = 29.dp, y = 4.dp)
-                    .size(11.dp)
-                    .clip(CircleShape)
-                    .background(palette.avatarOnlineRing)
-                    .padding(1.5.dp)
-                    .clip(CircleShape)
-                    .background(palette.logoMint),
-            )
         }
 
         // CENTER — badge + app name.
@@ -1115,12 +1104,12 @@ private fun AgentHomeTopBar(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(size = 30.dp, shape = TeamilyShapes.xs)
+            AppBadge(size = 32.dp, shape = TeamilyShapes.xs)
             Spacer(Modifier.width(spacing.sm))
             Text(
                 text = APP_NAME,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 21.sp,
+                    fontSize = 22.sp,
                     lineHeight = 26.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.01).em,
@@ -1130,12 +1119,13 @@ private fun AgentHomeTopBar(
             )
         }
 
-        // RIGHT — plus (48.dp visual circle). Opens the menu of REAL actions.
+        // RIGHT — plus (48.dp visual circle with soft drop shadow). Opens the menu of REAL actions.
         Box(modifier = Modifier.align(Alignment.CenterEnd)) {
             var menuOpen by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .teamilyRestingShadow(palette, CircleShape)
                     .clip(CircleShape)
                     .background(palette.plusFill)
                     .clickable(role = Role.Button) { menuOpen = true }
@@ -1223,8 +1213,6 @@ private fun DuaHomeWelcome(
 @Composable
 private fun AppBadge(size: Dp, shape: Shape) {
     val palette = teamilyPalette()
-    val glyphFraction = if (size <= 18.dp) 0.72f else 0.65f
-    val strokeWidth = if (size <= 18.dp) 1.35.dp else 1.75.dp
     Box(
         modifier = Modifier
             .size(size)
@@ -1232,39 +1220,19 @@ private fun AppBadge(size: Dp, shape: Shape) {
             .background(palette.logoMint),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(size * glyphFraction)) {
-            val u = this.size.minDimension / 24f
-            fun p(x: Float, y: Float) = Offset(x * u, y * u)
-            val stroke = Stroke(
-                width = strokeWidth.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            )
-            val hexagon = Path().apply {
-                p(12f, 2.6f).let { moveTo(it.x, it.y) }
-                p(20.1f, 7.3f).let { lineTo(it.x, it.y) }
-                p(20.1f, 16.7f).let { lineTo(it.x, it.y) }
-                p(12f, 21.4f).let { lineTo(it.x, it.y) }
-                p(3.9f, 16.7f).let { lineTo(it.x, it.y) }
-                p(3.9f, 7.3f).let { lineTo(it.x, it.y) }
-                close()
-            }
-            drawPath(hexagon, color = palette.tileInk, style = stroke)
-            val c = p(12f, 12f)
-            val seam = Path().apply {
-                for (end in listOf(p(12f, 2.6f), p(3.9f, 16.7f), p(20.1f, 16.7f))) {
-                    moveTo(c.x, c.y)
-                    lineTo(end.x, end.y)
-                }
-            }
-            drawPath(seam, color = palette.tileInk, style = stroke)
-        }
+        Image(
+            painter = painterResource(R.drawable.dua_bot_head),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(size * 0.82f),
+        )
     }
 }
 
 /**
- * Agent mode's search row: a 48dp circular filter button (chromeFill, 1dp
- * border) and a full-width pill search bar (999dp, 1dp border).
+ * Agent mode's search row: a 48dp circular filter button and a full-width
+ * pill search bar (999dp). Borderless soft grey fills in light theme on the
+ * white canvas, matching Teamily AI parity.
  *
  * FILTER (audit fix #7) — a real toggle; the active state uses `brandSoft` /
  * `onBrandSoft` and publishes `selected`.
@@ -1289,11 +1257,17 @@ private fun SearchRow(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(if (filterActive) colors.brandSoft else palette.chromeFill)
-                .border(
-                    width = 1.dp,
-                    color = if (filterActive) colors.brandSoft else palette.border,
-                    shape = CircleShape,
+                .background(if (filterActive) colors.brandSoft else palette.surfaceRecessed)
+                .then(
+                    if (palette.borderStrong == null) {
+                        Modifier.border(
+                            width = 1.dp,
+                            color = if (filterActive) colors.brandSoft else palette.border,
+                            shape = CircleShape,
+                        )
+                    } else {
+                        Modifier
+                    },
                 )
                 .clickable(role = Role.Button, onClick = onToggleFilter)
                 .semantics {
@@ -1330,7 +1304,7 @@ private fun SearchRow(
                 },
             shape = TeamilyShapes.capsule,
             color = palette.surfaceRecessed,
-            border = BorderStroke(1.dp, palette.border),
+            border = if (palette.borderStrong == null) BorderStroke(1.dp, palette.border) else null,
         ) {
             Row(
                 modifier = Modifier
@@ -1343,13 +1317,13 @@ private fun SearchRow(
                     Icons.Filled.Search,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(spacing.sm))
                 Text(
                     text = "Search",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.5.sp,
+                        fontSize = 16.sp,
                     ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1361,10 +1335,9 @@ private fun SearchRow(
 /**
  * The ONE filled card on Agent home: the user's personal agent.
  *
- * `cardHeroColor` fill, 10dp corners, 1dp soft rim (`heroCardBorder`), resting
- * glass shadow and the 0.97 press scale. The avatar renders the active bot
- * appearance ([BotBadge]) with the brand [AppBadge] mini-badge. Tapping it
- * opens the Personal Agent thread ([onClick] = `onOpenPersonalAgentChat`).
+ * `cardHeroColor` fill, 12dp corners, resting glass shadow and the 0.97 press
+ * scale. The 46dp pastel-pink avatar and its 16dp green mini-badge render the
+ * 3D bot mascot ([R.drawable.dua_bot_head]), matching Teamily AI 1:1.
  */
 @Composable
 internal fun PersonalAgentHeroCard(
@@ -1375,7 +1348,7 @@ internal fun PersonalAgentHeroCard(
     val palette = teamilyPalette()
     val interactionSource = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
-    val heroShape = RoundedCornerShape(10.dp)
+    val heroShape = TeamilyShapes.md
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -1396,21 +1369,34 @@ internal fun PersonalAgentHeroCard(
             },
         shape = heroShape,
         color = palette.cardHeroColor,
-        border = BorderStroke(1.dp, palette.heroCardBorder),
+        border = BorderStroke(0.5.dp, palette.heroCardBorder),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
-                ring = palette.cardHeroColor,
+                ring = if (palette.borderStrong == null) palette.cardHeroColor else Color.White,
                 miniBadge = true,
-                size = 42.dp,
+                size = 46.dp,
                 mini = {
-                    AppBadge(size = 16.dp, shape = CircleShape)
+                    AppBadge(size = 15.dp, shape = CircleShape)
                 },
             ) {
-                BotBadge(42.dp)
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF3E8EE)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.dua_bot_head),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(36.dp),
+                    )
+                }
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1502,55 +1488,33 @@ internal fun BotBadge(size: Dp) {
 }
 
 /**
- * Dua Agent's official row avatar: high-contrast dark bot glyph (`tileInk`)
- * on a `signalGreen` (`#00D95A`) circle so it never clashes with the green
- * background in dark theme or when the user picks a green personal bot.
+ * Dua Agent's official row avatar: 3D T-Cube mascot ([R.drawable.dua_bot_head])
+ * on a `signalGreen` (`#00D95A`) circle, matching Teamily AI 1:1.
  */
 @Composable
-internal fun SignalBotBadge(size: Dp = 42.dp) {
-    val palette = teamilyPalette()
+internal fun SignalBotBadge(size: Dp = 46.dp) {
+    val green = teamilyPalette().signalGreen
     Box(
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(palette.signalGreen),
+            .background(green),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.size(size * 0.56f)) {
-            val w = this.size.width
-            val h = this.size.height
-            val ink = palette.tileInk
-            val stroke = Stroke(
-                width = (size * 0.055f).toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            )
-            // Official Dua Agent mark: rounded bot visor head + antenna + dual eyes
-            drawLine(ink, Offset(w * 0.5f, h * 0.06f), Offset(w * 0.5f, h * 0.24f), stroke.width, StrokeCap.Round)
-            drawCircle(ink, radius = w * 0.07f, center = Offset(w * 0.5f, h * 0.05f))
-            val head = Path().apply {
-                moveTo(w * 0.26f, h * 0.24f)
-                lineTo(w * 0.74f, h * 0.24f)
-                quadraticTo(w * 0.90f, h * 0.24f, w * 0.90f, h * 0.40f)
-                lineTo(w * 0.90f, h * 0.74f)
-                quadraticTo(w * 0.90f, h * 0.90f, w * 0.74f, h * 0.90f)
-                lineTo(w * 0.26f, h * 0.90f)
-                quadraticTo(w * 0.10f, h * 0.90f, w * 0.10f, h * 0.74f)
-                lineTo(w * 0.10f, h * 0.40f)
-                quadraticTo(w * 0.10f, h * 0.24f, w * 0.26f, h * 0.24f)
-                close()
-            }
-            drawPath(head, color = ink, style = stroke)
-            drawCircle(ink, radius = w * 0.075f, center = Offset(w * 0.37f, h * 0.56f))
-            drawCircle(ink, radius = w * 0.075f, center = Offset(w * 0.63f, h * 0.56f))
-        }
+        Image(
+            painter = painterResource(R.drawable.dua_bot_head),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(size * 0.81f),
+        )
     }
 }
 
 /** One chat row's 3D character, cropped to the avatar circle. */
 /**
  * One canvas row — no card box: avatar · title (+ verified ✓) / 1-line
- * subtitle · right-aligned time. 16dp side padding aligned with the gutter grid.
+ * subtitle · right-aligned time. 20dp side padding to align 46dp avatar with
+ * the Personal Agent hero card's 46dp avatar (10dp outer + 10dp inner).
  */
 @Composable
 private fun CanvasChatRow(
@@ -1576,7 +1540,7 @@ private fun CanvasChatRow(
                 onClick()
             },
         )
-        .padding(horizontal = spacing.gutter, vertical = 9.dp)
+        .padding(horizontal = 20.dp, vertical = 10.dp)
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1589,9 +1553,9 @@ private fun CanvasChatRow(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.5.sp,
-                            lineHeight = 20.sp,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 17.sp,
+                            lineHeight = 22.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -1599,7 +1563,7 @@ private fun CanvasChatRow(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (verified) {
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(6.dp))
                         VerifiedCheck()
                     }
                 }
@@ -1609,19 +1573,19 @@ private fun CanvasChatRow(
                         text = time,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
+                            fontSize = 13.sp,
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.Normal,
-                    fontSize = 12.5.sp,
-                    lineHeight = 17.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1631,7 +1595,7 @@ private fun CanvasChatRow(
     }
 }
 
-/** The green verified check next to "Dua Agent". */
+/** The dark emerald green verified check with white tick next to "Dua Agent", matching Teamily AI. */
 @Composable
 internal fun VerifiedCheck() {
     val palette = teamilyPalette()
@@ -1642,13 +1606,17 @@ internal fun VerifiedCheck() {
     ) {
         val w = size.width
         val h = size.height
-        drawCircle(palette.logoMint)
+        drawCircle(palette.accent)
         val p = Path().apply {
-            moveTo(w * 0.30f, h * 0.52f)
-            lineTo(w * 0.45f, h * 0.66f)
-            lineTo(w * 0.71f, h * 0.38f)
+            moveTo(w * 0.28f, h * 0.52f)
+            lineTo(w * 0.44f, h * 0.67f)
+            lineTo(w * 0.72f, h * 0.36f)
         }
-        drawPath(p, color = palette.tileInk, style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round))
+        drawPath(
+            p,
+            color = Color.White,
+            style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
     }
 }
 
@@ -1777,8 +1745,12 @@ private fun AgentHomeList(
                     verified = true,
                     onClick = onOpenDuaAgentChat,
                 ) {
-                    ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
-                        SignalBotBadge(40.dp)
+                    ChatAvatar(
+                        ring = if (palette.borderStrong == null) palette.bgCanvas else palette.bgSurface,
+                        miniBadge = false,
+                        size = 46.dp,
+                    ) {
+                        SignalBotBadge(46.dp)
                     }
                 }
             }
@@ -1837,12 +1809,17 @@ private fun AgentHomeList(
                         time = item.lastMessageAt,
                         onClick = { onOpenListedChat(item.id, item.title) },
                     ) {
-                        ChatAvatar(ring = palette.bgCanvas, miniBadge = false) {
+                        ChatAvatar(
+                            ring = if (palette.borderStrong == null) palette.bgCanvas else Color.White,
+                            miniBadge = true,
+                            size = 46.dp,
+                            mini = { AppBadge(size = 15.dp, shape = CircleShape) },
+                        ) {
                             val look = LocalBotAppearance.current
                             BabyGrokMark(
                                 shape = look.shape,
                                 color = look.color,
-                                size = 40.dp,
+                                size = 46.dp,
                                 contentDescription = item.title,
                             )
                         }
@@ -1987,7 +1964,18 @@ internal fun HomeBottomNav(
  */
 @Composable
 private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
-    Canvas(Modifier.size(20.dp)) {
+    // The chat list keeps Chats selected. That tab's glyph is the 3D T-Cube
+    // mascot (R.drawable.dua_bot_head), matching Teamily AI 1:1.
+    if (tab == HomeTab.Chats) {
+        Image(
+            painter = painterResource(R.drawable.dua_bot_head),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(28.dp),
+        )
+        return
+    }
+    Canvas(Modifier.size(22.dp)) {
         val w = size.width
         val h = size.height
         // `--nv-icon-stroke` 1.75; the active tab uses `--nv-icon-stroke-strong` 2.25.
@@ -1995,27 +1983,8 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
         val stroke = Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (tab) {
-            // Rounded chat bubble with dual eyes — tint-aware so it matches the
-            // active forest-green label and dims cleanly when another tab is selected.
-            HomeTab.Chats -> {
-                val bubble = Path().apply {
-                    moveTo(w * 0.24f, h * 0.16f)
-                    lineTo(w * 0.76f, h * 0.16f)
-                    quadraticTo(w * 0.90f, h * 0.16f, w * 0.90f, h * 0.32f)
-                    lineTo(w * 0.90f, h * 0.64f)
-                    quadraticTo(w * 0.90f, h * 0.80f, w * 0.74f, h * 0.80f)
-                    lineTo(w * 0.42f, h * 0.80f)
-                    lineTo(w * 0.20f, h * 0.92f)
-                    lineTo(w * 0.24f, h * 0.78f)
-                    quadraticTo(w * 0.10f, h * 0.74f, w * 0.10f, h * 0.62f)
-                    lineTo(w * 0.10f, h * 0.32f)
-                    quadraticTo(w * 0.10f, h * 0.16f, w * 0.24f, h * 0.16f)
-                    close()
-                }
-                drawPath(bubble, color = tint, style = stroke)
-                drawLine(tint, Offset(w * 0.39f, h * 0.44f), Offset(w * 0.39f, h * 0.52f), stroke.width, StrokeCap.Round)
-                drawLine(tint, Offset(w * 0.61f, h * 0.44f), Offset(w * 0.61f, h * 0.52f), stroke.width, StrokeCap.Round)
-            }
+            // Drawn above as the 3D bot. This branch is only for exhaustiveness.
+            HomeTab.Chats -> Unit
 
             // A robot: antenna, rounded head, two eyes, side ears.
             HomeTab.Managed -> {
