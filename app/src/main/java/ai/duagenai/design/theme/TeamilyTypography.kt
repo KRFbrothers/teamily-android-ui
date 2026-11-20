@@ -23,12 +23,12 @@ import androidx.compose.ui.unit.sp
  *    caption   400 12/16           -> labelMedium
  *
  *  `--nv-tracking-tight` (-0.01em) is applied only where the zip applies it:
- *  `.type-display` and `.type-title`. The zip's Lato has 300 / 400 / 700 only,
- *  so no role uses 500, 600 or 900. The zip's label (700 13/18) and
- *  body-strong (700 16/24) have no M3 slot here and are not mapped.
+ *  `.type-display` and `.type-title`. Sizes stay this screen scale.
+ *  v4 also ships Lato Medium (500) and Black (900) in `res/font`. The screen
+ *  scale below stays 400/700 so existing rows keep the same width and height.
  *
- *  Official SIL OFL Lato Regular (400) and Bold (700) live in
- *  `app/src/main/res/font/` (`lato_regular.ttf`, `lato_bold.ttf`).
+ *  Official SIL OFL Lato faces live in `app/src/main/res/font/`:
+ *  `lato_regular.ttf`, `lato_medium.ttf`, `lato_bold.ttf`, `lato_black.ttf`.
  *  [TeamilySansFontFamily] loads them. [teamilyTypography] and
  *  [TeamilyTypography] use that family; every M3 role is defined so
  *  unset slots cannot fall back to the platform default (or to weight 500).
@@ -38,10 +38,12 @@ import androidx.compose.ui.unit.sp
 /** `--nv-tracking-tight` -0.01em. */
 private val TrackingTight = (-0.01).em
 
-/** Official Lato Regular (400) and Bold (700) from `res/font`. */
+/** Lato 400 / 500 / 700 / 900 from `res/font`. */
 val TeamilySansFontFamily: FontFamily = FontFamily(
     Font(R.font.lato_regular, FontWeight.Normal),
+    Font(R.font.lato_medium, FontWeight.Medium),
     Font(R.font.lato_bold, FontWeight.Bold),
+    Font(R.font.lato_black, FontWeight.Black),
 )
 
 /** Code blocks use the system monospace family. */
@@ -63,8 +65,7 @@ private val TeamilyBaseTextStyle = TextStyle(
 
 /** The spec's M3 type scale for the given sans family (Lato in the app). */
 fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Typography(
-    // Remaining M3 roles: Lato + 400/700 only. Sizes follow the M3 defaults
-    // so layout stays stable; Medium (500) is not used.
+    // Sizes stay the screen scale above. Medium (500) is the real Lato face.
     displayLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = (-0.25).sp),
     displayMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp),
     displaySmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp),
@@ -88,5 +89,5 @@ fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Ty
     labelSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.5.sp),
 )
 
-/** Kit typography with Lato 400 / 700. */
+/** Kit typography with Lato 400 / 500 / 700 / 900. */
 val TeamilyTypography: Typography = teamilyTypography()
