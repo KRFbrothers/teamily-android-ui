@@ -1230,49 +1230,8 @@ private fun AppBadge(size: Dp, shape: Shape) {
             .background(palette.logoMint),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(size * 0.82f),
-        )
+        BotBadge(size = size * 0.82f)
     }
-}
-
-/**
- * The cube logo glyph on its 24-unit grid — `M12 2.6l8.1 4.7v9.4L12 21.4
- * 3.9 16.7V7.3z` plus the Y seam `M12 12l0-9.4M12 12l-8.1 4.7M12 12l8.1 4.7`,
- * scaled to the composable's size. Round caps and joins.
- */
-@Composable
-private fun CubeLogoGlyph(tint: Color, strokeWidth: Dp, modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        drawCubeLogo(tint, Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-    }
-}
-
-/** Draws the cube logo paths (24-unit grid) scaled to this canvas. */
-private fun DrawScope.drawCubeLogo(tint: Color, stroke: Stroke) {
-    val u = size.minDimension / 24f
-    fun p(x: Float, y: Float) = Offset(x * u, y * u)
-    val hexagon = Path().apply {
-        p(12f, 2.6f).let { moveTo(it.x, it.y) }
-        p(20.1f, 7.3f).let { lineTo(it.x, it.y) }
-        p(20.1f, 16.7f).let { lineTo(it.x, it.y) }
-        p(12f, 21.4f).let { lineTo(it.x, it.y) }
-        p(3.9f, 16.7f).let { lineTo(it.x, it.y) }
-        p(3.9f, 7.3f).let { lineTo(it.x, it.y) }
-        close()
-    }
-    drawPath(hexagon, color = tint, style = stroke)
-    val c = p(12f, 12f)
-    val seam = Path().apply {
-        for (end in listOf(p(12f, 2.6f), p(3.9f, 16.7f), p(20.1f, 16.7f))) {
-            moveTo(c.x, c.y)
-            lineTo(end.x, end.y)
-        }
-    }
-    drawPath(seam, color = tint, style = stroke)
 }
 
 /**
@@ -1291,6 +1250,7 @@ private fun SearchRow(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    val palette = teamilyPalette()
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -1301,7 +1261,12 @@ private fun SearchRow(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(if (filterActive) colors.brandSoft else Color(0xFF2A322E))
+                .background(if (filterActive) colors.brandSoft else palette.chromeFill)
+                .border(
+                    width = 1.dp,
+                    color = if (filterActive) colors.brandSoft else palette.border,
+                    shape = CircleShape,
+                )
                 .clickable(role = Role.Button, onClick = onToggleFilter)
                 .semantics {
                     contentDescription = "Filter"
@@ -1336,8 +1301,8 @@ private fun SearchRow(
                     disabled()
                 },
             shape = TeamilyShapes.capsule,
-            color = Color(0xFF181C1B),
-            border = BorderStroke(1.dp, Color(0xFF323A36)),
+            color = palette.surfaceRecessed,
+            border = BorderStroke(1.dp, palette.border),
         ) {
             Row(
                 modifier = Modifier
@@ -1368,10 +1333,10 @@ private fun SearchRow(
 /**
  * The ONE filled card on Agent home: the user's personal agent.
  *
- * `cardHeroColor` fill, 20dp corners, 1dp soft rim (`heroCardBorder`), resting
- * glass shadow and the 0.98 press scale. The avatar and its mini-badge are
- * the 3D bot image. Tapping it opens the Personal Agent thread
- * ([onClick] = `onOpenPersonalAgentChat`).
+ * `cardHeroColor` fill, 10dp corners, 1dp soft rim (`heroCardBorder`), resting
+ * glass shadow and the 0.97 press scale. The avatar and its mini-badge render
+ * the active bot appearance ([BotBadge]). Tapping it opens the Personal Agent
+ * thread ([onClick] = `onOpenPersonalAgentChat`).
  */
 @Composable
 internal fun PersonalAgentHeroCard(
@@ -1402,48 +1367,22 @@ internal fun PersonalAgentHeroCard(
                 contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW, $PERSONAL_AGENT_DATE"
             },
         shape = heroShape,
-        color = Color(0xFF263C30),
-        border = null,
+        color = palette.cardHeroColor,
+        border = BorderStroke(1.dp, palette.heroCardBorder),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
-                ring = Color(0xFF263C30),
+                ring = palette.cardHeroColor,
                 miniBadge = true,
                 size = 42.dp,
                 mini = {
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(palette.logoMint),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.dua_bot_head),
-                            contentDescription = null,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.size(12.dp),
-                        )
-                    }
+                    AppBadge(size = 16.dp, shape = CircleShape)
                 },
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF3E8EE)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.dua_bot_head),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(34.dp),
-                    )
-                }
+                BotBadge(42.dp)
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1535,9 +1474,7 @@ internal fun BotBadge(size: Dp) {
 }
 
 /**
- * Dua Agent's row avatar: [R.drawable.dua_bot_badge] on a `#00D95A` circle.
- * The PNG's mint field is made transparent so the circle shows. [BotBadge]
- * stays the untouched mint image for the hero.
+ * Dua Agent's row avatar: vector [BotBadge] on a `signalGreen` (`#00D95A`) circle.
  */
 @Composable
 internal fun SignalBotBadge(size: Dp = 42.dp) {
@@ -1549,34 +1486,8 @@ internal fun SignalBotBadge(size: Dp = 42.dp) {
             .background(green),
         contentAlignment = Alignment.Center,
     ) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(size * 0.81f),
-        )
+        BotBadge(size = size * 0.81f)
     }
-}
-
-/** [R.drawable.dua_bot_badge] with its mint `#42D982` field punched out. */
-private fun botBadgeWithoutMint(context: android.content.Context): ImageBitmap {
-    val decoded = BitmapFactory.decodeResource(context.resources, R.drawable.dua_bot_badge)
-    val src = decoded.copy(Bitmap.Config.ARGB_8888, true)
-    val width = src.width
-    val height = src.height
-    val pixels = IntArray(width * height)
-    src.getPixels(pixels, 0, width, 0, 0, width, height)
-    for (i in pixels.indices) {
-        val pixel = pixels[i]
-        val r = (pixel shr 16) and 0xFF
-        val g = (pixel shr 8) and 0xFF
-        val b = pixel and 0xFF
-        // Mint field and its anti-aliased edge. The face is near-white and the
-        // body is near-black, so a green-leading pixel is background.
-        if (g > 90 && g > r + 28 && g > b + 18) pixels[i] = 0
-    }
-    src.setPixels(pixels, 0, width, 0, 0, width, height)
-    return src.asImageBitmap()
 }
 
 /** One chat row's 3D character, cropped to the avatar circle. */
@@ -2019,15 +1930,10 @@ internal fun HomeBottomNav(
  */
 @Composable
 private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
-    // The chat list keeps Chats selected. That tab's glyph is the 3D bot,
-    // sitting directly on the navSelected pill (#545B56 in dark) with transparent background.
+    // The chat list keeps Chats selected. That tab's glyph renders the active
+    // vector bot badge sitting directly on the navSelected pill.
     if (tab == HomeTab.Chats) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(28.dp),
-        )
+        BotBadge(size = 24.dp)
         return
     }
     Canvas(Modifier.size(20.dp)) {
