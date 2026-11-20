@@ -421,8 +421,8 @@ fun HomeScreen(
                 PersonalAgentHeroCard(
                     onClick = onOpenPersonalAgentChat,
                     modifier = Modifier.padding(
-                        start = 9.dp,
-                        end = 9.dp,
+                        start = LocalDuaGenAISpacing.current.gutter,
+                        end = LocalDuaGenAISpacing.current.gutter,
                         bottom = 6.dp,
                     ),
                 )
@@ -1073,7 +1073,7 @@ private fun AgentHomeTopBar(
             .fillMaxWidth()
             .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
     ) {
-        // LEFT — the user's photo: 35.dp visual circle inside 48.dp touch target.
+        // LEFT — the user's photo: 40.dp visual circle inside 48.dp touch target.
         val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
         Box(
             modifier = Modifier
@@ -1083,7 +1083,7 @@ private fun AgentHomeTopBar(
         ) {
             Box(
                 modifier = Modifier
-                    .size(35.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(palette.chromeFill)
                     .clickable(role = Role.Button, onClick = onOpenDrawer)
@@ -1096,11 +1096,11 @@ private fun AgentHomeTopBar(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            // 8.dp #42D982 fill, 2.dp #1D2120 ring.
+            // 11.dp online indicator anchored cleanly on the 40.dp circle's top-right rim.
             Box(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = 24.dp, y = 3.dp)
+                    .offset(x = 29.dp, y = 4.dp)
                     .size(11.dp)
                     .clip(CircleShape)
                     .background(palette.avatarOnlineRing)
@@ -1223,6 +1223,8 @@ private fun DuaHomeWelcome(
 @Composable
 private fun AppBadge(size: Dp, shape: Shape) {
     val palette = teamilyPalette()
+    val glyphFraction = if (size <= 18.dp) 0.72f else 0.65f
+    val strokeWidth = if (size <= 18.dp) 1.35.dp else 1.75.dp
     Box(
         modifier = Modifier
             .size(size)
@@ -1230,7 +1232,33 @@ private fun AppBadge(size: Dp, shape: Shape) {
             .background(palette.logoMint),
         contentAlignment = Alignment.Center,
     ) {
-        BotBadge(size = size * 0.82f)
+        Canvas(Modifier.size(size * glyphFraction)) {
+            val u = this.size.minDimension / 24f
+            fun p(x: Float, y: Float) = Offset(x * u, y * u)
+            val stroke = Stroke(
+                width = strokeWidth.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            )
+            val hexagon = Path().apply {
+                p(12f, 2.6f).let { moveTo(it.x, it.y) }
+                p(20.1f, 7.3f).let { lineTo(it.x, it.y) }
+                p(20.1f, 16.7f).let { lineTo(it.x, it.y) }
+                p(12f, 21.4f).let { lineTo(it.x, it.y) }
+                p(3.9f, 16.7f).let { lineTo(it.x, it.y) }
+                p(3.9f, 7.3f).let { lineTo(it.x, it.y) }
+                close()
+            }
+            drawPath(hexagon, color = palette.tileInk, style = stroke)
+            val c = p(12f, 12f)
+            val seam = Path().apply {
+                for (end in listOf(p(12f, 2.6f), p(3.9f, 16.7f), p(20.1f, 16.7f))) {
+                    moveTo(c.x, c.y)
+                    lineTo(end.x, end.y)
+                }
+            }
+            drawPath(seam, color = palette.tileInk, style = stroke)
+        }
     }
 }
 
@@ -1295,7 +1323,7 @@ private fun SearchRow(
         Surface(
             modifier = Modifier
                 .weight(1f)
-                .height(46.dp)
+                .height(48.dp)
                 .semantics {
                     contentDescription = "Search"
                     disabled()
@@ -1307,7 +1335,7 @@ private fun SearchRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(46.dp)
+                    .height(48.dp)
                     .padding(horizontal = spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1334,9 +1362,9 @@ private fun SearchRow(
  * The ONE filled card on Agent home: the user's personal agent.
  *
  * `cardHeroColor` fill, 10dp corners, 1dp soft rim (`heroCardBorder`), resting
- * glass shadow and the 0.97 press scale. The avatar and its mini-badge render
- * the active bot appearance ([BotBadge]). Tapping it opens the Personal Agent
- * thread ([onClick] = `onOpenPersonalAgentChat`).
+ * glass shadow and the 0.97 press scale. The avatar renders the active bot
+ * appearance ([BotBadge]) with the brand [AppBadge] mini-badge. Tapping it
+ * opens the Personal Agent thread ([onClick] = `onOpenPersonalAgentChat`).
  */
 @Composable
 internal fun PersonalAgentHeroCard(
@@ -1371,7 +1399,7 @@ internal fun PersonalAgentHeroCard(
         border = BorderStroke(1.dp, palette.heroCardBorder),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
@@ -1474,26 +1502,55 @@ internal fun BotBadge(size: Dp) {
 }
 
 /**
- * Dua Agent's row avatar: vector [BotBadge] on a `signalGreen` (`#00D95A`) circle.
+ * Dua Agent's official row avatar: high-contrast dark bot glyph (`tileInk`)
+ * on a `signalGreen` (`#00D95A`) circle so it never clashes with the green
+ * background in dark theme or when the user picks a green personal bot.
  */
 @Composable
 internal fun SignalBotBadge(size: Dp = 42.dp) {
-    val green = teamilyPalette().signalGreen
+    val palette = teamilyPalette()
     Box(
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(green),
+            .background(palette.signalGreen),
         contentAlignment = Alignment.Center,
     ) {
-        BotBadge(size = size * 0.81f)
+        Canvas(Modifier.size(size * 0.56f)) {
+            val w = this.size.width
+            val h = this.size.height
+            val ink = palette.tileInk
+            val stroke = Stroke(
+                width = (size * 0.055f).toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            )
+            // Official Dua Agent mark: rounded bot visor head + antenna + dual eyes
+            drawLine(ink, Offset(w * 0.5f, h * 0.06f), Offset(w * 0.5f, h * 0.24f), stroke.width, StrokeCap.Round)
+            drawCircle(ink, radius = w * 0.07f, center = Offset(w * 0.5f, h * 0.05f))
+            val head = Path().apply {
+                moveTo(w * 0.26f, h * 0.24f)
+                lineTo(w * 0.74f, h * 0.24f)
+                quadraticTo(w * 0.90f, h * 0.24f, w * 0.90f, h * 0.40f)
+                lineTo(w * 0.90f, h * 0.74f)
+                quadraticTo(w * 0.90f, h * 0.90f, w * 0.74f, h * 0.90f)
+                lineTo(w * 0.26f, h * 0.90f)
+                quadraticTo(w * 0.10f, h * 0.90f, w * 0.10f, h * 0.74f)
+                lineTo(w * 0.10f, h * 0.40f)
+                quadraticTo(w * 0.10f, h * 0.24f, w * 0.26f, h * 0.24f)
+                close()
+            }
+            drawPath(head, color = ink, style = stroke)
+            drawCircle(ink, radius = w * 0.075f, center = Offset(w * 0.37f, h * 0.56f))
+            drawCircle(ink, radius = w * 0.075f, center = Offset(w * 0.63f, h * 0.56f))
+        }
     }
 }
 
 /** One chat row's 3D character, cropped to the avatar circle. */
 /**
  * One canvas row — no card box: avatar · title (+ verified ✓) / 1-line
- * subtitle · right-aligned time. 18dp side padding to align avatar with hero card.
+ * subtitle · right-aligned time. 16dp side padding aligned with the gutter grid.
  */
 @Composable
 private fun CanvasChatRow(
@@ -1519,7 +1576,7 @@ private fun CanvasChatRow(
                 onClick()
             },
         )
-        .padding(horizontal = 18.dp, vertical = 9.dp)
+        .padding(horizontal = spacing.gutter, vertical = 9.dp)
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1930,12 +1987,6 @@ internal fun HomeBottomNav(
  */
 @Composable
 private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
-    // The chat list keeps Chats selected. That tab's glyph renders the active
-    // vector bot badge sitting directly on the navSelected pill.
-    if (tab == HomeTab.Chats) {
-        BotBadge(size = 24.dp)
-        return
-    }
     Canvas(Modifier.size(20.dp)) {
         val w = size.width
         val h = size.height
@@ -1944,8 +1995,27 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
         val stroke = Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (tab) {
-            // Drawn above as the 3D bot. This branch is only for exhaustiveness.
-            HomeTab.Chats -> Unit
+            // Rounded chat bubble with dual eyes — tint-aware so it matches the
+            // active forest-green label and dims cleanly when another tab is selected.
+            HomeTab.Chats -> {
+                val bubble = Path().apply {
+                    moveTo(w * 0.24f, h * 0.16f)
+                    lineTo(w * 0.76f, h * 0.16f)
+                    quadraticTo(w * 0.90f, h * 0.16f, w * 0.90f, h * 0.32f)
+                    lineTo(w * 0.90f, h * 0.64f)
+                    quadraticTo(w * 0.90f, h * 0.80f, w * 0.74f, h * 0.80f)
+                    lineTo(w * 0.42f, h * 0.80f)
+                    lineTo(w * 0.20f, h * 0.92f)
+                    lineTo(w * 0.24f, h * 0.78f)
+                    quadraticTo(w * 0.10f, h * 0.74f, w * 0.10f, h * 0.62f)
+                    lineTo(w * 0.10f, h * 0.32f)
+                    quadraticTo(w * 0.10f, h * 0.16f, w * 0.24f, h * 0.16f)
+                    close()
+                }
+                drawPath(bubble, color = tint, style = stroke)
+                drawLine(tint, Offset(w * 0.39f, h * 0.44f), Offset(w * 0.39f, h * 0.52f), stroke.width, StrokeCap.Round)
+                drawLine(tint, Offset(w * 0.61f, h * 0.44f), Offset(w * 0.61f, h * 0.52f), stroke.width, StrokeCap.Round)
+            }
 
             // A robot: antenna, rounded head, two eyes, side ears.
             HomeTab.Managed -> {
