@@ -1225,6 +1225,7 @@ class DuaGenAINavHostTest {
         assertVisible(DUA_AGENT_ROW)
         assertVisibleDescCount("Verified", 1)
         assertVisible(CHATS_HEADER)
+        compose.onNodeWithTag("home_pull_to_refresh").assertExists()
         // No fake conversations: the section says so, and none of the old
         // sample rows is anywhere on screen.
         assertVisible("No conversations yet")

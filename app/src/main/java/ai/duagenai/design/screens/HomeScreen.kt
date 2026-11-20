@@ -7,13 +7,18 @@
  *
  * A `@file:` annotation must precede the `package` declaration.
  */
-@file:OptIn(kotlin.ExperimentalStdlibApi::class)
+@file:OptIn(
+    kotlin.ExperimentalStdlibApi::class,
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+)
 
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.bot.BabyGrokMark
 import ai.duagenai.design.bot.LocalBotAppearance
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.ui.platform.testTag
 import ai.duagenai.design.theme.DemoBadge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -303,6 +308,9 @@ fun HomeScreen(
     userAvatar: Painter? = null,
     hasUnreadMemory: Boolean = true,
     conversations: List<ConversationItem> = emptyList(),
+    /** Pull-to-refresh state and callback for refreshing the agent & conversation list. */
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // Local only when the host does not own the flag. On means the public
@@ -432,12 +440,20 @@ fun HomeScreen(
                         .weight(1f)
                         .fillMaxWidth(),
                 ) {
-                    AgentHomeList(
-                        onOpenDuaAgentChat = onOpenDuaAgentChat,
-                        conversations = conversations,
-                        onOpenListedChat = onOpenListedChat,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("home_pull_to_refresh"),
+                    ) {
+                        AgentHomeList(
+                            onOpenDuaAgentChat = onOpenDuaAgentChat,
+                            conversations = conversations,
+                            onOpenListedChat = onOpenListedChat,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     HomeBottomNav(
                         selected = selectedTab,
                         onSelect = onSelectTab,
