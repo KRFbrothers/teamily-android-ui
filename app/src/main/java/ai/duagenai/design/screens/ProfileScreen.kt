@@ -85,8 +85,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -109,7 +109,6 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    cubeId: String = CubeIds.DEFAULT,
     photoPath: String? = null,
     photoVersion: Long = 0L,
     displayName: String = "",
@@ -117,7 +116,6 @@ fun ProfileScreen(
     username: String = "",
     phone: String = "",
     links: String = "",
-    onChangeCube: () -> Unit = {},
     onBack: () -> Unit = {},
     onPhotoChosen: (Bitmap) -> Unit = {},
     /**
@@ -254,15 +252,15 @@ fun ProfileScreen(
                         .size(148.dp),
                     contentAlignment = Alignment.Center,
                 ) {
+                    val look = LocalBotAppearance.current
                     ProfileOrCubeAvatar(
-                        cubeId = cubeId,
                         photoPath = photoPath,
                         photoVersion = photoVersion,
                         size = 120.dp,
                         contentDescription = if (photoPath != null) {
                             stringResource(R.string.profile_photo_cd)
                         } else {
-                            stringResource(R.string.profile_avatar_cd, CubeIds.label(cubeId))
+                            stringResource(R.string.profile_avatar_cd, "${look.shape.label}, ${look.color.label}")
                         },
                     )
                     SmallFloatingActionButton(
@@ -359,7 +357,6 @@ fun ProfileScreen(
 
     if (showPictureSheet) {
         ProfilePictureSheet(
-            cubeId = cubeId,
             hasPhoto = photoPath != null,
             onDismiss = { showPictureSheet = false },
             onCamera = { launchCamera() },
@@ -367,10 +364,6 @@ fun ProfileScreen(
                 galleryLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                 )
-            },
-            onChooseCube = {
-                showPictureSheet = false
-                onChangeCube()
             },
             onDelete = {
                 onClearPhoto()
@@ -460,12 +453,10 @@ private fun ProfileFieldDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ProfilePictureSheet(
-    cubeId: String,
     hasPhoto: Boolean,
     onDismiss: () -> Unit,
     onCamera: () -> Unit,
     onGallery: () -> Unit,
-    onChooseCube: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
@@ -520,32 +511,16 @@ internal fun ProfilePictureSheet(
                 icon = Icons.Outlined.Image,
                 onClick = onGallery,
             )
-            HorizontalDivider(color = colors.hairline)
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_choose_cube),
-                subtitle = stringResource(R.string.profile_picture_cube_subtitle, CubeIds.label(cubeId)),
-                icon = null,
-                onClick = onChooseCube,
-                leading = {
-                    CubeAvatar(
-                        cubeId = cubeId,
-                        size = 32.dp,
-                        shape = CircleShape,
-                        contentDescription = null,
-                    )
-                },
-            )
         }
     }
 }
 
 /**
  * The Profile / Settings avatar: the locally saved photo when one exists,
- * otherwise the saved cube, always clipped to a circle.
+ * otherwise the selected bot shape & color.
  */
 @Composable
 internal fun ProfileOrCubeAvatar(
-    cubeId: String,
     photoPath: String?,
     size: Dp,
     contentDescription: String,
@@ -571,10 +546,11 @@ internal fun ProfileOrCubeAvatar(
             contentScale = ContentScale.Crop,
         )
     } else {
-        CubeAvatar(
-            cubeId = cubeId,
+        val look = LocalBotAppearance.current
+        BabyGrokMark(
+            shape = look.shape,
+            color = look.color,
             size = size,
-            shape = CircleShape,
             contentDescription = contentDescription,
             modifier = modifier,
         )

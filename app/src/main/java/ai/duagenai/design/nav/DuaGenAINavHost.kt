@@ -43,10 +43,7 @@ import ai.duagenai.design.bot.BotColor
 import ai.duagenai.design.bot.BotLook
 import ai.duagenai.design.bot.BotShape
 import ai.duagenai.design.bot.LocalBotAppearance
-import ai.duagenai.design.cube.CubeIds
 import ai.duagenai.design.cube.CreateAgentScreen
-import ai.duagenai.design.cube.CubePickerScreen
-import ai.duagenai.design.cube.CubeStore
 import ai.duagenai.design.screens.PersonalAgentDemoScreen
 import ai.duagenai.design.screens.DuaAgentDemoScreen
 import ai.duagenai.design.screens.AgentsScreen
@@ -200,7 +197,6 @@ object DuaGenAIRoutes {
     const val ARTIFACTS = "artifacts"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
-    const val CUBE_PICKER = "cube_picker"
     const val APPEARANCE = "appearance"
     const val STORAGE = "storage"
     const val NOTIFICATIONS = "notifications"
@@ -350,12 +346,6 @@ fun DuaGenAINavHost(
     signedOutMemories: List<MemoryItem> = emptyList(),
 ) {
     val context = LocalContext.current
-    // applicationContext: the store outlives any single Activity recreation, and
-    // DataStore must not be created twice for the same file.
-    val store = remember(context) { CubeStore(context.applicationContext) }
-    // The Profile settings (theme / storage / notifications) live in the SAME
-    // DataStore pattern CubeStore uses, created once here and passed down — so
-    // the Profile rows' subtitles and the screens they open read one copy.
     val settings = remember(context) { SettingsStore(context.applicationContext) }
     // The Artifacts data source. Created once here and passed into the screen,
     // so the screen holds no data of its own.
@@ -422,17 +412,6 @@ fun DuaGenAINavHost(
     // chat's back-stack entry), so an agent profile's "Clear Chat History"
     // clears the same transcript the thread shows.
     val transcriptStore: ChatTranscriptStore = viewModel()
-
-    // The one and only read of the saved cube in the whole app.
-    //
-    // `CubeIds.DEFAULT` is passed explicitly because `CubeStore.selected` is a
-    // plain `Flow<String>`, and the `Flow<T>` overload of
-    // `collectAsStateWithLifecycle` has NO default for `initialValue` — only the
-    // `StateFlow<T>` overload does. Omitting it is a compile error, not a
-    // runtime fallback. The value is also the right one: it is exactly what the
-    // store itself emits when nothing has been saved yet, so the first frame
-    // shows the same cube the first emission will.
-    val savedCubeId by store.selected.collectAsStateWithLifecycle(CubeIds.DEFAULT)
 
     // The Profile settings, collected once here. Each has an explicit initial
     // value because the `Flow<T>` overload of `collectAsStateWithLifecycle` has
@@ -528,7 +507,6 @@ fun DuaGenAINavHost(
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             SidebarDrawer(
-                cubeId = savedCubeId,
                 // No hardcoded identity: the avatar only says "Signed in" /
                 // "Not signed in" until a real session supplies a name.
                 signedIn = sessionToken != null,
@@ -638,7 +616,6 @@ fun DuaGenAINavHost(
 
             composable(DuaGenAIRoutes.PROFILE) {
                 ProfileScreen(
-                    cubeId = savedCubeId,
                     photoPath = profilePhotoPath,
                     photoVersion = profilePhotoVersion,
                     displayName = profileName,
@@ -646,7 +623,6 @@ fun DuaGenAINavHost(
                     username = profileUsername,
                     phone = profilePhone,
                     links = profileLinks,
-                    onChangeCube = { navController.navigate(DuaGenAIRoutes.CUBE_PICKER) },
                     onBack = { navController.popBackStack() },
                     onPhotoChosen = { bitmap -> scope.launch { settings.saveProfilePhoto(bitmap) } },
                     // Decoded + downsampled on IO inside the store.
@@ -764,29 +740,6 @@ fun DuaGenAINavHost(
                             popUpTo(DuaGenAIRoutes.CREATE_AGENT) { inclusive = true }
                         }
                     },
-                    onCancel = { navController.popBackStack() },
-                )
-            }
-
-            composable(DuaGenAIRoutes.CUBE_PICKER) {
-                CubePickerScreen(
-                    // The picker starts from the persisted value, so reopening it
-                    // always shows the saved cube rather than a stale draft.
-                    savedCubeId = savedCubeId,
-                    onSave = { picked ->
-                        // Persist FIRST, then leave. Popping before the write
-                        // lands would let a fast back-press show the old avatar
-                        // on Profile for a frame, and a process death in that
-                        // window would lose the choice entirely.
-                        // Persist on a worker, then pop on this (main) thread.
-                        // DataStore resumes a plain coroutine off the main
-                        // thread, and NavController rejects that pop.
-                        kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                            store.save(picked)
-                        }
-                        navController.popBackStack()
-                    },
-                    // Cancel writes nothing — the draft dies with the screen.
                     onCancel = { navController.popBackStack() },
                 )
             }
@@ -1003,7 +956,6 @@ fun DuaGenAINavHost(
             }
             composable(DuaGenAIRoutes.SETTINGS) {
                 SettingsScreen(
-                    cubeId = savedCubeId,
                     photoPath = profilePhotoPath,
                     photoVersion = profilePhotoVersion,
                     displayName = profileName,

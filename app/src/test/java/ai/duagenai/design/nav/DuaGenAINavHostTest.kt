@@ -45,9 +45,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import ai.duagenai.design.cube.CubeCatalog
-import ai.duagenai.design.cube.CubeIds
-import ai.duagenai.design.cube.CubeStore
+import ai.duagenai.design.bot.BotColor
+import ai.duagenai.design.bot.BotShape
 import ai.duagenai.design.BuildConfig
 import ai.duagenai.design.screens.ApiConfig
 import ai.duagenai.design.screens.ApiError
@@ -218,19 +217,18 @@ import org.robolectric.annotation.Config
 private data class ChatCase(
     val chatId: String,
     val title: String,
-    val cubeId: String,
     /** Agent threads get the agent header pill and "Type a message...". */
     val agent: Boolean,
 )
 
 private val CHATS = listOf(
-    ChatCase("chat_webpage_developer", "Webpage Developer", "cube_34", agent = true),
-    ChatCase("chat_design_team", "Design Team \u00b7 5", "cube_08", agent = false),
-    ChatCase("chat_slides_assistant", "Slides Assistant", "cube_11", agent = true),
-    ChatCase("chat_david_park", "David Park", "cube_35", agent = false),
-    ChatCase("chat_market_research", "Market Research", "cube_06", agent = true),
-    ChatCase("chat_accounting_assistant", "Accounting Assistant", "cube_32", agent = true),
-    ChatCase("chat_family", "Family \u00b7 8", "cube_12", agent = false),
+    ChatCase("chat_webpage_developer", "Webpage Developer", agent = true),
+    ChatCase("chat_design_team", "Design Team \u00b7 5", agent = false),
+    ChatCase("chat_slides_assistant", "Slides Assistant", agent = true),
+    ChatCase("chat_david_park", "David Park", agent = false),
+    ChatCase("chat_market_research", "Market Research", agent = true),
+    ChatCase("chat_accounting_assistant", "Accounting Assistant", agent = true),
+    ChatCase("chat_family", "Family \u00b7 8", agent = false),
 )
 
 /**
@@ -343,11 +341,6 @@ private const val ARTIFACTS_EMPTY = "Abhi koi artifact nahi hai"
 private const val ARTIFACTS_FIRST_ITEM = "Q3 Launch Deck"
 private const val ARTIFACTS_LAST_ITEM = "Meeting Notes"
 
-/** The picker's markers (`CubePickerScreen.kt`). */
-private const val PICKER_HEADING = "Choose cube"
-private const val PICKER_SAVE = "Save"
-private const val PICKER_CANCEL = "Cancel"
-
 /**
  * The Profile settings screens' markers.
  *
@@ -369,20 +362,10 @@ private val NOTIFICATION_SWITCHES =
 private const val CLEAR_CACHE = "Clear cache"
 private const val CLEAR_CACHE_CONFIRM = "Clear"
 
-/**
- * The cube picker's search + filter markers (`CubePickerScreen.kt`).
- *
- * The search field's placeholder and the four category chips. The no-results
- * line is the state a query that matches nothing must show.
- */
-private const val PICKER_SEARCH_HINT = "Search cubes"
 /** The drawer's footer avatar: "Profile, Not signed in" / "Profile, Signed in". */
 private const val DRAWER_PROFILE = "Profile, "
 /** M3's scrim label: the drawer has no X, the scrim (and Back) close it. */
 private const val CLOSE_DRAWER = "Close navigation menu"
-private val PICKER_CATEGORIES = listOf("All", "Orange", "Charcoal", "Multi")
-private const val PICKER_NO_RESULTS = "Koi cube nahi mila"
-private const val PICKER_CLEAR_FILTERS = "Clear filters"
 
 /**
  * The Memory list's markers (`MemoryScreen.kt`).
@@ -518,15 +501,6 @@ private const val MEMORY_COPIED_SNACK = "Copied"
  * label.
  */
 private const val MEMORY_SHARE = "Share memory"
-
-/**
- * The Cube picker chip's long-press tooltip (this fix).
- *
- * The tooltip carries the chip's FULL label, so its description is the label
- * itself. The chip's own description is the filter marker, so the two are
- * distinct nodes.
- */
-private fun pickerTooltip(cat: String) = "Tooltip: $cat"
 
 /**
  * The shared URL opener's markers (this fix).
@@ -1002,13 +976,6 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
     }
 
-    private fun openCubePickerFromProfile() {
-        openProfileFromDrawer()
-        openProfilePictureSheet()
-        compose.onNodeWithText("Choose cube").performClick()
-        compose.waitForIdle()
-    }
-
 
     private fun switchTo(mode: HomeMode) {
         if (visibleDescCount("${mode.label} mode") > 0) {
@@ -1108,7 +1075,7 @@ class DuaGenAINavHostTest {
         // on screen and no per-chat cube is drawn.
         for (chat in CHATS) {
             assertNotVisible(chat.title)
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 0)
+            assertVisibleDescCount(avatarLabel(chat.title), 0)
         }
     }
 
@@ -2742,60 +2709,6 @@ class DuaGenAINavHostTest {
         assertTrue("a URL-less memory must share a null url", sharer.shared.last().second == null)
     }
 
-    /**
-     * The Cube picker's category chips are 48dp touch targets.
-     *
-     * The audit's rule applied to the picker: the chip's drawn size is unchanged,
-     * but its tappable box must meet the M3 48dp minimum. The chip is addressed
-     * by its own description, and its height is read from the semantics bounds.
-     */
-    @Test
-    fun theCubePickerChipsAreAtLeast48dpTall() {
-        launch()
-        openCubePickerFromProfile()
-        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
-
-        for (cat in PICKER_CATEGORIES) {
-            val node = compose.onNodeWithContentDescription("Filter: $cat").fetchSemanticsNode()
-            val heightDp = node.boundsInRoot.height / compose.density.density
-            assertTrue(
-                "the \"$cat\" chip must be at least 48dp tall, was ${heightDp}dp",
-                heightDp >= 48f,
-            )
-        }
-    }
-
-    // ------------------------------------------- cube picker chip tooltip
-
-    /**
-     * Long-pressing a Cube picker chip shows a tooltip with the chip's FULL
-     * label, and the tap still applies the filter.
-     *
-     * The tooltip is the M3 plain tooltip, so its content is the label itself;
-     * the chip's own description is the filter marker. Asserting both proves the
-     * two gestures stay distinct: the long-press reveals the name, the tap
-     * filters.
-     */
-    @Test
-    fun theCubePickerChipLongPressShowsATooltipWithTheFullLabel() {
-        launch()
-        openCubePickerFromProfile()
-        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
-
-        // The tooltip is not up before the long-press.
-        assertVisibleDescCount(pickerTooltip("Charcoal"), 0)
-
-        // Long-press the chip: the tooltip appears with the full label.
-        compose.onNodeWithContentDescription("Filter: Charcoal").performTouchInput { longClick() }
-        compose.waitForIdle()
-        assertVisibleDescCount(pickerTooltip("Charcoal"), 1)
-
-        // The tap still applies the filter (the long-press did not).
-        compose.onNodeWithContentDescription("Filter: Orange").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithContentDescription("Filter: Orange").assertIsSelected()
-    }
-
     // ------------------------------------------- shared URL opener
 
     /**
@@ -2902,12 +2815,12 @@ class DuaGenAINavHostTest {
         // No sample conversations are shipped, so the history says so…
         assertVisible("No conversations yet")
 
-        // …and none of the old fake rows — titles or their cubes — is drawn.
+        // …and none of the old fake rows — titles or their avatars — is drawn.
         for (chat in CHATS) {
             // ChatGPT style would show the title only, no avatar — but with
             // honest empty history even the title must not appear.
             assertNotVisible(chat.title)
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), 0)
+            assertVisibleDescCount(avatarLabel(chat.title), 0)
         }
     }
 
@@ -2925,12 +2838,12 @@ class DuaGenAINavHostTest {
             // an agent's hint is "Type a message...", any other thread's names it.
             assertComposer(threadComposerHint(chat))
 
-            // An empty thread draws the header cube only. Say something, wait
-            // for the canned reply, and the SAME cube appears beside both
-            // bubbles — the row's cube and the thread's cube are one value.
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            // An empty thread draws the header avatar only. Say something, wait
+            // for the canned reply, and the bot shape appears beside both
+            // bubbles.
+            assertVisibleDescCount(avatarLabel(chat.title), THREAD_HEADER_CUBES)
             startConversation()
-            assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
+            assertVisibleDescCount(bubbleLabel(chat.title), THREAD_BUBBLE_CUBES)
 
             // Back to Home for the next row — never a second setContent.
             compose.onNodeWithContentDescription("Back").performClick()
@@ -2946,10 +2859,8 @@ class DuaGenAINavHostTest {
         openChatFromDrawer(CHATS.first { it.chatId == "chat_market_research" })
         startConversation()
 
-        // Header + both bubbles carry cube_06. If any bubble had kept the
-        // user's saved cube, the bubble count would be short.
-        assertVisibleDescCount(avatarLabel("Market Research", "cube_06"), THREAD_HEADER_CUBES)
-        assertVisibleDescCount(bubbleLabel("Market Research", "cube_06"), THREAD_BUBBLE_CUBES)
+        assertVisibleDescCount(avatarLabel("Market Research"), THREAD_HEADER_CUBES)
+        assertVisibleDescCount(bubbleLabel("Market Research"), THREAD_BUBBLE_CUBES)
     }
 
     @Test
@@ -2979,7 +2890,7 @@ class DuaGenAINavHostTest {
         val args = navController.currentBackStackEntry?.arguments
         assertEquals("Design Team \u00b7 5", args?.getString("title"))
         assertEquals("chat_design_team", args?.getString("chatId"))
-        assertVisibleDescCount(avatarLabel("Design Team \u00b7 5", "cube_08"), THREAD_HEADER_CUBES)
+        assertVisibleDescCount(avatarLabel("Design Team \u00b7 5"), THREAD_HEADER_CUBES)
     }
 
     // ------------------------------------------------------------- back
@@ -3048,8 +2959,6 @@ class DuaGenAINavHostTest {
     fun navigatingStraightToAChatRouteShowsThatChatsCube() {
         launch()
 
-        // The same thing a deep link would do: no drawer row involved, so the
-        // cube can only come from the route argument.
         for (chat in CHATS) {
             compose.runOnUiThread {
                 navController.navigate(DuaGenAIRoutes.chat(chat.chatId, chat.title))
@@ -3057,34 +2966,12 @@ class DuaGenAINavHostTest {
             compose.waitForIdle()
 
             assertOnChat()
-            // Empty thread: the header cube only, until the conversation starts.
-            assertVisibleDescCount(avatarLabel(chat.title, chat.cubeId), THREAD_HEADER_CUBES)
+            assertVisibleDescCount(avatarLabel(chat.title), THREAD_HEADER_CUBES)
             startConversation()
-            assertVisibleDescCount(bubbleLabel(chat.title, chat.cubeId), THREAD_BUBBLE_CUBES)
+            assertVisibleDescCount(bubbleLabel(chat.title), THREAD_BUBBLE_CUBES)
 
             compose.runOnUiThread { navController.popBackStack() }
             compose.waitForIdle()
-        }
-    }
-
-    @Test
-    fun theChatCubeIsNotTheSavedCube() {
-        launch()
-
-        // CubeIds.DEFAULT is what CubeStore emits before anything is saved, and
-        // it is what the drawer footer and Profile draw. No chat may resolve to
-        // it, or "the thread shows the user's avatar" would be indistinguishable
-        // from correct behaviour.
-        for (chat in CHATS) {
-            assertTrue(
-                "${chat.chatId} must not resolve to the saved-cube default",
-                chat.cubeId != CubeIds.DEFAULT,
-            )
-            assertEquals(
-                "the hardcoded expectation must match the production mapping",
-                chat.cubeId,
-                CubeCatalog.forEntity(chat.chatId),
-            )
         }
     }
 
@@ -3284,16 +3171,15 @@ class DuaGenAINavHostTest {
 
     @Test
     fun theDrawerFooterShowsTheSavedCube() {
-        // A previous test may have saved another cube into the process-wide store.
         runBlocking {
-            CubeStore(compose.activity.applicationContext).save(CubeIds.DEFAULT)
+            val settings = ai.duagenai.design.screens.SettingsStore(compose.activity.applicationContext)
+            settings.setBotShape(BotShape.DEFAULT)
+            settings.setBotColor(BotColor.DEFAULT)
         }
         launch()
         openDrawer()
 
-        // The footer avatar is the USER's saved cube — a different thing from a
-        // chat's cube. TalkBack hears "Profile, …"; the tag carries the cube.
-        compose.onNodeWithTag(ai.duagenai.design.screens.drawerAvatarTag(CubeIds.DEFAULT)).assertExists()
+        compose.onNodeWithTag(ai.duagenai.design.screens.drawerAvatarTag(BotShape.DEFAULT.key)).assertExists()
     }
 
     // ------------------------------------------------- drawer avatar -> Settings
@@ -3406,91 +3292,19 @@ class DuaGenAINavHostTest {
         assertVisible(SETTINGS_EDIT_PROFILE_LABEL)
     }
 
-    // ------------------------------------------- Profile -> cube picker
+    // ------------------------------------------- Profile picture sheet
 
-    /**
-     * "Choose cube" on the Profile picture sheet opens the cube picker.
-     *
-     * The row is wired to [DuaGenAIRoutes.CUBE_PICKER] through the same
-     * `navController.navigate(...)` every other destination uses. The picker's
-     * own title and its Save/Cancel controls are the screen's markers.
-     */
     @Test
-    fun theProfilePictureSheetHasOnlyCameraGalleryAndChooseCube() {
+    fun theProfilePictureSheetHasOnlyCameraAndGallery() {
         launch()
         openProfileFromDrawer()
         openProfilePictureSheet()
         assertVisible("Camera")
         assertVisible("Gallery")
-        assertVisible("Choose cube")
+        assertNotVisible("Choose cube")
         assertNotVisible("Import from Instagram")
         assertNotVisible("Import from Facebook")
         assertNotVisible("AI images")
-    }
-
-    @Test
-    fun theChangeCubeRowOpensTheCubePicker() {
-        launch()
-        openCubePickerFromProfile()
-
-        assertEquals(
-            "Choose cube must open the cube picker route",
-            DuaGenAIRoutes.CUBE_PICKER,
-            currentRoute(),
-        )
-        assertVisible(PICKER_HEADING)
-        assertVisible(PICKER_SAVE)
-        assertVisible(PICKER_CANCEL)
-    }
-
-    /**
-     * Cancel from the picker discards the draft and returns to Profile.
-     *
-     * The picker's Cancel writes nothing — it just pops back, so Profile keeps
-     * the previously saved cube. This is the "unsaved change discard" contract.
-     */
-    @Test
-    fun cancelFromThePickerReturnsToProfileWithoutSaving() {
-        launch()
-        openCubePickerFromProfile()
-        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
-
-        compose.onNodeWithText(PICKER_CANCEL).performClick()
-        compose.waitForIdle()
-
-        assertEquals(
-            "Cancel must pop back to Profile without saving",
-            DuaGenAIRoutes.PROFILE,
-            currentRoute(),
-        )
-        assertVisible("Name")
-    }
-
-    /**
-     * Save from the picker persists the choice and returns to Profile.
-     *
-     * The picker's Save writes through CubeStore (the existing storage pattern)
-     * and then pops back, so Profile's header re-reads the saved cube from the Flow and updates on its own.
-     */
-    @Test
-    fun saveFromThePickerPersistsAndReturnsToProfile() {
-        launch()
-        openCubePickerFromProfile()
-        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
-
-        // Pick a different cube, then Save.
-        compose.onNodeWithContentDescription("Cube 07").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithText(PICKER_SAVE).performClick()
-        compose.waitForIdle()
-
-        assertEquals(
-            "Save must pop back to Profile after persisting",
-            DuaGenAIRoutes.PROFILE,
-            currentRoute(),
-        )
-        // The saved cube is now Cube 07, so the header draws it.
-        assertVisibleDescCount("Your avatar, Cube 07", 1)
     }
 
     // ------------------------------------------- Profile -> settings rows
@@ -3614,54 +3428,6 @@ class DuaGenAINavHostTest {
         )
         assertVisible(NOTIFICATIONS_HEADING)
         for (switch in NOTIFICATION_SWITCHES) assertVisible(switch)
-    }
-
-    // ------------------------------------------- cube picker search + filter
-
-    /**
-     * The picker's search field filters the grid live.
-     *
-     * Typing a cube's number narrows the grid to it, so a cube that was on
-     * screen before the query is gone after it — the assertion that the
-     * filter actually ran rather than the field being decorative.
-     */
-    @Test
-    fun thePickerSearchFiltersTheGrid() {
-        launch()
-        openCubePickerFromProfile()
-        assertEquals(DuaGenAIRoutes.CUBE_PICKER, currentRoute())
-
-        // The search field and the chips are there.
-        assertVisible(PICKER_SEARCH_HINT)
-        for (cat in PICKER_CATEGORIES) assertVisible(cat)
-
-        // Type a query that matches exactly one cube.
-        compose.onNode(hasSetTextAction()).performTextInput("07")
-        compose.waitForIdle()
-
-        // Cube 07 is on screen; a cube the query excludes is not.
-        assertVisible("Cube 07")
-        assertNotVisible("Cube 08")
-    }
-
-    /**
-     * A query that matches nothing shows the no-results state with a clear.
-     *
-     * The state is the picker's own fallback, and its Clear filters action is
-     * the one-tap way back to the full grid.
-     */
-    @Test
-    fun thePickerShowsNoResultsForAnUnmatchedQuery() {
-        launch()
-        openCubePickerFromProfile()
-
-        compose.onNode(hasSetTextAction()).performTextInput("zzz")
-        compose.waitForIdle()
-
-        assertVisible(PICKER_NO_RESULTS)
-        assertVisible(PICKER_CLEAR_FILTERS)
-        // No cube is shown while nothing matches.
-        assertNotVisible("Cube 01")
     }
 
     // ------------------------------------------------- Agent's own thread
@@ -4994,7 +4760,7 @@ class DuaGenAINavHostTest {
         assertEquals(DuaGenAIRoutes.AGENT_NEW_GROUP, currentRoute())
         assertEquals("chat_webpage_developer", navController.currentBackStackEntry?.arguments?.getString("agentId"))
         assertVisible("New Group")
-        assertVisibleDescCount(avatarLabel("Webpage Developer", "cube_34"), 1)
+        assertVisibleDescCount(avatarLabel("Webpage Developer"), 1)
     }
 
     /** The more-sheet has exactly Share, Clear Chat History and Delete agent. */
@@ -5033,7 +4799,7 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Back").performClick()
         compose.waitForIdle()
         assertOnChat()
-        assertVisibleDescCount(bubbleLabel("Webpage Developer", "cube_34"), 0)
+        assertVisibleDescCount(bubbleLabel("Webpage Developer"), 0)
     }
 
     /** Mute and Pin are real toggles on every agent's profile. */
@@ -5443,13 +5209,13 @@ class DuaGenAINavHostTest {
      * fail rather than silently keep matching.
      */
 
-    /** Drawer history row and Chat header: `"<name> avatar, Cube NN"`. */
-    private fun avatarLabel(title: String, cubeId: String) =
-        "$title avatar, ${CubeIds.label(cubeId)}"
+    /** Chat header & agent avatar: `"<name> avatar, Blob"`. */
+    private fun avatarLabel(title: String, shape: BotShape = BotShape.DEFAULT) =
+        "$title avatar, ${shape.label}"
 
-    /** Chat message bubbles: `"<name>, Cube NN"`. */
-    private fun bubbleLabel(title: String, cubeId: String) =
-        "$title, ${CubeIds.label(cubeId)}"
+    /** Chat message bubbles: `"<name>, Blob"`. */
+    private fun bubbleLabel(title: String, shape: BotShape = BotShape.DEFAULT) =
+        "$title, ${shape.label}"
 
     /**
      * The composer hint a thread shows: `ChatScreen` passes

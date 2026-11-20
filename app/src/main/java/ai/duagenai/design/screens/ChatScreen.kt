@@ -66,9 +66,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ai.duagenai.design.cube.CubeAvatar
-import ai.duagenai.design.cube.CubeCatalog
-import ai.duagenai.design.cube.CubeIds
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -337,10 +336,6 @@ fun ChatScreen(
     val initialSeed = if (initialMessage != null) emptyList() else seed
     // The thread's initial content comes ONLY from the caller. Nothing here
     // invents a conversation.
-    // Derived, never accepted as a parameter: the conversation's cube is a pure
-    // function of its stable id, so this screen cannot drift from the Home row
-    // that opened it — and it is not the user's saved cube.
-    val cubeId = CubeCatalog.forEntity(chatId)
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
 
@@ -578,14 +573,16 @@ fun ChatScreen(
                     when {
                         // Personal Agent: its badge is already in the title.
                         isPersonal || isDuaAgent -> Unit
-                        // 32dp header avatar — this conversation's cube, untinted.
-                        else -> CubeAvatar(
-                            cubeId = cubeId,
-                            size = 32.dp,
-                            shape = DuaGenAITheme.shapes.avatarMessage,
-                            contentDescription = "$chatTitle avatar, ${CubeIds.label(cubeId)}",
-                            modifier = Modifier.padding(end = spacing.gutter),
-                        )
+                        else -> {
+                            val look = LocalBotAppearance.current
+                            BabyGrokMark(
+                                shape = look.shape,
+                                color = look.color,
+                                size = 32.dp,
+                                contentDescription = "$chatTitle avatar, ${look.shape.label}",
+                                modifier = Modifier.padding(end = spacing.gutter),
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -689,12 +686,12 @@ fun ChatScreen(
             }
             items(messages) { msg ->
                 when (msg.who) {
-                    SavedMessage.AGENT -> AgentBubble(msg, cubeId, chatTitle)
-                    else -> UserBubble(msg, cubeId, chatTitle)
+                    SavedMessage.AGENT -> AgentBubble(msg, chatTitle)
+                    else -> UserBubble(msg, chatTitle)
                 }
             }
             if (agentTyping) {
-                item { TypingBubble(cubeId, chatTitle) }
+                item { TypingBubble(chatTitle) }
             }
             // Personal Agent, conversation underway: the same quick-action
             // chips as its demo screen, under the messages. A chip sends its
@@ -752,15 +749,16 @@ fun ChatScreen(
  * rather than a new component.
  */
 @Composable
-private fun TypingBubble(cubeId: String, chatTitle: String) {
+private fun TypingBubble(chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
+    val look = LocalBotAppearance.current
     Row(verticalAlignment = Alignment.Bottom) {
-        CubeAvatar(
-            cubeId = cubeId,
+        BabyGrokMark(
+            shape = look.shape,
+            color = look.color,
             size = 28.dp,
-            shape = DuaGenAITheme.shapes.avatarMessage,
-            contentDescription = "$chatTitle, ${CubeIds.label(cubeId)}",
+            contentDescription = "$chatTitle, ${look.shape.label}",
         )
         Spacer(Modifier.width(spacing.sm))
         Box(
@@ -788,18 +786,18 @@ private fun TypingBubble(cubeId: String, chatTitle: String) {
 }
 
 @Composable
-private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
+private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
-    val effectiveCubeId = if (!msg.agentId.isNullOrBlank()) CubeCatalog.forEntity(msg.agentId) else cubeId
     val effectiveTitle = msg.agentName?.takeIf { it.isNotBlank() } ?: chatTitle
+    val look = LocalBotAppearance.current
 
     Row(verticalAlignment = Alignment.Bottom) {
-        CubeAvatar(
-            cubeId = effectiveCubeId,
+        BabyGrokMark(
+            shape = look.shape,
+            color = look.color,
             size = 28.dp,
-            shape = DuaGenAITheme.shapes.avatarMessage,
-            contentDescription = "$effectiveTitle, ${CubeIds.label(effectiveCubeId)}",
+            contentDescription = "$effectiveTitle, ${look.shape.label}",
         )
         Spacer(Modifier.width(spacing.sm))
         Column {
@@ -839,9 +837,10 @@ private fun AgentBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
 }
 
 @Composable
-private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
+private fun UserBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
+    val look = LocalBotAppearance.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -871,13 +870,11 @@ private fun UserBubble(msg: SavedMessage, cubeId: String, chatTitle: String) {
             )
         }
         Spacer(Modifier.width(spacing.sm))
-        // 32dp avatar beside the user's own message — this conversation's cube,
-        // not the user's saved one (which stays on Home's top bar and Profile).
-        CubeAvatar(
-            cubeId = cubeId,
+        BabyGrokMark(
+            shape = look.shape,
+            color = look.color,
             size = 32.dp,
-            shape = DuaGenAITheme.shapes.avatarMessage,
-            contentDescription = "$chatTitle, ${CubeIds.label(cubeId)}",
+            contentDescription = "$chatTitle, ${look.shape.label}",
         )
     }
 }

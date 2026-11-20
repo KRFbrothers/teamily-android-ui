@@ -11,7 +11,8 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.R
-import ai.duagenai.design.cube.CubeAvatar
+import ai.duagenai.design.bot.BabyGrokMark
+import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.DemoBadge
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -122,8 +123,8 @@ enum class DrawerDestination(val label: String, val comingSoon: Boolean = false)
 /** The drawer's one width cap (ChatGPT-like; leaves a home strip beside it). */
 internal val DRAWER_MAX_WIDTH = 280.dp
 
-/** Test tag on the footer avatar, carrying the cube it draws. */
-internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
+/** Test tag on the footer avatar, carrying the bot shape it draws. */
+internal fun drawerAvatarTag(shapeKey: String) = "drawerAvatar:$shapeKey"
 
 /**
  * The drawer sheet, laid out like the ChatGPT Android drawer in Dua colours:
@@ -141,7 +142,6 @@ internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
  * Rendered inside [androidx.compose.material3.ModalNavigationDrawer], which
  * supplies the scrim and the open/close animation.
  *
- * @param cubeId the USER's saved cube, for the footer avatar only.
  * @param signedIn whether a session exists; read out on the avatar
  *   ("Profile, Signed in" / "Profile, Not signed in").
  * @param mode the current Home mode, shown as the active segment of the toggle.
@@ -156,7 +156,6 @@ internal fun drawerAvatarTag(cubeId: String) = "drawerAvatar:$cubeId"
  */
 @Composable
 fun SidebarDrawer(
-    cubeId: String,
     signedIn: Boolean,
     mode: HomeMode,
     history: List<ChatRow>,
@@ -362,18 +361,19 @@ fun SidebarDrawer(
                 // Round avatar only. TalkBack hears one label, e.g.
                 // "Profile, Not signed in".
                 val profileLabel = "Profile, ${if (signedIn) "Signed in" else "Not signed in"}"
+                val look = LocalBotAppearance.current
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(role = Role.Button, onClick = onOpenProfile)
                         .semantics { contentDescription = profileLabel }
-                        .testTag(drawerAvatarTag(cubeId)),
+                        .testTag(drawerAvatarTag(look.shape.key)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CubeAvatar(
-                        cubeId = cubeId,
+                    BabyGrokMark(
+                        shape = look.shape,
+                        color = look.color,
                         size = 40.dp,
-                        shape = CircleShape,
                         contentDescription = null,
                     )
                 }

@@ -1,14 +1,29 @@
 package ai.duagenai.design.cube
 
+import ai.duagenai.design.R
+import ai.duagenai.design.screens.MinTouchTarget
+import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.DuaGenAITheme
+import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyMotion
+import ai.duagenai.design.theme.TeamilyPalette
+import ai.duagenai.design.theme.teamilyPalette
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,473 +32,61 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ai.duagenai.design.R
-import ai.duagenai.design.screens.MinTouchTarget
-import ai.duagenai.design.screens.minTouchTarget
-import ai.duagenai.design.theme.DuaGenAITextStyles
-import ai.duagenai.design.theme.DuaGenAITheme
-import ai.duagenai.design.theme.LocalDuaGenAISpacing
-import ai.duagenai.design.theme.teamilyPalette
-
-/* ============================================================================
- *  Cube picker — M3 components used:
- *      Scaffold, TopAppBar, OutlinedTextField, FilterChip, LazyRow,
- *      LazyVerticalGrid, Button, OutlinedButton, Text
- *
- *  The screen "Change cube" on Profile opens. It shows all 42 cubes in a grid;
- *  tapping one selects it (a ring + checkmark), and the bottom bar's Save
- *  persists the choice through [onSave] while Cancel discards it through
- *  [onCancel]. The draft is local and `rememberSaveable`, so a rotation keeps
- *  the in-progress selection but never writes it until Save is pressed.
- *
- *  SEARCH + FILTER
- *  ---------------
- *  Finding one cube among 42 was the audit's complaint, so the screen now has:
- *
- *    • a search field — typing a name ("Cube 07") or an id ("cube_07") filters
- *      the grid live;
- *    • a row of category chips — All / Orange / Charcoal / Multi — derived from
- *      the cube art itself (see [CubeCategory]);
- *    • the two combine: the grid shows cubes matching the text AND the chip;
- *    • a "no results" state with a Clear filters action when nothing matches.
- *
- *  Both the query and the chip are `rememberSaveable`, so a rotation keeps the
- *  user's search. Filtering only changes WHICH cubes are shown — selection,
- *  preview sync, the orange ring + checkmark and Save/Cancel are untouched.
- *
- *  The cube ART is drawn untinted — `CubeAvatar` uses Image, not Icon, so the
- *  charcoal/orange fills survive. The only colour applied to a cube is the
- *  selection ring, which is the picker's own `CubeSelectionOrange` and is never
- *  painted onto the art itself.
- *
- *  Every other colour comes from MaterialTheme.colorScheme / DuaGenAITheme and
- *  every gap from LocalDuaGenAISpacing, so light and dark are both correct by
- *  construction — there is no hardcoded colour in this file.
- * ==========================================================================*/
-
-/**
- * The picker's own selection ring colour.
- *
- * WHY A LOCAL CONSTANT
- * --------------------
- * The ring is the picker's affordance, not a product token: it marks "this is
- * the cube you are about to save", and it must stay legible on both the light
- * and the dark surface. It is deliberately NOT taken from the theme's accent —
- * the accent is the brand's, and a brand change must not silently restyle a
- * selection control. It is also never painted onto the cube art itself, only
- * drawn as a 2dp border around it.
- */
-private val CubeSelectionOrange = Color(0xFFE8622C)
-
-/**
- * A cube's colour family, derived from the art's own fills.
- *
- * The 42 cubes are drawn from three fills — orange (#FF6A00 family), charcoal
- * (#2C2C2C family) and a mix of the two — so the filter chips are those three
- * plus "All". [matches] is the single place the mapping lives, so the chip row
- * and the grid can never disagree about which cubes a chip shows.
- */
-enum class CubeCategory(val label: String) {
-    All("All"),
-    Orange("Orange"),
-    Charcoal("Charcoal"),
-    Multi("Multi");
-
-    /** True when [cubeId] belongs to this category. */
-    fun matches(cubeId: String): Boolean = when (this) {
-        All -> true
-        else -> CubeCategories.of(cubeId) == this
-    }
-}
-
-/**
- * The cube → category mapping.
- *
- * Hardcoded on purpose: the category is a property of the shipped art, not
- * something to recompute at runtime, and a test can pin it. The ids are the
- * same zero-padded ones [CubeIds] uses.
- */
-object CubeCategories {
-    private val orange = setOf("cube_23", "cube_25", "cube_38")
-    private val multi = setOf(
-        "cube_01", "cube_06", "cube_16", "cube_17", "cube_20", "cube_21",
-        "cube_28", "cube_30", "cube_31", "cube_32", "cube_33", "cube_34",
-        "cube_36", "cube_39", "cube_40",
-    )
-
-    /** The category of [cubeId]. Anything not orange or multi is charcoal. */
-    fun of(cubeId: String): CubeCategory = when (cubeId) {
-        in orange -> CubeCategory.Orange
-        in multi -> CubeCategory.Multi
-        else -> CubeCategory.Charcoal
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CubePickerScreen(
-    savedCubeId: String = CubeIds.DEFAULT,
-    onSave: (String) -> Unit = {},
-    onCancel: () -> Unit = {},
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-
-    // The in-progress selection. Starts from the persisted value so reopening
-    // the picker always shows the saved cube rather than a stale draft, and it
-    // is rememberSaveable so a rotation keeps the user's tap. Nothing is
-    // written to the store until Save.
-    var draft by rememberSaveable { mutableStateOf(savedCubeId) }
-
-    // The search text and the active category chip. Both rememberSaveable, so a
-    // rotation keeps the user's search. They only affect WHICH cubes are shown.
-    var query by rememberSaveable { mutableStateOf("") }
-    var category by rememberSaveable { mutableStateOf(CubeCategory.All) }
-
-    // The visible cubes: text AND chip, applied together.
-    val visible = CubeIds.all.filter { id ->
-        category.matches(id) && matchesQuery(id, query)
-    }
-
-    Scaffold(
-        modifier = modifier,
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Choose cube",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
-            )
-        },
-        bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = spacing.gutter, vertical = spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            ) {
-                OutlinedButton(
-                    onClick = onCancel,
-                    modifier = Modifier.weight(1f),
-                    shape = DuaGenAITheme.shapes.pill,
-                ) {
-                    Text("Cancel", style = DuaGenAITextStyles.button)
-                }
-                Button(
-                    onClick = { onSave(draft) },
-                    modifier = Modifier.weight(1f),
-                    shape = DuaGenAITheme.shapes.pill,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                ) {
-                    Text("Save", style = DuaGenAITextStyles.button)
-                }
-            }
-        },
-    ) { inner ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(inner),
-        ) {
-            // The search field. A clear (X) button appears once there is text.
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-                singleLine = true,
-                shape = DuaGenAITheme.shapes.pill,
-                placeholder = { Text("Search cubes") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Filled.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Clear search",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            )
-
-            // The category chips. A LazyRow so the row scrolls on a narrow phone.
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = spacing.gutter),
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-            ) {
-                items(CubeCategory.values().toList()) { entry ->
-                    // The chip's long-press TOOLTIP (this fix). A plain M3 tooltip
-                    // shows the FULL label \u2014 the chip truncates on a narrow
-                    // phone, so the tooltip is how the whole name is read.
-                    // TooltipBox's own long-press handling is used (the standard
-                    // M3 behaviour), so the chip's tap still applies the filter
-                    // and the long-press never does.
-                    // Hoisted so the long-press and TooltipBox share one state.
-                    // TooltipBox shows it; the chip does not handle the gesture
-                    // itself, so a tap still only applies the filter.
-                    val tooltipState = rememberTooltipState()
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                        tooltip = {
-                            PlainTooltip {
-                                Text(
-                                    text = entry.label,
-                                    modifier = Modifier.semantics {
-                                        contentDescription = "Tooltip: ${entry.label}"
-                                    },
-                                )
-                            }
-                        },
-                        state = tooltipState,
-                    ) {
-                        FilterChip(
-                            selected = entry == category,
-                            onClick = { category = entry },
-                            // A distinct description per chip: the grid's cells also
-                            // carry their label as text ("Cube 07"), so a bare text
-                            // match would be ambiguous. This makes the chip
-                            // addressable, and the selected state is published by
-                            // FilterChip itself. The description carries the FULL
-                            // label, so accessibility reads the whole name too.
-                            //
-                            // sizeIn + semantics sit BEFORE minTouchTarget so the
-                            // semantics node is the 48dp box the audit measures.
-                            modifier = Modifier
-                                .sizeIn(minHeight = MinTouchTarget)
-                                .semantics { contentDescription = "Filter: ${entry.label}" }
-                                .minTouchTarget(),
-                            label = { Text(entry.label) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = DuaGenAITheme.colors.brandSoft,
-                                selectedLabelColor = DuaGenAITheme.colors.onBrandSoft,
-                            ),
-                        )
-                    }
-                }
-            }
-
-            if (visible.isEmpty()) {
-                // No cube matches the text + chip. Offer a one-tap way out.
-                NoResults(
-                    onClear = {
-                        query = ""
-                        category = CubeCategory.All
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = spacing.gutter),
-                )
-            } else {
-                LazyVerticalGrid(
-                    // 80dp keeps 4 columns at 390dp (gutter 14 + spacedBy 6).
-                    columns = GridCells.Adaptive(80.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = spacing.gutter,
-                        end = spacing.gutter,
-                        top = spacing.sm,
-                        bottom = spacing.lg,
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(spacing.sm),
-                ) {
-                    items(visible, key = { it }) { cubeId ->
-                        CubeCell(
-                            cubeId = cubeId,
-                            selected = cubeId == draft,
-                            onClick = { draft = cubeId },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * True when [cubeId] matches [query].
- *
- * Matches the label ("Cube 07"), the raw id ("cube_07") and the bare number
- * ("07" / "7"), case-insensitively — so any of the ways a user might think of a
- * cube finds it.
- */
-private fun matchesQuery(cubeId: String, query: String): Boolean {
-    val q = query.trim().lowercase()
-    if (q.isEmpty()) return true
-    val label = CubeIds.label(cubeId).lowercase()
-    val id = cubeId.lowercase()
-    val number = cubeId.removePrefix("cube_").lowercase()
-    return label.contains(q) || id.contains(q) || number.contains(q)
-}
-
-/** The "no results" state, with a Clear filters action. */
-@Composable
-private fun NoResults(onClear: () -> Unit, modifier: Modifier = Modifier) {
-    val spacing = LocalDuaGenAISpacing.current
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = "Koi cube nahi mila",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(spacing.sm))
-            Text(
-                text = "Search ya filter badal kar dekhein.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(spacing.lg))
-            OutlinedButton(
-                onClick = onClear,
-                shape = DuaGenAITheme.shapes.pill,
-            ) {
-                Text("Clear filters", style = DuaGenAITextStyles.button)
-            }
-        }
-    }
-}
-
-/**
- * One cube in the grid.
- *
- * The art is drawn untinted by [CubeAvatar]. When selected, a ring in the
- * picker's own [CubeSelectionOrange] wraps the avatar and a small checkmark
- * badge sits in the corner — the ring is a border around the avatar box, never
- * a tint on the art. The whole cell is a 48dp+ touch target.
- */
-@Composable
-private fun CubeCell(
-    cubeId: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(DuaGenAITheme.shapes.card)
-            .background(if (selected) colors.brandSoft else MaterialTheme.colorScheme.surface)
-            .clickable(onClick = onClick)
-            .padding(vertical = spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(DuaGenAITheme.shapes.avatarList)
-                .background(
-                    if (selected) MaterialTheme.colorScheme.surface
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                )
-                // The selection ring — the picker's own orange, drawn as a
-                // border around the avatar, never onto the art.
-                .then(
-                    if (selected) Modifier.border(
-                        width = 2.dp,
-                        color = CubeSelectionOrange,
-                        shape = DuaGenAITheme.shapes.avatarList,
-                    ) else Modifier,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            CubeAvatar(
-                cubeId = cubeId,
-                size = 40.dp,
-                shape = DuaGenAITheme.shapes.avatarList,
-                contentDescription = CubeIds.label(cubeId),
-            )
-        }
-        Spacer(Modifier.height(spacing.xxs))
-        Text(
-            text = CubeIds.label(cubeId),
-            style = DuaGenAITextStyles.meta,
-            color = if (selected) colors.onBrandSoft
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
+import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Cubic
+import androidx.graphics.shapes.Morph
+import androidx.graphics.shapes.RoundedPolygon
+import androidx.graphics.shapes.circle
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /* ============================================================================
  *  Create Agent — opened ONLY from Agent home's plus menu ("Create Agent").
@@ -492,9 +95,10 @@ private fun CubeCell(
  *  field, the 15-shape grid and the colour swatches, then Create. Create is
  *  enabled once the trimmed name is non-empty; a shape and a colour are always
  *  preselected. The name and both selections are rememberSaveable.
- *
- *  The Profile "Change cube" picker above is untouched.
  * ==========================================================================*/
+
+/** The eye ink for the Create Agent silhouette on a light body. */
+private val AvatarInk = Color(0xFF17201B)
 
 /** Shapes per row in the Create Agent grid (15 shapes = 3 rows). */
 private const val CreateAgentShapeColumns = 5
@@ -569,13 +173,12 @@ fun CreateAgentScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // The big preview: the only place with eyes, and it morphs.
-            CubeAvatar(
-                cubeId = CubeIds.DEFAULT,
+            SilhouetteAvatar(
+                silhouette = silhouette,
+                fill = swatch.color(palette),
                 size = 132.dp,
                 shape = RectangleShape,
                 contentDescription = "Agent preview: ${silhouette.label}, ${swatch.label}",
-                silhouette = silhouette,
-                fill = swatch.color(palette),
                 showEyes = true,
                 animateMorph = true,
             )
@@ -662,12 +265,14 @@ private fun AgentShapeCell(
             },
         contentAlignment = Alignment.Center,
     ) {
-        CubeAvatar(
-            cubeId = CubeIds.DEFAULT,
-            size = 40.dp,
-            shape = RectangleShape,
+        SilhouetteAvatar(
             silhouette = silhouette,
             fill = MaterialTheme.colorScheme.onBackground,
+            size = 40.dp,
+            shape = RectangleShape,
+            contentDescription = null,
+            showEyes = false,
+            animateMorph = false,
         )
     }
 }
@@ -710,6 +315,283 @@ private fun AgentSwatchDot(
     }
 }
 
+/* ============================================================================
+ *  Create Agent silhouettes
+ *
+ *  Fifteen rounded shapes, built once with graphics-shapes so any two can be
+ *  morphed into each other. Every shape is laid out on a unit radius around
+ *  (0, 0); drawing re-centres it from its bounds, so a wide pill and a round
+ *  circle both sit in the middle of the avatar.
+ * ==========================================================================*/
+
+/** The 15 shapes the Create Agent grid offers, in grid order. */
+enum class AgentSilhouette(val label: String) {
+    Circle("Circle"),
+    Drop("Drop"),
+    Tile("Tile"),
+    Sparkle("Sparkle"),
+    Cloud("Cloud"),
+    Pebble("Pebble"),
+    Scallop("Scallop"),
+    Clover("Clover"),
+    Bean("Bean"),
+    Triangle("Triangle"),
+    Hexagon("Hexagon"),
+    Star("Star"),
+    Flower("Flower"),
+    Diamond("Diamond"),
+    Sunburst("Sunburst");
+
+    /** The graphics-shapes polygon. Built lazily, once per process. */
+    internal val polygon: RoundedPolygon by lazy { buildSilhouette(this) }
+
+    companion object {
+        /** The shape Create Agent preselects. */
+        val DEFAULT: AgentSilhouette = Circle
+
+        /** Parses a stored key, falling back to [DEFAULT]. */
+        fun fromKey(key: String?): AgentSilhouette =
+            values().firstOrNull { it.name == key } ?: DEFAULT
+    }
+}
+
+/**
+ * The Create Agent colour swatches: the five frozen tile tokens plus the four
+ * named Create Agent tokens. Colours are resolved from [TeamilyPalette], so no
+ * screen ever holds a raw hex.
+ */
+enum class AgentSwatch(val label: String) {
+    Mint("Mint"),
+    Cyan("Cyan"),
+    Yellow("Yellow"),
+    Violet("Violet"),
+    Ink("Ink"),
+    Brown("Brown"),
+    Red("Red"),
+    Blue("Blue"),
+    Pink("Pink");
+
+    /** This swatch's colour in [palette]. */
+    fun color(palette: TeamilyPalette): Color = when (this) {
+        Mint -> palette.tileMint
+        Cyan -> palette.tileCyan
+        Yellow -> palette.tileYellow
+        Violet -> palette.tileViolet
+        Ink -> palette.tileInk
+        Brown -> palette.tileBrown
+        Red -> palette.tileRed
+        Blue -> palette.tileBlue
+        Pink -> palette.tilePink
+    }
+
+    companion object {
+        /** The colour Create Agent preselects. Mint reads on both canvases. */
+        val DEFAULT: AgentSwatch = Mint
+
+        /** Parses a stored key, falling back to [DEFAULT]. */
+        fun fromKey(key: String?): AgentSwatch =
+            values().firstOrNull { it.name == key } ?: DEFAULT
+    }
+}
+
+/** Vertices on a unit circle, starting at [startDeg], radius per vertex. */
+private fun ring(count: Int, startDeg: Float, radius: (Int) -> Float): FloatArray {
+    val out = FloatArray(count * 2)
+    for (i in 0 until count) {
+        val a = (startDeg + 360f * i / count) * (PI / 180.0)
+        out[i * 2] = (radius(i) * cos(a)).toFloat()
+        out[i * 2 + 1] = (radius(i) * sin(a)).toFloat()
+    }
+    return out
+}
+
+/** A regular polygon with soft corners, the first vertex at [startDeg]. */
+private fun softPolygon(sides: Int, rounding: Float, startDeg: Float = -90f): RoundedPolygon =
+    RoundedPolygon(
+        vertices = ring(sides, startDeg) { 1f },
+        rounding = CornerRounding(rounding, 0.6f),
+    )
+
+/** A star: [points] outer tips alternating with inner valleys at [inner]. */
+private fun softStar(
+    points: Int,
+    inner: Float,
+    tipRounding: Float,
+    valleyRounding: Float,
+    startDeg: Float = -90f,
+): RoundedPolygon {
+    val tip = CornerRounding(tipRounding, 0.6f)
+    val valley = CornerRounding(valleyRounding, 0.6f)
+    return RoundedPolygon(
+        vertices = ring(points * 2, startDeg) { if (it % 2 == 0) 1f else inner },
+        perVertexRounding = List(points * 2) { if (it % 2 == 0) tip else valley },
+    )
+}
+
+/** A rectangle [w] × [h] centred on the origin, with corner [rounding]. */
+private fun softRect(w: Float, h: Float, rounding: Float): RoundedPolygon =
+    RoundedPolygon(
+        vertices = floatArrayOf(w / 2, -h / 2, w / 2, h / 2, -w / 2, h / 2, -w / 2, -h / 2),
+        rounding = CornerRounding(rounding, 0.6f),
+    )
+
+private fun buildSilhouette(s: AgentSilhouette): RoundedPolygon = when (s) {
+    AgentSilhouette.Circle -> RoundedPolygon.circle(numVertices = 8)
+    AgentSilhouette.Drop -> RoundedPolygon(
+        vertices = ring(3, -90f) { 1f },
+        perVertexRounding = listOf(
+            CornerRounding(0.2f, 0.6f),
+            CornerRounding(0.85f, 0.6f),
+            CornerRounding(0.85f, 0.6f),
+        ),
+    )
+    AgentSilhouette.Tile -> softPolygon(sides = 4, rounding = 0.3f, startDeg = -35f)
+    AgentSilhouette.Sparkle -> softStar(points = 4, inner = 0.5f, tipRounding = 0.25f, valleyRounding = 0.2f)
+    AgentSilhouette.Cloud -> softStar(points = 3, inner = 0.68f, tipRounding = 0.6f, valleyRounding = 0.15f)
+    AgentSilhouette.Pebble -> softPolygon(sides = 5, rounding = 0.5f)
+    AgentSilhouette.Scallop -> softStar(points = 10, inner = 0.84f, tipRounding = 0.16f, valleyRounding = 0.06f)
+    AgentSilhouette.Clover -> softStar(points = 4, inner = 0.52f, tipRounding = 0.5f, valleyRounding = 0.12f, startDeg = -45f)
+    AgentSilhouette.Bean -> softRect(w = 2f, h = 1.4f, rounding = 0.65f)
+    AgentSilhouette.Triangle -> softPolygon(sides = 3, rounding = 0.3f, startDeg = 0f)
+    AgentSilhouette.Hexagon -> softPolygon(sides = 6, rounding = 0.25f)
+    AgentSilhouette.Star -> softStar(points = 5, inner = 0.55f, tipRounding = 0.15f, valleyRounding = 0.08f)
+    AgentSilhouette.Flower -> softStar(points = 6, inner = 0.72f, tipRounding = 0.35f, valleyRounding = 0.1f)
+    AgentSilhouette.Diamond -> softPolygon(sides = 4, rounding = 0.2f)
+    AgentSilhouette.Sunburst -> softStar(points = 12, inner = 0.8f, tipRounding = 0.08f, valleyRounding = 0.04f)
+}
+
+/** Builds a Compose [Path] from graphics-shapes cubics, scaled and offset. */
+private fun List<Cubic>.toPath(scale: Float, dx: Float, dy: Float): Path {
+    val path = Path()
+    if (isEmpty()) return path
+    val first = first()
+    path.moveTo(first.anchor0X * scale + dx, first.anchor0Y * scale + dy)
+    for (c in this) {
+        path.cubicTo(
+            c.control0X * scale + dx, c.control0Y * scale + dy,
+            c.control1X * scale + dx, c.control1Y * scale + dy,
+            c.anchor1X * scale + dx, c.anchor1Y * scale + dy,
+        )
+    }
+    path.close()
+    return path
+}
+
+/** Blink: eyes open most of the cycle, closed for a brief beat. */
+private const val BlinkCycleMs = 3600
+
+/**
+ * The Create Agent avatar: a silhouette in [fill], optionally with blinking
+ * eyes, morphing between shapes when [animateMorph] is on.
+ */
+@Composable
+private fun SilhouetteAvatar(
+    silhouette: AgentSilhouette,
+    fill: Color,
+    size: Dp,
+    shape: Shape,
+    contentDescription: String?,
+    showEyes: Boolean,
+    animateMorph: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var from by remember { mutableStateOf(silhouette) }
+    var to by remember { mutableStateOf(silhouette) }
+    val progress = remember { Animatable(1f) }
+    LaunchedEffect(silhouette, animateMorph) {
+        if (silhouette == to) return@LaunchedEffect
+        if (animateMorph) {
+            from = to
+            to = silhouette
+            progress.snapTo(0f)
+            progress.animateTo(
+                1f,
+                tween(TeamilyMotion.durationLarge, easing = TeamilyMotion.easeChange),
+            )
+        } else {
+            from = silhouette
+            to = silhouette
+            progress.snapTo(1f)
+        }
+    }
+    val drawnFrom = if (animateMorph) from else silhouette
+    val drawnTo = if (animateMorph) to else silhouette
+    val morph = remember(drawnFrom, drawnTo) { Morph(drawnFrom.polygon, drawnTo.polygon) }
+
+    val color = if (animateMorph) {
+        animateColorAsState(
+            fill,
+            tween(TeamilyMotion.durationLarge, easing = TeamilyMotion.easeChange),
+            label = "agentFill",
+        ).value
+    } else {
+        fill
+    }
+
+    val blink = if (showEyes) {
+        rememberInfiniteTransition(label = "agentBlink").animateFloat(
+            initialValue = 1f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                keyframes {
+                    durationMillis = BlinkCycleMs
+                    1f at BlinkCycleMs - 300
+                    0.1f at BlinkCycleMs - 180
+                    1f at BlinkCycleMs - 60
+                },
+            ),
+            label = "agentBlinkScale",
+        ).value
+    } else {
+        1f
+    }
+    val eyeColor = if (color.luminance() > 0.45f) AvatarInk else Color.White
+
+    Canvas(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else {
+                    Modifier.clearAndSetSemantics { }
+                },
+            ),
+    ) {
+        val cubics = morph.asCubics(progress.value)
+        val bounds = morph.calculateBounds()
+        val w = bounds[2] - bounds[0]
+        val h = bounds[3] - bounds[1]
+        if (w <= 0f || h <= 0f) return@Canvas
+        val box = this.size.minDimension * 0.84f
+        val scale = box / maxOf(w, h)
+        val dx = this.size.width / 2f - (bounds[0] + w / 2f) * scale
+        val dy = this.size.height / 2f - (bounds[1] + h / 2f) * scale
+        drawPath(cubics.toPath(scale, dx, dy), color = color)
+
+        if (showEyes) drawEyes(eyeColor, blink)
+    }
+}
+
+/** Two upright capsule eyes around the centre, squashed by [blink]. */
+private fun DrawScope.drawEyes(color: Color, blink: Float) {
+    val d = this.size.minDimension
+    val eyeW = d * 0.085f
+    val eyeH = d * 0.2f * blink
+    val gap = d * 0.1f
+    val cy = this.size.height / 2f
+    val cx = this.size.width / 2f
+    for (x in listOf(cx - gap - eyeW / 2f, cx + gap - eyeW / 2f)) {
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(x, cy - eyeH / 2f),
+            size = Size(eyeW, eyeH),
+            cornerRadius = CornerRadius(eyeW / 2f),
+        )
+    }
+}
+
 @Preview(name = "Create Agent — light", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun CreateAgentLight() = DuaGenAITheme(darkTheme = false) { CreateAgentScreen() }
@@ -717,11 +599,3 @@ private fun CreateAgentLight() = DuaGenAITheme(darkTheme = false) { CreateAgentS
 @Preview(name = "Create Agent — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun CreateAgentDark() = DuaGenAITheme(darkTheme = true) { CreateAgentScreen() }
-
-@Preview(name = "Cube picker — light", showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-private fun CubePickerLight() = DuaGenAITheme(darkTheme = false) { CubePickerScreen() }
-
-@Preview(name = "Cube picker — dark", showBackground = true, widthDp = 390, heightDp = 844)
-@Composable
-private fun CubePickerDark() = DuaGenAITheme(darkTheme = true) { CubePickerScreen() }
