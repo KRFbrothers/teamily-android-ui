@@ -129,6 +129,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
@@ -1392,7 +1393,7 @@ internal fun PersonalAgentHeroCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
-                ring = if (palette.borderStrong == null) palette.cardHeroColor else Color.White,
+                ring = if (palette.borderStrong == null) palette.cardHeroColor else TeamilyMarks.paper,
                 miniBadge = true,
                 size = 46.dp,
                 mini = {
@@ -1403,7 +1404,7 @@ internal fun PersonalAgentHeroCard(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFF3E8EE)),
+                        .background(TeamilyMarks.heroAvatarFill),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
@@ -1630,7 +1631,7 @@ internal fun VerifiedCheck() {
         }
         drawPath(
             p,
-            color = Color.White,
+            color = TeamilyMarks.paper,
             style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
@@ -1826,7 +1827,7 @@ private fun AgentHomeList(
                         onClick = { onOpenListedChat(item.id, item.title) },
                     ) {
                         ChatAvatar(
-                            ring = if (palette.borderStrong == null) palette.bgCanvas else Color.White,
+                            ring = if (palette.borderStrong == null) palette.bgCanvas else TeamilyMarks.paper,
                             miniBadge = true,
                             size = 46.dp,
                             mini = { AppBadge(size = 15.dp, shape = CircleShape) },

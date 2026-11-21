@@ -59,7 +59,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -70,6 +69,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
@@ -380,7 +380,7 @@ private fun OrchestrationRow(
         ) {
             Text(
                 text = status,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium, fontSize = 11.sp),
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal, fontSize = 11.sp),
                 color = palette.signalGreen,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
@@ -420,7 +420,7 @@ private fun DuaAgentBubble(
                         fontSize = 13.5.sp,
                         lineHeight = 18.sp,
                     ),
-                    color = if (isUser) Color.Black else MaterialTheme.colorScheme.onSurface,
+                    color = if (isUser) TeamilyMarks.ink else MaterialTheme.colorScheme.onSurface,
                 )
                 if (message.subAgentsActive.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
@@ -448,7 +448,7 @@ private fun DuaAgentBubble(
                 Text(
                     text = message.time,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp),
-                    color = if (isUser) Color.Black.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isUser) TeamilyMarks.ink.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.End),
                 )
             }

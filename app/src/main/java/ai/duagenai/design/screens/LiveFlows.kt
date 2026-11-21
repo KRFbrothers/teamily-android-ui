@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.selection.toggleable
@@ -96,6 +97,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.teamilyPalette
@@ -329,7 +331,7 @@ internal val CREATE_TILES = listOf(
         "Landing page, portfolio ya microsite — ek prompt se.",
         "Kaisi website chahiye? Sections, tone aur colour bata do…",
         listOf("Sections aur content likho", "Theme aur tone chuno", "Publish karke live URL lo"),
-        Color(0xFF4285F4),
+        TeamilyMarks.tileWebsite,
     ),
     CreateTile(
         "document", "Document", "Document likho",
@@ -343,28 +345,28 @@ internal val CREATE_TILES = listOf(
         "Deck ya pitch — poore slides, template ke saath.",
         "Kitne slides chahiye aur kis topic par?…",
         listOf("Story aur slide count do", "Template choose karo", "Deck preview me khulega"),
-        Color(0xFFF4B400),
+        TeamilyMarks.tileSlides,
     ),
     CreateTile(
         "spreadsheet", "Spreadsheet", "Spreadsheet banao",
         "Tables, budget, tracker — formulas ke saath.",
         "Kaunse columns chahiye? Data ka source bata do…",
         listOf("Columns aur rows define karo", "Formulas add karo", "Excel file download hogi"),
-        Color(0xFF0F9D58),
+        TeamilyMarks.tileSheet,
     ),
     CreateTile(
         "image", "Image", "Image banao",
         "Illustration, banner ya icon — prompt se.",
         "Kya dikhana hai? Style, mood aur ratio bata do…",
         listOf("Scene aur style likho", "Ratio chuno", "Image gallery me milegi"),
-        Color(0xFFAB47BC),
+        TeamilyMarks.tileImage,
     ),
     CreateTile(
         "video", "Video", "Video banao",
         "Chhote clips — text ya reference image se.",
         "Kya ho raha hai clip me? Camera aur mood bata do…",
         listOf("Prompt ya reference image do", "Duration aur ratio chuno", "Clip render hoke milega"),
-        Color(0xFFEC407A),
+        TeamilyMarks.tileVideo,
         pro = true,
     ),
     CreateTile(
@@ -372,14 +374,14 @@ internal val CREATE_TILES = listOf(
         "Songs ya instrumental — genre aur mood se.",
         "Genre, mood aur tempo bata do. Lyrics chahiye?…",
         listOf("Genre aur mood likho", "Instrumental ya vocals?", "Audio file milegi"),
-        Color(0xFF7986CB),
+        TeamilyMarks.tileMusic,
     ),
     CreateTile(
         "model", "3D model", "3D model banao",
         "Props aur characters — text ya image se.",
         "Kya banana hai? Style aur detail level bata do…",
         listOf("Object aur style likho", "Polygon budget chuno", "GLB / FBX milega"),
-        Color(0xFF4DD0E1),
+        TeamilyMarks.tileModel,
     ),
 )
 
@@ -569,8 +571,8 @@ internal fun PublicProfileScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(spacing.sm))
-            PublicAgentRow("Webpage Developer", Color(0xFF79C79A))
-            PublicAgentRow("Feishu Integration Developer", Color(0xFFE0D7FF))
+            PublicAgentRow("Webpage Developer", TeamilyMarks.publicAgentMint)
+            PublicAgentRow("Feishu Integration Developer", TeamilyMarks.publicAgentLilac)
         }
     }
 }
@@ -995,6 +997,7 @@ internal fun LanguageScreen(
     FlowPage(title = "Language", onBack = onBack) {
         Column(
             Modifier
+                .selectableGroup()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = spacing.xxl),
         ) {

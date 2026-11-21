@@ -2,7 +2,6 @@ package ai.duagenai.design.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -150,7 +150,7 @@ fun AppearanceScreen(
                     shape = DuaGenAITheme.shapes.card,
                     color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Column {
+                    Column(Modifier.selectableGroup()) {
                         ThemeMode.values().forEachIndexed { index, mode ->
                             if (index > 0) HorizontalDivider(color = colors.hairline)
                             ThemeRow(
@@ -229,14 +229,14 @@ private fun ThemeRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
             .sizeIn(minHeight = 48.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = spacing.md, vertical = spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(
             selected = selected,
-            onClick = onClick,
+            onClick = null,
         )
         Spacer(Modifier.width(spacing.sm))
         Text(
@@ -257,7 +257,10 @@ private fun ShapeGrid(
     onShape: (BotShape) -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(spacing.xs),
+    ) {
         BotShape.values().toList().chunked(ShapeColumns).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -312,7 +315,10 @@ private fun ColorGrid(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val hairline = DuaGenAITheme.colors.hairline
-    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+    ) {
         BotColor.values().toList().chunked(6).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
