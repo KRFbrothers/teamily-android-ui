@@ -33,4 +33,4 @@ Dependencies: Do NOT add or upgrade libraries in gradle/libs.versions.toml or bu
 Autonomous Execution (Non-Coder Friendly): Execute all code edits, Gradle commands, test runs, and root-cause fixes autonomously. Never ask the user to manually edit code or read raw stacktraces. Report results in simple Hinglish.
 Ambiguity Gate: If requirements or UI/architecture choices are unclear, STOP before editing, present 4 distinct options + 1 clear recommendation, and wait for approval.
 No Skipped Tests: Never mark failing tests @Ignore or delete assertions to force a green build.
-Branch & PR Hygiene: After verification passes and secrets are checked (git status / git diff), push changes to a clean feat/... or fix/... branch and open a Pull Request with a simple Hinglish summary. Always ask for approval before merging PRs or deleting branches.
+Branch & PR Hygiene: After verification passes and secrets are checked (git status / git diff), push changes to a clean feat/... or fix/... branch and open a Pull Request with a simple Hinglish summary. Always ask for approval before merging PRs or deleting branches
