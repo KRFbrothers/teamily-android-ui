@@ -90,6 +90,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.duagenai.design.theme.DuaGenAITheme
+import ai.duagenai.design.theme.TeamilyLightPalette
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.TeamilyPalette
 import ai.duagenai.design.theme.teamilyPalette
 
@@ -141,37 +143,37 @@ data class AgentColors(
 
 fun agentColors(p: TeamilyPalette, dark: Boolean): AgentColors = AgentColors(
     ink = p.textPrimary, ink2 = p.textSecondary,
-    dim = if (dark) Color(0xFF8A958E) else Color(0xFF5C6D63),
+    dim = if (dark) TeamilyMarks.dimDark else p.textSecondary,
     border = p.border, chrome = p.chromeFill, recessed = p.surfaceRecessed,
     topbar = p.topbarBg, body = p.bgElevated,
-    hairline = if (dark) Color(0xFF343A36) else Color(0xFFDDE6E0),
+    hairline = if (dark) TeamilyMarks.hairlineDark else p.border,
     atmosphereDeep = p.atmosphereDeep, atmosphereStop = if (dark) 0.48f else 0.52f,
     plusFill = p.plusFill, plusIcon = p.plusIcon, primaryInk = p.primaryInk, dangerInk = p.dangerInk,
-    aiFill = if (dark) Color(0xFF224735) else Color(0xFFDDF3E5), aiInk = p.primaryInk,
-    well = if (dark) Color(0xFF545B56) else Color(0xFFEEF2EF),
-    wellInk = if (dark) Color(0xFFA2E4B6) else Color(0xFF087C45),
-    wellConnectors = if (dark) Color(0xFF1B3A5C) else Color(0xFFD7E3F4),
-    wellConnectorsInk = if (dark) Color(0xFF8BB4E0) else Color(0xFF1B4A7A),
-    wellMute = if (dark) Color(0xFF4A3218) else Color(0xFFF3E6D4),
-    wellMuteInk = if (dark) Color(0xFFE0C08A) else Color(0xFF7A4E18),
-    wellPin = if (dark) Color(0xFF1E2A6A) else Color(0xFFD9DCF6),
-    wellPinInk = if (dark) Color(0xFFA8B0F0) else Color(0xFF2A2F7A),
-    track = if (dark) Color(0xFF3A423D) else Color(0xFFDDE6E0),
-    thumb = if (dark) Color(0xFFD1DAD3) else Color(0xFFFFFFFF),
-    trackOn = if (dark) Color(0xFFA2E4B6) else p.accent,
-    thumbOn = if (dark) Color(0xFF17201B) else Color(0xFFFFFFFF),
-    unread = if (dark) Color(0xFFA2E4B6) else Color(0xFFDDF3E5),
-    unreadInk = if (dark) Color(0xFF17201B) else Color(0xFF066A3B),
-    needsYou = if (dark) Color(0xFFE0A04A) else Color(0xFFC47A22),
-    scrim = if (dark) Color(0xA8000000) else Color(0x99000000),
-    sheet = p.topbarBg, button = p.accent, buttonInk = Color(0xFFFFFFFF),
+    aiFill = if (dark) TeamilyMarks.aiFillDark else p.primarySoft, aiInk = p.primaryInk,
+    well = if (dark) p.navSelected else p.chromeFill,
+    wellInk = if (dark) p.primaryInk else p.accent,
+    wellConnectors = if (dark) TeamilyMarks.wellConnectorsDark else TeamilyMarks.wellConnectorsLight,
+    wellConnectorsInk = if (dark) TeamilyMarks.wellConnectorsInkDark else TeamilyMarks.wellConnectorsInkLight,
+    wellMute = if (dark) TeamilyMarks.wellMuteDark else TeamilyMarks.wellMuteLight,
+    wellMuteInk = if (dark) TeamilyMarks.wellMuteInkDark else TeamilyMarks.wellMuteInkLight,
+    wellPin = if (dark) TeamilyMarks.wellPinDark else TeamilyMarks.wellPinLight,
+    wellPinInk = if (dark) TeamilyMarks.wellPinInkDark else TeamilyMarks.wellPinInkLight,
+    track = if (dark) TeamilyMarks.trackDark else p.border,
+    thumb = if (dark) TeamilyMarks.thumbDark else p.accentContrast,
+    trackOn = if (dark) p.primaryInk else p.accent,
+    thumbOn = if (dark) p.tileInk else p.accentContrast,
+    unread = if (dark) p.primaryInk else p.primarySoft,
+    unreadInk = if (dark) p.tileInk else p.primaryInk,
+    needsYou = if (dark) TeamilyMarks.needsYouDark else TeamilyMarks.needsYouLight,
+    scrim = if (dark) TeamilyMarks.scrimDark else TeamilyMarks.scrimLight,
+    sheet = p.topbarBg, button = p.accent, buttonInk = TeamilyMarks.paper,
     tabIdle = p.textSecondary, tabActive = p.textPrimary, tabUnderline = p.logoMint,
-    focusRing = if (dark) Color(0xFF91D9A8) else Color(0xFF087C45),
-    dashed = if (dark) Color(0xFF4B5750) else Color(0xFFC9D5CD),
+    focusRing = if (dark) p.accentHover else p.accent,
+    dashed = if (dark) TeamilyMarks.dashedDark else (p.borderStrong ?: TeamilyMarks.dashedLight),
     emptyIconBg = p.chromeFill,
-    handle = if (dark) Color(0xFF545B56) else Color(0xFFC9D5CD),
+    handle = if (dark) p.navSelected else (p.borderStrong ?: TeamilyMarks.dashedLight),
     navSelected = p.navSelected, navSelectedInk = p.navSelectedContent, surface = p.bgSurface,
-    notionMark = if (dark) Color(0xFFFFFFFF) else Color(0xFF000000), isDark = dark,
+    notionMark = if (dark) TeamilyMarks.paper else TeamilyMarks.ink, isDark = dark,
     badge = if (dark) p.logoMint else p.accent, badgeInk = p.accentContrast,
 )
 
@@ -182,8 +184,7 @@ private fun rememberAgentColors(): AgentColors {
     return remember(p) { agentColors(p, dark = p.textPrimary.luminance() > 0.5f) }
 }
 
-private val Mint = Color(0xFF42D982)
-private val TileInk = Color(0xFF17201B)
+
 
 // ---------------------------------------------------------------------------
 // Type — Lato family from the theme, sizes / line heights from the SVGs
@@ -262,11 +263,11 @@ private fun agentVector(name: String, strokeWidth: Float = 1.75f): ImageVector =
         )
         for (part in ICONS.getValue(name)) {
             if (part.filled) {
-                b.addPath(pathData = addPathNodes(part.d), fill = SolidColor(Color.Black))
+                b.addPath(pathData = addPathNodes(part.d), fill = SolidColor(TeamilyMarks.ink))
             } else {
                 b.addPath(
                     pathData = addPathNodes(part.d),
-                    stroke = SolidColor(Color.Black),
+                    stroke = SolidColor(TeamilyMarks.ink),
                     strokeLineWidth = strokeWidth,
                     strokeLineCap = StrokeCap.Round,
                     strokeLineJoin = StrokeJoin.Round,
@@ -308,17 +309,19 @@ private fun Modifier.agentAtmosphere(base: Color, c: AgentColors): Modifier = th
 /** Mint circle with the cube glyph in its inner 62%, optional mini cube badge. */
 @Composable
 fun AgentCubeAvatar(size: Dp, modifier: Modifier = Modifier, badge: Dp = 0.dp, ring: Color = Color.Transparent) {
+    val mint = teamilyPalette().logoMint
+    val tileInk = teamilyPalette().tileInk
     Box(modifier.size(size)) {
-        Box(Modifier.fillMaxSize().clip(CircleShape).background(Mint), contentAlignment = Alignment.Center) {
-            AgentIcon("glyph", size * 0.62f, TileInk)
+        Box(Modifier.fillMaxSize().clip(CircleShape).background(mint), contentAlignment = Alignment.Center) {
+            AgentIcon("glyph", size * 0.62f, tileInk)
         }
         if (badge > 0.dp) {
             val c = size / 2 * 1.62f
             Box(Modifier.offset(c - badge / 2 - 2.dp, c - badge / 2 - 2.dp).size(badge + 4.dp).clip(CircleShape).background(ring))
             Box(
-                Modifier.offset(c - badge / 2, c - badge / 2).size(badge).clip(CircleShape).background(Mint),
+                Modifier.offset(c - badge / 2, c - badge / 2).size(badge).clip(CircleShape).background(mint),
                 contentAlignment = Alignment.Center,
-            ) { AgentIcon("glyph", badge * 0.62f, TileInk, strokeWidth = 1.5f) }
+            ) { AgentIcon("glyph", badge * 0.62f, tileInk, strokeWidth = 1.5f) }
         }
     }
 }
@@ -959,47 +962,47 @@ private class Brand(val d: String, val fill: Color? = null, val stroke: Color? =
 
 private fun brandMarks(key: String, notion: Color): List<Brand> = when (key) {
     "gmail" -> listOf(
-        Brand("M 2.2 6.4 c 0 -1 .8 -1.8 1.8 -1.8 h 16 c 1 0 1.8 .8 1.8 1.8 v 11.2 c 0 1 -.8 1.8 -1.8 1.8 h -16 A 1.8 1.8 0 0 1 2.2 17.6 z", Color(0xFFEA4335)),
-        Brand("M3 6.2l9 7 9-7v2.2L12 15.6 3 8.4z", Color.White),
-        Brand("M 3 8.2 L 12 15.2 V 19 H 4.2 A 1.2 1.2 0 0 1 3 17.8 z", Color(0xFFC5221F), alpha = 0.35f),
+        Brand("M 2.2 6.4 c 0 -1 .8 -1.8 1.8 -1.8 h 16 c 1 0 1.8 .8 1.8 1.8 v 11.2 c 0 1 -.8 1.8 -1.8 1.8 h -16 A 1.8 1.8 0 0 1 2.2 17.6 z", TeamilyMarks.gmail),
+        Brand("M3 6.2l9 7 9-7v2.2L12 15.6 3 8.4z", TeamilyMarks.paper),
+        Brand("M 3 8.2 L 12 15.2 V 19 H 4.2 A 1.2 1.2 0 0 1 3 17.8 z", TeamilyMarks.gmailFold, alpha = 0.35f),
     )
     "calendar" -> listOf(
-        Brand(rrect(3f, 3.4f, 18f, 17.2f, 2.4f), Color.White),
-        Brand("M3 3.4h18v5.2H3z", Color(0xFF4285F4)),
-        Brand(circle(7.2f, 6f, 0.9f), Color.White),
-        Brand(circle(16.8f, 6f, 0.9f), Color.White),
+        Brand(rrect(3f, 3.4f, 18f, 17.2f, 2.4f), TeamilyMarks.paper),
+        Brand("M3 3.4h18v5.2H3z", TeamilyMarks.googleBlue),
+        Brand(circle(7.2f, 6f, 0.9f), TeamilyMarks.paper),
+        Brand(circle(16.8f, 6f, 0.9f), TeamilyMarks.paper),
     )
     "notion" -> listOf(Brand("M6 4.2h3.4L16.2 15V4.2H19V19.8h-3.4L7.8 9v10.8H5V4.2z", notion))
     "sheets" -> listOf(
-        Brand(rrect(3.6f, 2.8f, 16.8f, 18.4f, 2f), Color(0xFF34A853)),
-        Brand("M7 8.4h10M7 12h10M7 15.6h10M10.4 8.4v10.4", stroke = Color.White),
+        Brand(rrect(3.6f, 2.8f, 16.8f, 18.4f, 2f), TeamilyMarks.googleGreen),
+        Brand("M7 8.4h10M7 12h10M7 15.6h10M10.4 8.4v10.4", stroke = TeamilyMarks.paper),
     )
     "slack" -> listOf(
-        Brand(rrect(9.4f, 2.4f, 5.2f, 8.2f, 2.6f), Color(0xFFE01E5A)),
-        Brand(rrect(13.4f, 9.4f, 8.2f, 5.2f, 2.6f), Color(0xFF36C5F0)),
-        Brand(rrect(9.4f, 13.4f, 5.2f, 8.2f, 2.6f), Color(0xFF2EB67D)),
-        Brand(rrect(2.4f, 9.4f, 8.2f, 5.2f, 2.6f), Color(0xFFECB22E)),
+        Brand(rrect(9.4f, 2.4f, 5.2f, 8.2f, 2.6f), TeamilyMarks.slackMagenta),
+        Brand(rrect(13.4f, 9.4f, 8.2f, 5.2f, 2.6f), TeamilyMarks.slackCyan),
+        Brand(rrect(9.4f, 13.4f, 5.2f, 8.2f, 2.6f), TeamilyMarks.slackGreen),
+        Brand(rrect(2.4f, 9.4f, 8.2f, 5.2f, 2.6f), TeamilyMarks.slackYellow),
     )
-    "supabase" -> listOf(Brand("M14.4 2.6L4.6 13.8h6.2L8.4 21.4 19.4 10H13.2L16.6 2.6z", Color(0xFF3ECF8E)))
+    "supabase" -> listOf(Brand("M14.4 2.6L4.6 13.8h6.2L8.4 21.4 19.4 10H13.2L16.6 2.6z", TeamilyMarks.supabase))
     "outlook" -> listOf(
-        Brand(rrect(2.4f, 6f, 19.2f, 12.6f, 1.6f), Color(0xFF0078D4)),
-        Brand("M3.2 7.2L12 13.2l8.8-6", stroke = Color.White),
+        Brand(rrect(2.4f, 6f, 19.2f, 12.6f, 1.6f), TeamilyMarks.microsoft),
+        Brand("M3.2 7.2L12 13.2l8.8-6", stroke = TeamilyMarks.paper),
     )
     "twitter" -> listOf(
         Brand(
             "M 22 5.8 a 8.2 8.2 0 0 1 -2.36 .65 4.1 4.1 0 0 0 1.8 -2.27 8.2 8.2 0 0 1 -2.6 1 4.1 4.1 0 0 0 -7 3.74 11.65 11.65 0 0 1 -8.45 -4.29 4.1 4.1 0 0 0 1.27 5.48 4.07 4.07 0 0 1 -1.86 -.51 v .05 a 4.1 4.1 0 0 0 3.29 4.02 4.1 4.1 0 0 1 -1.85 .07 4.1 4.1 0 0 0 3.83 2.85 A 8.23 8.23 0 0 1 2 18.4 a 11.62 11.62 0 0 0 6.29 1.84 c 7.55 0 11.68 -6.25 11.68 -11.67 0 -.18 0 -.36 -.01 -.53 A 8.35 8.35 0 0 0 22 5.8 z",
-            Color(0xFF1DA1F2),
+            TeamilyMarks.twitter,
         ),
     )
     "drive" -> listOf(
-        Brand("M12 3.2L4.2 16.8h5.4L14.6 9z", Color(0xFF34A853)),
-        Brand("M12 3.2L19.8 16.8h-5.4L9.4 9z", Color(0xFF4285F4)),
-        Brand("M4.2 16.8L7.4 21.2h9.2l3.2-4.4z", Color(0xFFFBBC05)),
+        Brand("M12 3.2L4.2 16.8h5.4L14.6 9z", TeamilyMarks.googleGreen),
+        Brand("M12 3.2L19.8 16.8h-5.4L9.4 9z", TeamilyMarks.googleBlue),
+        Brand("M4.2 16.8L7.4 21.2h9.2l3.2-4.4z", TeamilyMarks.googleYellow),
     )
     "docs" -> listOf(
-        Brand("M 6 2.8 h 8.2 L 19.2 8 v 13.2 A 1.4 1.4 0 0 1 17.8 22.6 H 6 A 1.4 1.4 0 0 1 4.6 21.2 V 4.2 A 1.4 1.4 0 0 1 6 2.8 z", Color(0xFF4285F4)),
-        Brand("M14.2 2.8V7.4c0 .5.4.9.9.9h4.1z", Color(0xFF1967D2)),
-        Brand("M7.6 12.2h8.8M7.6 15.2h8.8M7.6 18.2h6.2", stroke = Color.White),
+        Brand("M 6 2.8 h 8.2 L 19.2 8 v 13.2 A 1.4 1.4 0 0 1 17.8 22.6 H 6 A 1.4 1.4 0 0 1 4.6 21.2 V 4.2 A 1.4 1.4 0 0 1 6 2.8 z", TeamilyMarks.googleBlue),
+        Brand("M14.2 2.8V7.4c0 .5.4.9.9.9h4.1z", TeamilyMarks.googleBlueDeep),
+        Brand("M7.6 12.2h8.8M7.6 15.2h8.8M7.6 18.2h6.2", stroke = TeamilyMarks.paper),
     )
     else -> emptyList()
 }
@@ -1024,7 +1027,7 @@ private fun AppTile(key: String, c: AgentColors) {
     Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(c.surface), contentAlignment = Alignment.Center) {
         Image(painter = rememberVectorPainter(vector), contentDescription = null, modifier = Modifier.size(24.dp))
         if (key == "calendar") {
-            Text("31", style = t(9, 9, true), color = Color(0xFF4285F4), textAlign = TextAlign.Center, modifier = Modifier.offset(y = 3.dp))
+            Text("31", style = t(9, 9, true), color = TeamilyMarks.googleBlue, textAlign = TextAlign.Center, modifier = Modifier.offset(y = 3.dp))
         }
     }
 }
@@ -1101,7 +1104,7 @@ internal fun GroupCluster() {
                     .offset(pos.x.dp, pos.y.dp)
                     .size(s)
                     .clip(CircleShape)
-                    .border(1.5.dp, Color(0xFF1D2220), CircleShape),
+                    .border(1.5.dp, TeamilyMarks.clusterRing, CircleShape),
             )
         }
     }
@@ -1133,9 +1136,9 @@ private fun ConversationRow(
             ) {
                 Text(title, style = t(14, 18, true), color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (plus) {
-                    Box(Modifier.padding(top = 1.dp).height(15.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF9A7BFF))) {
-                        AgentIcon("star", 9.dp, TileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
-                        Text("PLUS", style = t(11, 14, true), color = TileInk, modifier = Modifier.padding(start = 14.dp, end = 8.dp))
+                    Box(Modifier.padding(top = 1.dp).height(15.dp).clip(RoundedCornerShape(8.dp)).background(TeamilyLightPalette.tileViolet)) {
+                        AgentIcon("star", 9.dp, TeamilyLightPalette.tileInk, Modifier.offset(4.dp, 3.dp), strokeWidth = 1.2f)
+                        Text("PLUS", style = t(11, 14, true), color = TeamilyLightPalette.tileInk, modifier = Modifier.padding(start = 14.dp, end = 8.dp))
                     }
                 }
             }
@@ -1571,21 +1574,21 @@ fun DuaAgentMailScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier) {
 private fun ColoredAgentAvatar(fill: Color, ring: Color) {
     Box(Modifier.size(32.dp)) {
         Box(Modifier.fillMaxSize().clip(CircleShape).background(fill), contentAlignment = Alignment.Center) {
-            AgentIcon("glyph", 17.6.dp, TileInk, strokeWidth = 1.5f)
+            AgentIcon("glyph", 17.6.dp, TeamilyLightPalette.tileInk, strokeWidth = 1.5f)
         }
         Box(Modifier.offset(17.32.dp, 17.32.dp).size(17.2.dp).clip(CircleShape).background(ring))
-        Box(Modifier.offset(18.92.dp, 18.92.dp).size(14.dp).clip(CircleShape).background(Mint), contentAlignment = Alignment.Center) {
-            AgentIcon("glyph", 9.dp, TileInk, strokeWidth = 1.2f)
+        Box(Modifier.offset(18.92.dp, 18.92.dp).size(14.dp).clip(CircleShape).background(TeamilyLightPalette.logoMint), contentAlignment = Alignment.Center) {
+            AgentIcon("glyph", 9.dp, TeamilyLightPalette.tileInk, strokeWidth = 1.2f)
         }
     }
 }
 
 private val GROUP_AGENTS = listOf(
-    Color(0xFFF6C945) to "Finance Assistant",
-    Color(0xFFE07A3D) to "Slides Assistant",
-    Color(0xFF3EC0EA) to "Webpage Developer",
-    Color(0xFF2DD4BF) to "Travel Planner",
-    Color(0xFF9BE3B8) to "Health Assistant",
+    TeamilyLightPalette.tileYellow to "Finance Assistant",
+    TeamilyMarks.assistantSlides to "Slides Assistant",
+    TeamilyLightPalette.tileCyan to "Webpage Developer",
+    TeamilyMarks.assistantTravel to "Travel Planner",
+    TeamilyLightPalette.tileMint to "Health Assistant",
 )
 
 /** SVG 13 — New Group (Custom Group selected, Agents tab, Members Pay). */

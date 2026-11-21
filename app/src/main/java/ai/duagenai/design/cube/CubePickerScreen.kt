@@ -5,6 +5,8 @@ import ai.duagenai.design.screens.MinTouchTarget
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
+import ai.duagenai.design.theme.TeamilyLightPalette
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.TeamilyMotion
 import ai.duagenai.design.theme.TeamilyPalette
 import ai.duagenai.design.theme.teamilyPalette
@@ -106,7 +108,7 @@ import kotlin.math.sin
  * ==========================================================================*/
 
 /** The eye ink for the Create Agent silhouette on a light body. */
-private val AvatarInk = Color(0xFF17201B)
+private val AvatarInk = TeamilyLightPalette.tileInk
 
 /** Shapes per row in the Create Agent grid (15 shapes = 3 rows). */
 private const val CreateAgentShapeColumns = 5
@@ -629,7 +631,7 @@ private fun SilhouetteAvatar(
     } else {
         1f
     }
-    val eyeColor = if (color.luminance() > 0.45f) AvatarInk else Color.White
+    val eyeColor = if (color.luminance() > 0.45f) AvatarInk else TeamilyMarks.paper
 
     Canvas(
         modifier = modifier

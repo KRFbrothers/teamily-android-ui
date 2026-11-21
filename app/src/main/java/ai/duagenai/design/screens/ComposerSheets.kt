@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ai.duagenai.design.theme.DuaGenAITextStyles
+import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
@@ -183,10 +184,10 @@ private fun CreateTileButton(
                     text = "Pro",
                     modifier = Modifier
                         .clip(TeamilyShapes.capsule)
-                        .background(Color(0xFF2E7D32))
+                        .background(TeamilyMarks.proBadge)
                         .padding(horizontal = 4.dp, vertical = 1.dp),
                     style = DuaGenAITextStyles.meta.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White,
+                    color = TeamilyMarks.paper,
                 )
             }
         }

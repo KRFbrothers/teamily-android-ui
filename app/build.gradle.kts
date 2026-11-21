@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 /* ============================================================================
@@ -103,10 +104,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-P",
-            "plugin:androidx.compose.compiler.plugins.kotlin:strongSkipping=true",
-        )
     }
 
     buildFeatures {
@@ -115,11 +112,6 @@ android {
         // above. AGP 8.x turns BuildConfig generation off by default, so without
         // this the fields do not exist and ApiConfig would not compile.
         buildConfig = true
-    }
-
-    composeOptions {
-        // Matches Kotlin 1.9.24 (see the root build file).
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     packaging {
@@ -141,8 +133,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
 
     // Compose BOM pins every Compose artifact to one compatible set.
-    // 2024.09.02 ships Material3 1.3.0, which is where PullToRefreshBox lives.
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
+    // 2026.04.01 ships Material3 1.4.0 (public APIs only; expressive APIs stay internal).
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -152,8 +144,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Create Agent's shape morph (Morph + RoundedPolygon). 1.0.1 is the
-    // newest stable that still runs on Kotlin 1.9.24; 1.1.0 needs Kotlin 2.0.
+    // Create Agent's shape morph (Morph + RoundedPolygon).
     implementation("androidx.graphics:graphics-shapes:1.0.1")
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
