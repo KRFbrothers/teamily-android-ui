@@ -29,8 +29,10 @@ import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
@@ -75,11 +77,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -330,7 +334,7 @@ fun HomeScreen(
 
     val palette = teamilyPalette()
     // Dua home's draft: one short string, so rememberSaveable (rotation-safe).
-    var duaDraft by rememberSaveable { mutableStateOf("") }
+    val duaDraftState = rememberSaveable(saver = TextFieldState.Saver) { TextFieldState("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.composer_coming_soon)
@@ -383,12 +387,11 @@ fun HomeScreen(
                         // Attach / Voice taps explain themselves here.
                         SnackbarHost(snackbarHostState)
                         DuaComposer(
-                            value = duaDraft,
-                            onValueChange = { duaDraft = it },
+                            state = duaDraftState,
                             onSend = {
-                                val text = duaDraft.trim()
+                                val text = duaDraftState.text.toString().trim()
                                 if (text.isNotEmpty()) {
-                                    duaDraft = ""
+                                    duaDraftState.edit { replace(0, length, "") }
                                     onSendDuaMessage(text)
                                 }
                             },
@@ -688,6 +691,7 @@ private fun ModeToggle(
 @Composable
 internal fun DuaComposer(
     placeholder: String = "Ask Dua ...",
+    state: TextFieldState? = null,
     value: String? = null,
     onValueChange: ((String) -> Unit)? = null,
     onSend: (() -> Unit)? = null,
@@ -722,10 +726,12 @@ internal fun DuaComposer(
     voiceEnabled: Boolean = false,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    // Editable only when a caller supplies a change handler. This is the single
-    // switch between "Dua's presentational pill" and "a thread's live composer".
-    val editable = onValueChange != null
-    val canSend = editable && !value.isNullOrBlank() && !sending
+    // Editable only when a caller supplies a change handler or a TextFieldState.
+    // This is the single switch between "Dua's presentational pill" and "a thread's live composer".
+    val editable = state != null || onValueChange != null
+    val fieldState = state ?: if (editable) rememberTextFieldState(initialText = value.orEmpty()) else null
+    val hasContent = fieldState?.text?.isNotBlank() ?: !value.isNullOrBlank()
+    val canSend = editable && hasContent && !sending
     val live = editable && onStop != null
     val agentTools = onToggleSkill != null && onToggleMcp != null
     val plusLive = agentTools || attachEnabled
@@ -767,26 +773,43 @@ internal fun DuaComposer(
                     onClick = { sheet = ComposerSheet.Plus },
                     onDisabledClick = onUnavailable,
                 )
-                if (editable) {
+                if (editable && fieldState != null) {
+                    if (state == null) {
+                        LaunchedEffect(value) {
+                            val currentText = value.orEmpty()
+                            if (fieldState.text.toString() != currentText) {
+                                fieldState.edit {
+                                    replace(0, length, currentText)
+                                }
+                            }
+                        }
+                        LaunchedEffect(fieldState) {
+                            snapshotFlow { fieldState.text.toString() }
+                                .collect { newText ->
+                                    if (newText != value) {
+                                        onValueChange?.invoke(newText)
+                                    }
+                                }
+                        }
+                    }
+                    val canSendLive = editable && fieldState.text.isNotBlank() && !sending
                     BasicTextField(
-                        value = value.orEmpty(),
-                        onValueChange = onValueChange!!,
+                        state = fieldState,
                         modifier = Modifier.weight(1f).heightIn(min = 38.dp),
                         textStyle = DuaGenAITextStyles.bubble.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.5.sp,
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        maxLines = 4,
+                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 4),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(
-                            // Guarded: blank text or an in-flight reply never sends.
-                            onSend = { if (canSend) onSend?.invoke() },
-                        ),
-                        decorationBox = { innerTextField ->
+                        onKeyboardAction = {
+                            if (canSendLive) onSend?.invoke()
+                        },
+                        decorator = { innerTextField ->
                             // Centres the hint + text inside the >=48dp field box.
                             Box(contentAlignment = Alignment.CenterStart) {
-                                if (value.isNullOrEmpty()) {
+                                if (fieldState.text.isEmpty()) {
                                     Text(
                                         text = placeholder,
                                         style = DuaGenAITextStyles.bubble,
@@ -834,7 +857,7 @@ internal fun DuaComposer(
                 SendStopVoiceButton(
                     mode = when {
                         sending && live -> SendMode.Stop
-                        editable && !value.isNullOrBlank() -> SendMode.Send
+                        editable && hasContent -> SendMode.Send
                         else -> SendMode.Voice
                     },
                     onSend = { if (canSend) onSend?.invoke() },
