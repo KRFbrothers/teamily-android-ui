@@ -113,6 +113,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.painter.Painter
@@ -1072,8 +1073,8 @@ internal const val DUA_AGENT_TIME = "Mon"
 internal const val APP_NAME = "Dua Gen AI"
 
 /**
- * Agent home's header: 48dp circular user avatar (opens the drawer) · 32dp
- * rounded-square app badge + 21sp bold "Dua Gen AI" · 48dp circular plus (New group).
+ * Agent home's header: 48dp circular user avatar (opens the drawer) · 28dp
+ * rounded-square app badge + 20sp "Dua Gen AI" · 42dp plus inside a 48dp target.
  * No Dua | Agent toggle here — the way back to Dua is the drawer's "Dua" row.
  */
 @Composable
@@ -1116,18 +1117,18 @@ private fun AgentHomeTopBar(
             }
         }
 
-        // CENTER — badge + app name.
+        // CENTER — badge + app name. Compact, with 8dp between them.
         Row(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(size = 32.dp, shape = TeamilyShapes.xs)
-            Spacer(Modifier.width(spacing.sm))
+            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = APP_NAME,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontSize = 22.sp,
-                    lineHeight = 26.sp,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.01).em,
                 ),
@@ -1136,24 +1137,29 @@ private fun AgentHomeTopBar(
             )
         }
 
-        // RIGHT — plus (48.dp visual circle with soft drop shadow). Opens the menu of REAL actions.
-        Box(modifier = Modifier.align(Alignment.CenterEnd)) {
-            var menuOpen by remember { mutableStateOf(false) }
+        // RIGHT — 42dp green circle inside a 48dp hit box. Opens the real-action menu.
+        var menuOpen by remember { mutableStateOf(false) }
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(48.dp)
+                .clickable(role = Role.Button) { menuOpen = true }
+                .semantics { contentDescription = "New chat" },
+            contentAlignment = Alignment.Center,
+        ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(42.dp)
                     .teamilyRestingShadow(palette, CircleShape)
                     .clip(CircleShape)
-                    .background(palette.plusFill)
-                    .clickable(role = Role.Button) { menuOpen = true }
-                    .semantics { contentDescription = "New chat" },
+                    .background(palette.plusFill),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Filled.Add,
                     contentDescription = null,
                     tint = palette.plusIcon,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(22.dp),
                 )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -1352,7 +1358,7 @@ private fun SearchRow(
 /**
  * The ONE filled card on Agent home: the user's personal agent.
  *
- * `cardHeroColor` fill, 12dp corners, resting glass shadow and the 0.97 press
+ * `cardHeroColor` fill, 12dp corners, a soft floating shadow and the 0.97 press
  * scale. The 46dp pastel-pink avatar and its 16dp green mini-badge render the
  * 3D bot mascot ([R.drawable.dua_bot_head]), matching Teamily AI 1:1.
  */
@@ -1366,11 +1372,30 @@ internal fun PersonalAgentHeroCard(
     val interactionSource = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
     val heroShape = TeamilyShapes.md
+    val lightCard = palette.borderStrong != null
+    // Light floats a little higher. Dark stays lower so the shadow is not a hard black slab.
+    val heroElevation = if (lightCard) 6.dp else 4.dp
+    val heroAmbient = if (lightCard) {
+        palette.restingShadowAmbient
+    } else {
+        palette.restingShadowAmbient.copy(alpha = 0.14f)
+    }
+    val heroSpot = if (lightCard) {
+        palette.restingShadowSpot
+    } else {
+        palette.restingShadowSpot.copy(alpha = 0.20f)
+    }
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .teamilyPressScale(interactionSource, targetScale = 0.97f)
-            .teamilyRestingShadow(palette, heroShape)
+            .shadow(
+                elevation = heroElevation,
+                shape = heroShape,
+                clip = false,
+                ambientColor = heroAmbient,
+                spotColor = heroSpot,
+            )
             .clip(heroShape)
             .clickable(
                 interactionSource = interactionSource,
@@ -1389,7 +1414,7 @@ internal fun PersonalAgentHeroCard(
         border = BorderStroke(0.5.dp, palette.heroCardBorder),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
@@ -1580,7 +1605,7 @@ private fun CanvasChatRow(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     if (verified) {
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(4.dp))
                         VerifiedCheck()
                     }
                 }
@@ -1632,7 +1657,7 @@ internal fun VerifiedCheck() {
         drawPath(
             p,
             color = TeamilyMarks.paper,
-            style = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            style = Stroke(width = 1.25.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
 }
@@ -1870,6 +1895,20 @@ internal fun HomeBottomNav(
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
 
+    val lightDock = palette.borderStrong != null
+    // Lower than the shared resting elevation, and tinted by the palette so
+    // Light stays glassy. Dark uses the same tokens at a lower alpha.
+    val dockElevation = if (lightDock) 3.dp else 4.dp
+    val dockAmbient = if (lightDock) {
+        palette.restingShadowAmbient
+    } else {
+        palette.restingShadowAmbient.copy(alpha = 0.12f)
+    }
+    val dockSpot = if (lightDock) {
+        palette.restingShadowSpot
+    } else {
+        palette.restingShadowSpot.copy(alpha = 0.18f)
+    }
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -1878,11 +1917,17 @@ internal fun HomeBottomNav(
             // measured from the very bottom of the screen and the dock ends up
             // sitting under the gesture pill.
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+            .shadow(
+                elevation = dockElevation,
+                shape = TeamilyShapes.capsule,
+                clip = false,
+                ambientColor = dockAmbient,
+                spotColor = dockSpot,
+            ),
         shape = TeamilyShapes.capsule,
         color = palette.bottomnavBg,
         border = BorderStroke(1.dp, palette.borderGradient),
-        shadowElevation = palette.restingShadowElevation,
     ) {
         Row(
             // `selectableGroup()` makes the five tabs one tab list for TalkBack
@@ -1929,6 +1974,7 @@ internal fun HomeBottomNav(
                         Box(
                             Modifier
                                 .matchParentSize()
+                                .padding(horizontal = 4.dp, vertical = 6.dp)
                                 .clip(TeamilyShapes.capsule)
                                 .background(if (active) palette.navSelected else Color.Transparent)
                                 .indication(interaction, LocalIndication.current),
