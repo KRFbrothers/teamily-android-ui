@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,7 +80,6 @@ fun notificationSummary(state: Map<NotificationSetting, Boolean>): String {
     return "$on of ${NotificationSetting.values().size} on"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
     enabled: Map<NotificationSetting, Boolean> = defaultNotificationState,

@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -104,7 +103,6 @@ private data class DemoChatMessage(
  * - Autonomous background features & local privacy
  * - Interactive conversation & quick command prompts
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalAgentDemoScreen(
     onBack: () -> Unit = {},

@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -65,7 +64,11 @@ fun engineBaseUrlFor(buildTypeSuffix: String): String {
 
 android {
     namespace = "ai.duagenai.design"
-    compileSdk = 36
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "ai.duagenai.design"
@@ -102,10 +105,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         // Required for the generated API_BASE_URL and ENGINE_BASE_URL fields
@@ -127,14 +126,20 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
 
     // Compose BOM pins every Compose artifact to one compatible set.
-    // 2026.04.01 ships Material3 1.4.0 (public APIs only; expressive APIs stay internal).
-    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
+    // 2026.11.01 ships Material3 1.5.0.
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
@@ -147,7 +152,7 @@ dependencies {
     // Create Agent's shape morph (Morph + RoundedPolygon).
     implementation("androidx.graphics:graphics-shapes:1.0.1")
 
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
@@ -158,6 +163,6 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.1.5")
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("androidx.navigation:navigation-testing:2.7.7")
+    testImplementation("androidx.navigation:navigation-testing:2.10.2")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
