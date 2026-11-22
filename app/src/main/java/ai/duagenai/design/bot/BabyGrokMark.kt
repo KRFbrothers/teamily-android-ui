@@ -1,11 +1,15 @@
 package ai.duagenai.design.bot
 
-import androidx.compose.foundation.Canvas
+import android.content.Context
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.luminance
@@ -13,6 +17,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
@@ -25,6 +35,44 @@ private const val GEOMETRY_ASSET = "babygrok-geometry.json"
 
 @Volatile
 private var cachedGeometry: BabyGrokGeometry? = null
+
+private val geometryLock = Any()
+private val geometryLoader = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+private var geometryJob: Job? = null
+
+/**
+ * Starts the asset read on [Dispatchers.IO]. Safe to call more than once.
+ * The first painted mark uses the cache when this finishes before composition.
+ */
+internal fun preloadBabyGrokGeometry(context: Context) {
+    if (cachedGeometry != null) return
+    val app = context.applicationContext
+    synchronized(geometryLock) {
+        if (cachedGeometry != null || geometryJob?.isActive == true) return
+        geometryJob = geometryLoader.launch { readBabyGrokGeometry(app) }
+    }
+}
+
+/** Parsed geometry, loaded off the main thread. Null when the asset cannot be read. */
+internal suspend fun awaitBabyGrokGeometry(context: Context): BabyGrokGeometry? {
+    cachedGeometry?.let { return it }
+    val app = context.applicationContext
+    return withContext(Dispatchers.IO) { readBabyGrokGeometry(app) }
+}
+
+private fun readBabyGrokGeometry(context: Context): BabyGrokGeometry? {
+    cachedGeometry?.let { return it }
+    synchronized(geometryLock) {
+        cachedGeometry?.let { return it }
+        val loaded = runCatching {
+            context.assets.open(GEOMETRY_ASSET).bufferedReader().use { it.readText() }
+        }.getOrNull()?.let { json ->
+            runCatching { loadBabyGrokGeometry(json) }.getOrNull()
+        }
+        if (loaded != null) cachedGeometry = loaded
+        return cachedGeometry
+    }
+}
 
 /** Reads [GEOMETRY_ASSET]. Null when the asset cannot be parsed. */
 internal fun loadBabyGrokGeometry(json: String): BabyGrokGeometry {
@@ -50,13 +98,11 @@ internal fun loadBabyGrokGeometry(json: String): BabyGrokGeometry {
 
 @Composable
 private fun rememberGeometry(): BabyGrokGeometry? {
-    cachedGeometry?.let { return it }
-    val context = LocalContext.current
-    val loaded = runCatching {
-        context.assets.open(GEOMETRY_ASSET).bufferedReader().use { it.readText() }
-    }.getOrNull()?.let { json -> runCatching { loadBabyGrokGeometry(json) }.getOrNull() }
-    if (loaded != null) cachedGeometry = loaded
-    return loaded
+    val appContext = LocalContext.current.applicationContext
+    val geometry by produceState(initialValue = cachedGeometry, appContext) {
+        if (value == null) value = awaitBabyGrokGeometry(appContext)
+    }
+    return geometry
 }
 
 /**
@@ -86,27 +132,33 @@ fun BabyGrokMark(
         modifier.size(size).semantics { this.contentDescription = contentDescription }
     }
     val spec = geometry?.shapes?.get(shape.key)
-    if (geometry == null || spec == null) {
-        Canvas(described) { drawCircle(body) }
-        return
-    }
-    val viewBox = geometry.viewBox
-    Canvas(described) {
-        val sx = this.size.width / viewBox.width
-        val sy = this.size.height / viewBox.height
-        fun map(points: FloatArray): Path {
-            val path = Path()
-            var p = 0
-            while (p + 1 < points.size) {
-                val x = (points[p] - viewBox.minX) * sx
-                val y = (points[p + 1] - viewBox.minY) * sy
-                if (p == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                p += 2
+    val viewBox = geometry?.viewBox
+    Spacer(
+        described.drawWithCache {
+            if (viewBox == null || spec == null) {
+                onDrawBehind { drawCircle(body) }
+            } else {
+                val sx = this.size.width / viewBox.width
+                val sy = this.size.height / viewBox.height
+                fun map(points: FloatArray): Path {
+                    val path = Path()
+                    var p = 0
+                    while (p + 1 < points.size) {
+                        val x = (points[p] - viewBox.minX) * sx
+                        val y = (points[p + 1] - viewBox.minY) * sy
+                        if (p == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                        p += 2
+                    }
+                    path.close()
+                    return path
+                }
+                val bodyPath = map(spec.body)
+                val eyePaths = spec.eyes.map { map(it) }
+                onDrawBehind {
+                    drawPath(bodyPath, body)
+                    for (eye in eyePaths) drawPath(eye, eyes)
+                }
             }
-            path.close()
-            return path
-        }
-        drawPath(map(spec.body), body)
-        for (eye in spec.eyes) drawPath(map(eye), eyes)
-    }
+        },
+    )
 }

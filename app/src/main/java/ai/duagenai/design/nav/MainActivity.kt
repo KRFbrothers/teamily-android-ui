@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ai.duagenai.design.bot.preloadBabyGrokGeometry
 import ai.duagenai.design.screens.SettingsStore
 import ai.duagenai.design.screens.ThemeMode
 import ai.duagenai.design.screens.TokenStore
@@ -32,6 +33,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Restore the saved sign-in and keep it in sync (survives restarts).
         TokenStore.persistTo(applicationContext)
+        // Geometry JSON is parsed on IO so the first frame does not read the asset.
+        preloadBabyGrokGeometry(applicationContext)
         setContent {
             val context = LocalContext.current
             val settings = remember(context) { SettingsStore(context.applicationContext) }

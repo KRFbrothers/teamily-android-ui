@@ -433,15 +433,8 @@ object TeamilyMarks {
     val dashedDark = Color(0xFF4B5750)
     val dashedLight = Color(0xFFC9D5CD)
 
-    /** Agent-home filter button when the filter is off. */
-    val filterIdle = Color(0xFF2A322E)
-
-    /** Agent-home search pill fill and its 1dp edge. */
-    val searchFill = Color(0xFF181C1B)
+    /** Agent-home search pill 1dp edge. */
     val searchEdge = Color(0xFF323A36)
-
-    /** Personal-agent hero fill, also the avatar ring on that card. */
-    val heroFill = Color(0xFF263C30)
 
     /** Pale disc behind the hero's bot head. */
     val heroAvatarFill = Color(0xFFF3E8EE)
@@ -478,9 +471,6 @@ object TeamilyMarks {
     val supabase = Color(0xFF3ECF8E)
     val microsoft = Color(0xFF0078D4)
     val twitter = Color(0xFF1DA1F2)
-
-    /** Cube picker selection ring. Not the brand accent. */
-    val cubeSelection = Color(0xFFE8622C)
 
     /** "Pro" chip on a create tile. */
     val proBadge = Color(0xFF2E7D32)
