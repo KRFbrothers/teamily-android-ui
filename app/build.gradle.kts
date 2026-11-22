@@ -148,7 +148,7 @@ dependencies {
     // Create Agent's shape morph (Morph + RoundedPolygon).
     implementation("androidx.graphics:graphics-shapes:1.0.1")
 
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
@@ -159,6 +159,6 @@ dependencies {
     testImplementation("androidx.test.ext:junit:1.1.5")
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("androidx.navigation:navigation-testing:2.7.7")
+    testImplementation("androidx.navigation:navigation-testing:2.10.2")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
