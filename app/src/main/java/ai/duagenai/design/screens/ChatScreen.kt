@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
@@ -357,7 +358,7 @@ fun ChatScreen(
     // rotation. Also keyed on `chatId`, so drafts do not leak between threads.
     // A draft is ONE short string, so the Bundle budget is a non-issue — this is
     // exactly the state that belongs in `rememberSaveable`.
-    var draft by rememberSaveable(chatId) { mutableStateOf("") }
+    val draftState = rememberSaveable(chatId, saver = TextFieldState.Saver) { TextFieldState("") }
     // Agent's reply is shown after a short beat, with the typing indicator up in
     // the meantime. Plain `remember`, NOT `rememberSaveable`: the indicator is
     // transient, and the coroutine that would clear it died with the old
@@ -415,13 +416,13 @@ fun ChatScreen(
     }
 
     fun send() {
-        val text = draft.trim()
+        val text = draftState.text.toString().trim()
         // Guarded twice over: blank text, or a reply still in flight.
         if (text.isEmpty() || agentTyping) return
         // The store is the single writer: the screen never holds a mutable copy
         // of the transcript, so a message cannot be lost by a stale local list.
         transcriptStore.append(chatId, SavedMessage(SavedMessage.USER, text, nowLabel()))
-        draft = ""
+        draftState.edit { replace(0, length, "") }
         agentTyping = true
         // Offline until there is a session or an injected source. This branch is
         // what the existing UI tests drive: a 900ms beat, then [AGENT_REPLY].
@@ -482,7 +483,7 @@ fun ChatScreen(
         val first = initialMessage?.trim().orEmpty()
         transcriptStore.ensure(chatId, initialSeed.map { it.toSaved() })
         if (first.isNotEmpty() && transcriptStore.threads.value[chatId].isNullOrEmpty()) {
-            draft = first
+            draftState.edit { replace(0, length, first) }
             send()
         } else if (TokenStore.token != null && !isPersonal && !isDuaAgent && !chatId.startsWith("chat_")) {
             // Load persistent conversation history from GET /api/conversations/:id/messages
@@ -599,8 +600,7 @@ fun ChatScreen(
                 ),
             ) {
                 TeamilyAgentChatBar(
-                    value = draft,
-                    onValueChange = { draft = it },
+                    state = draftState,
                     onSend = { send() },
                     // Agent threads read "Type a message..." (reference);
                     // other threads name the conversation.
@@ -673,7 +673,7 @@ fun ChatScreen(
                                 actions = PERSONAL_AGENT_QUICK_ACTIONS,
                                 onPick = { prompt ->
                                     if (!agentTyping) {
-                                        draft = prompt
+                                        draftState.edit { replace(0, length, prompt) }
                                         send()
                                     }
                                 },
@@ -702,7 +702,7 @@ fun ChatScreen(
                         actions = PERSONAL_AGENT_QUICK_ACTIONS,
                         onPick = { prompt ->
                             if (!agentTyping) {
-                                draft = prompt
+                                draftState.edit { replace(0, length, prompt) }
                                 send()
                             }
                         },

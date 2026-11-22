@@ -26,8 +26,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Stop
@@ -42,10 +43,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -95,8 +98,7 @@ import ai.duagenai.design.theme.teamilyRestingShadow
  */
 @Composable
 fun TeamilyAgentChatBar(
-    value: String = "",
-    onValueChange: (String) -> Unit = {},
+    state: TextFieldState,
     onSend: () -> Unit = {},
     placeholder: String = "Type a message...",
     enabled: Boolean = true,
@@ -118,7 +120,8 @@ fun TeamilyAgentChatBar(
 ) {
     val palette = teamilyPalette()
     var modeMenuExpanded by remember { mutableStateOf(false) }
-    val hasText = value.isNotBlank()
+
+    val hasText = state.text.isNotBlank()
     // Guarded: blank text or an in-flight reply never sends.
     val canSend = hasText && !sending
     val showStop = sending && onStop != null
@@ -144,8 +147,7 @@ fun TeamilyAgentChatBar(
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
+                    state = state,
                     modifier = Modifier.fillMaxWidth(),
                     enabled = enabled,
                     textStyle = DuaGenAITextStyles.bubble.copy(
@@ -155,9 +157,9 @@ fun TeamilyAgentChatBar(
                     ),
                     cursorBrush = SolidColor(palette.signalGreen),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
-                    decorationBox = { innerTextField ->
-                        if (value.isEmpty()) {
+                    onKeyboardAction = { if (canSend) onSend() },
+                    decorator = { innerTextField ->
+                        if (state.text.isEmpty()) {
                             Text(
                                 text = placeholder,
                                 style = DuaGenAITextStyles.bubble.copy(fontSize = 13.5.sp),
@@ -386,6 +388,62 @@ fun TeamilyAgentChatBar(
             }
         }
     }
+}
+
+@Composable
+fun TeamilyAgentChatBar(
+    value: String,
+    onValueChange: (String) -> Unit = {},
+    onSend: () -> Unit = {},
+    placeholder: String = "Type a message...",
+    enabled: Boolean = true,
+    selectedMode: String = "Auto",
+    onModeChange: (String) -> Unit = {},
+    onAttachClick: () -> Unit = {},
+    onMeetingMinutesClick: () -> Unit = {},
+    onDictateClick: () -> Unit = {},
+    onEmojiClick: () -> Unit = {},
+    onVoiceMessageClick: () -> Unit = {},
+    onVoiceCallClick: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    sending: Boolean = false,
+    onStop: (() -> Unit)? = null,
+    onOpenSkills: (() -> Unit)? = null,
+    onOpenMcp: (() -> Unit)? = null,
+) {
+    val state = rememberTextFieldState(initialText = value)
+    LaunchedEffect(value) {
+        if (state.text.toString() != value) {
+            state.edit { replace(0, length, value) }
+        }
+    }
+    LaunchedEffect(state) {
+        snapshotFlow { state.text.toString() }
+            .collect { newText ->
+                if (newText != value) {
+                    onValueChange(newText)
+                }
+            }
+    }
+    TeamilyAgentChatBar(
+        state = state,
+        onSend = onSend,
+        placeholder = placeholder,
+        enabled = enabled,
+        selectedMode = selectedMode,
+        onModeChange = onModeChange,
+        onAttachClick = onAttachClick,
+        onMeetingMinutesClick = onMeetingMinutesClick,
+        onDictateClick = onDictateClick,
+        onEmojiClick = onEmojiClick,
+        onVoiceMessageClick = onVoiceMessageClick,
+        onVoiceCallClick = onVoiceCallClick,
+        modifier = modifier,
+        sending = sending,
+        onStop = onStop,
+        onOpenSkills = onOpenSkills,
+        onOpenMcp = onOpenMcp,
+    )
 }
 
 /** The chat bar's single trailing control. */
