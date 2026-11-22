@@ -1,6 +1,8 @@
 package ai.duagenai.design.theme
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -283,7 +285,7 @@ object DuaGenAITheme {
             val view = LocalView.current
             if (!view.isInEditMode) {
                 SideEffect {
-                    val window = (view.context as? Activity)?.window ?: return@SideEffect
+                    val window = view.context.findActivity()?.window ?: return@SideEffect
                     // Dark theme: light icons. Light theme: dark icons.
                     val insetsController = WindowCompat.getInsetsController(window, view)
                     insetsController.isAppearanceLightStatusBars = !darkTheme
@@ -383,4 +385,10 @@ object DuaGenAITheme {
         surfaceTint = p.accent,
         scrim = Color.Black,
     )
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

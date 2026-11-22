@@ -395,6 +395,88 @@ object TeamilyMotion {
 }
 
 /**
+ * Colours that have no slot on [TeamilyPalette].
+ *
+ * Screens and the cube read these names. Hex literals stay in this file:
+ * brand green, mint, and signal green stay on the palette; product marks
+ * (Gmail, Slack, Drive, create tiles) stay here so a composable never
+ * inlines `Color(0x...)`.
+ */
+object TeamilyMarks {
+    /** Opaque white, used for logo paper and button ink. */
+    val paper = Color(0xFFFFFFFF)
+
+    /** Opaque black. Vector masks and text on [TeamilyPalette.signalGreen]. */
+    val ink = Color(0xFF000000)
+
+    val dimDark = Color(0xFF8A958E)
+    val hairlineDark = Color(0xFF343A36)
+    val aiFillDark = Color(0xFF224735)
+    val wellConnectorsDark = Color(0xFF1B3A5C)
+    val wellConnectorsLight = Color(0xFFD7E3F4)
+    val wellConnectorsInkDark = Color(0xFF8BB4E0)
+    val wellConnectorsInkLight = Color(0xFF1B4A7A)
+    val wellMuteDark = Color(0xFF4A3218)
+    val wellMuteLight = Color(0xFFF3E6D4)
+    val wellMuteInkDark = Color(0xFFE0C08A)
+    val wellMuteInkLight = Color(0xFF7A4E18)
+    val wellPinDark = Color(0xFF1E2A6A)
+    val wellPinLight = Color(0xFFD9DCF6)
+    val wellPinInkDark = Color(0xFFA8B0F0)
+    val wellPinInkLight = Color(0xFF2A2F7A)
+    val trackDark = Color(0xFF3A423D)
+    val thumbDark = Color(0xFFD1DAD3)
+    val needsYouDark = Color(0xFFE0A04A)
+    val needsYouLight = Color(0xFFC47A22)
+    val scrimDark = Color(0xA8000000)
+    val scrimLight = Color(0x99000000)
+    val dashedDark = Color(0xFF4B5750)
+    val dashedLight = Color(0xFFC9D5CD)
+
+    /** Agent-home search pill 1dp edge. */
+    val searchEdge = Color(0xFF323A36)
+
+    /** Pale disc behind the hero's bot head. */
+    val heroAvatarFill = Color(0xFFF3E8EE)
+
+    /** Group-cluster avatar ring. Same hex as the light online ring. */
+    val clusterRing = Color(0xFF1D2220)
+
+    val assistantSlides = Color(0xFFE07A3D)
+    val assistantTravel = Color(0xFF2DD4BF)
+
+    /** Create-tile product colours from the HTML set. */
+    val tileWebsite = Color(0xFF4285F4)
+    val tileSlides = Color(0xFFF4B400)
+    val tileSheet = Color(0xFF0F9D58)
+    val tileImage = Color(0xFFAB47BC)
+    val tileVideo = Color(0xFFEC407A)
+    val tileMusic = Color(0xFF7986CB)
+    val tileModel = Color(0xFF4DD0E1)
+
+    /** Public-agent row tints on Discover. */
+    val publicAgentMint = Color(0xFF79C79A)
+    val publicAgentLilac = Color(0xFFE0D7FF)
+
+    val gmail = Color(0xFFEA4335)
+    val gmailFold = Color(0xFFC5221F)
+    val googleBlue = Color(0xFF4285F4)
+    val googleGreen = Color(0xFF34A853)
+    val googleYellow = Color(0xFFFBBC05)
+    val googleBlueDeep = Color(0xFF1967D2)
+    val slackMagenta = Color(0xFFE01E5A)
+    val slackCyan = Color(0xFF36C5F0)
+    val slackGreen = Color(0xFF2EB67D)
+    val slackYellow = Color(0xFFECB22E)
+    val supabase = Color(0xFF3ECF8E)
+    val microsoft = Color(0xFF0078D4)
+    val twitter = Color(0xFF1DA1F2)
+
+    /** "Pro" chip on a create tile. */
+    val proBadge = Color(0xFF2E7D32)
+}
+
+/**
  * Max width for home, list, settings, and sheet bodies on large screens.
  * Phone widths (390dp) sit below this, so compact appearance is unchanged.
  */
