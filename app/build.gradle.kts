@@ -64,7 +64,11 @@ fun engineBaseUrlFor(buildTypeSuffix: String): String {
 
 android {
     namespace = "ai.duagenai.design"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
 
     defaultConfig {
         applicationId = "ai.duagenai.design"
@@ -134,8 +138,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
 
     // Compose BOM pins every Compose artifact to one compatible set.
-    // 2026.04.01 ships Material3 1.4.0 (public APIs only; expressive APIs stay internal).
-    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
+    // 2026.11.01 ships Material3 1.5.0.
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
