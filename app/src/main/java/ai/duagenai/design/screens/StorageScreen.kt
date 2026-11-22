@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -62,7 +61,6 @@ import ai.duagenai.design.theme.MaxContentWidth
  *  construction — there is no hardcoded colour in this file.
  * ==========================================================================*/
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StorageScreen(
     usedGb: Double = 3.2,

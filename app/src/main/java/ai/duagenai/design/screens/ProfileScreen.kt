@@ -107,7 +107,6 @@ import kotlinx.coroutines.withContext
  *  saved cube. The green camera FAB opens the Profile picture sheet.
  * ==========================================================================*/
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     photoPath: String? = null,
