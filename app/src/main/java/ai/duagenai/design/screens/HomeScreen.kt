@@ -434,6 +434,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(
                         start = 10.dp,
                         end = 10.dp,
+                        top = 8.dp,
                         bottom = 6.dp,
                     ),
                 )
@@ -1074,7 +1075,7 @@ internal const val APP_NAME = "Dua Gen AI"
 
 /**
  * Agent home's header: 48dp circular user avatar (opens the drawer) · 28dp
- * rounded-square app badge + 20sp "Dua Gen AI" · 42dp plus inside a 48dp target.
+ * rounded-square app badge + 20sp "Dua Gen AI" · 44dp plus inside a 48dp target.
  * No Dua | Agent toggle here — the way back to Dua is the drawer's "Dua" row.
  */
 @Composable
@@ -1090,23 +1091,23 @@ private fun AgentHomeTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = spacing.gutter, end = spacing.gutter, top = 12.dp, bottom = 6.dp),
+            .padding(start = spacing.gutter, end = spacing.gutter, top = 8.dp, bottom = 6.dp),
     ) {
         // LEFT — the user's photo: 42.dp clean visual circle inside 48.dp touch target (no online dot, matching Teamily AI).
         val photo = userAvatar ?: painterResource(R.drawable.dua_user_avatar)
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(48.dp),
+                .size(48.dp)
+                .clickable(role = Role.Button, onClick = onOpenDrawer)
+                .semantics { contentDescription = "Open menu" },
             contentAlignment = Alignment.CenterStart,
         ) {
             Box(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(palette.chromeFill)
-                    .clickable(role = Role.Button, onClick = onOpenDrawer)
-                    .semantics { contentDescription = "Open menu" },
+                    .background(palette.chromeFill),
             ) {
                 Image(
                     painter = photo,
@@ -1137,7 +1138,7 @@ private fun AgentHomeTopBar(
             )
         }
 
-        // RIGHT — 42dp green circle inside a 48dp hit box. Opens the real-action menu.
+        // RIGHT — 44dp green circle inside a 48dp hit box. Opens the real-action menu.
         var menuOpen by remember { mutableStateOf(false) }
         Box(
             modifier = Modifier
@@ -1149,7 +1150,7 @@ private fun AgentHomeTopBar(
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(44.dp)
                     .teamilyRestingShadow(palette, CircleShape)
                     .clip(CircleShape)
                     .background(palette.plusFill),
@@ -1359,8 +1360,9 @@ private fun SearchRow(
  * The ONE filled card on Agent home: the user's personal agent.
  *
  * `cardHeroColor` fill, 12dp corners, a soft floating shadow and the 0.97 press
- * scale. The 46dp pastel-pink avatar and its 16dp green mini-badge render the
- * 3D bot mascot ([R.drawable.dua_bot_head]), matching Teamily AI 1:1.
+ * scale. Rendered height stays in 76–80dp (the reference's 95px card, not the
+ * 129px overflow). The 46dp avatar and its mini-badge render the 3D bot mascot
+ * ([R.drawable.dua_bot_head]).
  */
 @Composable
 internal fun PersonalAgentHeroCard(
@@ -1373,8 +1375,9 @@ internal fun PersonalAgentHeroCard(
     val haptic = LocalHapticFeedback.current
     val heroShape = TeamilyShapes.md
     val lightCard = palette.borderStrong != null
-    // Light floats a little higher. Dark stays lower so the shadow is not a hard black slab.
-    val heroElevation = if (lightCard) 6.dp else 4.dp
+    // Light: soft 4dp shadow. Colors stay the palette's low-alpha tokens.
+    // Dark keeps elevation 4dp and the reduced alphas already set below.
+    val heroElevation = if (lightCard) palette.restingShadowElevation else 4.dp
     val heroAmbient = if (lightCard) {
         palette.restingShadowAmbient
     } else {
@@ -1388,6 +1391,8 @@ internal fun PersonalAgentHeroCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            // Reference card is 95px (76–80dp). This stops the fill growing to 129px.
+            .heightIn(min = 76.dp, max = 80.dp)
             .teamilyPressScale(interactionSource, targetScale = 0.97f)
             .shadow(
                 elevation = heroElevation,
@@ -1414,7 +1419,7 @@ internal fun PersonalAgentHeroCard(
         border = BorderStroke(0.5.dp, palette.heroCardBorder),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChatAvatar(
@@ -1643,7 +1648,8 @@ internal fun VerifiedCheck() {
     val palette = teamilyPalette()
     Canvas(
         Modifier
-            .size(16.dp)
+            // Reference measures 14×13 px (11–12dp). 12dp is the 4dp-grid size.
+            .size(12.dp)
             .semantics { contentDescription = "Verified" },
     ) {
         val w = size.width
@@ -1657,7 +1663,7 @@ internal fun VerifiedCheck() {
         drawPath(
             p,
             color = TeamilyMarks.paper,
-            style = Stroke(width = 1.25.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
         )
     }
 }
@@ -1912,12 +1918,10 @@ internal fun HomeBottomNav(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            // Lift the dock clear of the system gesture / navigation bar. The
-            // window is edge-to-edge, so without this the 12dp bottom margin is
-            // measured from the very bottom of the screen and the dock ends up
-            // sitting under the gesture pill.
+            // Edge-to-edge: clear the gesture bar, then 4dp. A 12dp margin
+            // sat the capsule about 12dp above the Teamily reference.
             .navigationBarsPadding()
-            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+            .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
             .shadow(
                 elevation = dockElevation,
                 shape = TeamilyShapes.capsule,
@@ -1956,7 +1960,9 @@ internal fun HomeBottomNav(
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 onSelect(tab)
                             }
-                            .height(76.dp)
+                            // 72dp tab. The selected pill is inset 6dp, so it draws at 60dp
+                            // (reference 75px) instead of the old ~66dp.
+                            .height(72.dp)
                             .fillMaxWidth()
                             .semantics {
                                 role = Role.Tab
