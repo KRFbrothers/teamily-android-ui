@@ -858,12 +858,9 @@ class DuaGenAINavHostTest {
     /**
      * Asserts the thread HAS a composer, with [placeholder] as its hint.
      *
-     * The composer is the 2-row `TeamilyAgentChatBar`: row 1 the field (exactly
-     * one editable node, showing the placeholder), row 2 the toolbar — the
-     * "Attach" `+`, the "Mode: …" pill (its menu lists Skills / MCP Tools, so
-     * there are no separate Skills / MCP icons), Meeting Minutes, Dictate,
-     * Emoji and, with an empty field, "Voice message" + "Voice call". No
-     * "Send message" node exists yet — Send appears only once text is typed.
+     * Idle, the composer is the collapsed pill: one field, Attach, Dictate and
+     * Voice message. Mode, Meeting Minutes and Emoji stay hidden until the
+     * field has text. Send appears only once text is typed.
      *
      * The old generic placeholder must be gone: a thread's hint is
      * `"Message <title>..."`, so seeing `"Type a message"` would mean the
@@ -874,12 +871,15 @@ class DuaGenAINavHostTest {
         if (placeholder != AGENT_COMPOSER_HINT) assertNotVisible(AGENT_COMPOSER_HINT)
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 1)
+        assertVisibleDescCount("Dictate", 1)
         assertEquals(
-            "the composer must have exactly one mode pill",
-            1,
+            "mode stays hidden until the composer expands",
+            0,
             compose.onAllNodes(hasContentDescription(THREAD_MODE_PREFIX, substring = true))
                 .fetchSemanticsNodes().count { isOnScreen(it) },
         )
+        assertVisibleDescCount("Meeting Minutes", 0)
+        assertVisibleDescCount("Emoji", 0)
         assertVisibleDescCount(THREAD_VOICE_LABEL, 1)
         assertVisibleDescCount(SEND_LABEL, 0)
         assertEquals(
@@ -3571,9 +3571,9 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The thread chat bar's toolbar reads Attach, the mode pill, then the
-     * tools, with Send at the far end once text is typed — and every control's
-     * touch box is at least the 48dp M3 minimum (drawn smaller, [touchTarget48]).
+     * Collapsed, the pill reads Attach, Dictate, Voice message.
+     * With text, the tool row reads Attach, Mode, Meeting Minutes, Emoji,
+     * Dictate, Send. Every control's touch box is at least 48dp.
      */
     @Test
     fun theChatBarToolbarOrderAndAll48dp() {
@@ -3581,25 +3581,40 @@ class DuaGenAINavHostTest {
         fun bounds(desc: String) =
             compose.onNodeWithContentDescription(desc, substring = true).fetchSemanticsNode().boundsInRoot
         val min = 48f * compose.density.density - 1f
-        val idle = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Meeting Minutes", "Dictate", "Emoji", THREAD_VOICE_LABEL, "Voice call")
-            .map { bounds(it) }
+        val idle = listOf(ATTACH_LABEL, "Dictate", THREAD_VOICE_LABEL).map { bounds(it) }
         for (i in 1 until idle.size) {
-            assertTrue("toolbar order, item $i", idle[i - 1].center.x < idle[i].center.x)
+            assertTrue("collapsed order, item $i", idle[i - 1].center.x < idle[i].center.x)
+        }
+        for (b in idle) {
+            assertTrue("collapsed control must be >= 48dp wide", b.width >= min)
+            assertTrue("collapsed control must be >= 48dp tall", b.height >= min)
         }
         compose.onNode(hasSetTextAction()).performTextInput("Hi")
         compose.waitForIdle()
-        val send = bounds(SEND_LABEL)
-        assertTrue("Send sits at the end", idle[4].right <= send.left + 1f)
-        for (b in idle + send) {
-            assertTrue("chat bar control must be >= 48dp wide", b.width >= min)
-            assertTrue("chat bar control must be >= 48dp tall", b.height >= min)
+        val typing = listOf(
+            ATTACH_LABEL,
+            THREAD_MODE_PREFIX,
+            "Meeting Minutes",
+            "Emoji",
+            "Dictate",
+            SEND_LABEL,
+        ).map { bounds(it) }
+        for (i in 1 until typing.size) {
+            assertTrue("expanded order, item $i", typing[i - 1].center.x < typing[i].center.x)
         }
+        for (b in typing) {
+            assertTrue("expanded control must be >= 48dp wide", b.width >= min)
+            assertTrue("expanded control must be >= 48dp tall", b.height >= min)
+        }
+        assertVisibleDescCount(THREAD_VOICE_LABEL, 0)
     }
 
     /** The mode pill's menu opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
     @Test
     fun theModePillOpensTheSkillsSheetAndTogglesASkill() {
         openAgentThread()
+        compose.onNode(hasSetTextAction()).performTextInput("Hi")
+        compose.waitForIdle()
         compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText(SKILLS_LABEL).performClick()
@@ -3621,6 +3636,8 @@ class DuaGenAINavHostTest {
     @Test
     fun theModePillOpensTheMcpSheetWithTheBuiltInTools() {
         openAgentThread()
+        compose.onNode(hasSetTextAction()).performTextInput("Hi")
+        compose.waitForIdle()
         compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithText(MCP_LABEL).performClick()

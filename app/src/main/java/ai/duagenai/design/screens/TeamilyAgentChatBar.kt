@@ -1,6 +1,7 @@
 
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.R
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.TeamilyPalette
@@ -8,12 +9,6 @@ import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.CapturedAnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -39,9 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerRounding
-import androidx.compose.foundation.shape.MorphPolygonShape
-import androidx.compose.foundation.shape.PolygonShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -53,9 +45,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -69,15 +63,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.computedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -85,8 +81,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -99,21 +95,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
 
 /**
- * Ultra-Clean Single-Row Floating White Capsule Composer.
+ * Collapsed pill that grows into a drafting card.
  *
- * Spec:
- * - Floating M3 Surface with 32.dp rounded corners (full pill capsule), min height 60.dp.
- * - Crisp MaterialTheme.colorScheme.surface with 0.5.dp outlineVariant border and soft shadow.
- * - Single row with 4 clean visual elements:
- *   1. Left: Thin `+` icon button (24.dp icon, 48.dp touch target) -> opens ComposerPlusSheet.
- *   2. Center: State-based BasicTextField (weight 1f, multiline up to 4 lines, 16.sp, placeholder "Ask Dua...").
- *   3. Right 1: Clean outlined Mic icon button (22.dp icon, 48.dp touch target).
- *   4. Right 2: Circular Primary Action button (44.dp drawn circle inside 48.dp touch target):
- *      - Empty: soft tonal circle (primaryContainer) with voice-wave icon (onPrimaryContainer).
- *      - Typing: solid brand green circle (primary) with crisp up-arrow ↑ Send icon (onPrimary).
- *      - Streaming: Stop square icon (errorContainer / onErrorContainer).
- * - Streaming: LinearWavyProgressIndicator along top edge of capsule.
- * - Context Chips: CapturedAnimatedVisibility above the input row.
+ * Empty and unfocused: one row, attach, the field, mic, and a voice circle.
+ * Focused, drafting, sending, or showing chips: the field moves above a tool
+ * row (mode, meeting minutes, emoji, mic, then Send or Stop).
+ * Colours are [MaterialTheme] tokens. [onVoiceCallClick] stays on the signature
+ * for existing callers; this bar does not draw a voice-call control.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -142,218 +130,45 @@ fun TeamilyAgentChatBar(
 ) {
     val palette = teamilyPalette()
     val isDark = isSystemInDarkTheme()
+    var fieldFocused by remember { mutableStateOf(false) }
 
-    // Reactive state derivation using Compose 1.13 computedStateOf
     val hasText by remember(state) {
         computedStateOf { state.text.isNotBlank() }
     }
-    val canSend = hasText && !sending
+    val canSend = hasText && !sending && enabled
     val showStop = sending && onStop != null
+    val expanded = fieldFocused || hasText || sending || contextChips.isNotEmpty()
 
-    // MorphPolygonShape for Streaming Stop button: circle <-> 8-point rounded star
-    val circlePolygon = remember { PolygonShape.circle() }
-    val starPolygon = remember {
-        PolygonShape.star(
-            numPoints = 8,
-            innerRadiusRatio = 0.82f,
-            outerRounding = CornerRounding.fraction(0.5f),
-        )
+    val field = remember {
+        movableContentOf<ComposerFieldSpec> { spec ->
+            ComposerInputField(spec)
+        }
     }
-    val infiniteTransition = rememberInfiniteTransition(label = "StopMorphTransition")
-    val morphProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "StopMorphProgress",
+    val fieldSpec = ComposerFieldSpec(
+        state = state,
+        placeholder = placeholder,
+        enabled = enabled,
+        expanded = expanded,
+        canSend = canSend,
+        onSend = onSend,
+        onFocusChange = { fieldFocused = it },
     )
-    val morphShape = remember(circlePolygon, starPolygon) {
-        MorphPolygonShape(circlePolygon, starPolygon) { morphProgress }
+    val trailing = when {
+        showStop -> TrailingAction.Stop
+        hasText -> TrailingAction.Send
+        else -> TrailingAction.Voice
     }
 
-    // Floating capsule container: 32dp radius, min height 60dp, soft shadow, subtle border
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp),
-        shape = RoundedCornerShape(32.dp),
+            .alpha(if (enabled) 1f else 0.38f),
+        shape = if (expanded) RoundedCornerShape(32.dp) else RoundedCornerShape(percent = 50),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
         shadowElevation = if (isDark) 2.dp else 6.dp,
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Accessible Semantics Layer (Satisfies full toolbar contract for accessibility & tests)
-            var modeMenuExpanded by remember { mutableStateOf(false) }
-            val modes = listOf("Auto", "Instant", "Agentic", "Deep Research", "Fast")
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .drawWithContent { /* invisible overlay, doesn't draw visually */ },
-            ) {
-                val modeSource = remember { MutableInteractionSource() }
-                val minutesSource = remember { MutableInteractionSource() }
-                val dictateSource = remember { MutableInteractionSource() }
-                val emojiSource = remember { MutableInteractionSource() }
-                val voiceSource = remember { MutableInteractionSource() }
-                val callSource = remember { MutableInteractionSource() }
-
-                // 1. Mode pill: x inside composer ~ 58.dp..106.dp
-                Box(
-                    modifier = Modifier
-                        .padding(start = 58.dp)
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = modeSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = { modeMenuExpanded = true },
-                                )
-                                .semantics { contentDescription = "Mode: $selectedMode" },
-                        )
-                        .size(48.dp),
-                )
-
-                DropdownMenu(
-                    expanded = modeMenuExpanded,
-                    onDismissRequest = { modeMenuExpanded = false },
-                    properties = PopupProperties(blurBehindRadius = 16.dp),
-                ) {
-                    modes.forEach { mode ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = mode,
-                                    fontWeight = if (mode == selectedMode) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (mode == selectedMode) palette.signalGreen else MaterialTheme.colorScheme.onSurface,
-                                )
-                            },
-                            onClick = {
-                                onModeChange(mode)
-                                modeMenuExpanded = false
-                            },
-                        )
-                    }
-                    if (onOpenSkills != null || onOpenMcp != null) {
-                        HorizontalDivider(color = palette.border)
-                    }
-                    if (onOpenSkills != null) {
-                        DropdownMenuItem(
-                            text = { Text("Skills") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Build, contentDescription = null)
-                            },
-                            onClick = {
-                                modeMenuExpanded = false
-                                onOpenSkills()
-                            },
-                        )
-                    }
-                    if (onOpenMcp != null) {
-                        DropdownMenuItem(
-                            text = { Text("MCP Tools") },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Extension, contentDescription = null)
-                            },
-                            onClick = {
-                                modeMenuExpanded = false
-                                onOpenMcp()
-                            },
-                        )
-                    }
-                }
-
-                // 2. Meeting Minutes: x inside composer ~ 108.dp..156.dp
-                Box(
-                    modifier = Modifier
-                        .padding(start = 108.dp)
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = minutesSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = onMeetingMinutesClick,
-                                )
-                                .semantics { contentDescription = "Meeting Minutes" },
-                        )
-                        .size(48.dp),
-                )
-
-                // 3. Dictate: x inside composer ~ 158.dp..206.dp
-                Box(
-                    modifier = Modifier
-                        .padding(start = 158.dp)
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = dictateSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = onDictateClick,
-                                )
-                                .semantics { contentDescription = "Dictate" },
-                        )
-                        .size(48.dp),
-                )
-
-                // 4. Emoji: x inside composer ~ 208.dp..256.dp
-                Box(
-                    modifier = Modifier
-                        .padding(start = 208.dp)
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = emojiSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = onEmojiClick,
-                                )
-                                .semantics { contentDescription = "Emoji" },
-                        )
-                        .size(48.dp),
-                )
-
-                // 5. Voice message (only when not typing / sending): x inside composer ~ 260.dp..308.dp
-                if (!hasText && !sending) {
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 260.dp)
-                            .touchTarget48(
-                                Modifier
-                                    .clickable(
-                                        interactionSource = voiceSource,
-                                        indication = null,
-                                        role = Role.Button,
-                                        onClick = onVoiceMessageClick,
-                                    )
-                                    .semantics { contentDescription = "Voice message" },
-                            )
-                            .size(48.dp),
-                    )
-                }
-
-                // 6. Voice call: x inside composer ~ 312.dp..360.dp
-                Box(
-                    modifier = Modifier
-                        .padding(start = 312.dp)
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = callSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = onVoiceCallClick,
-                                )
-                                .semantics { contentDescription = "Voice call" },
-                        )
-                        .size(48.dp),
-                )
-            }
-
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Streaming Wavy Progress Indicator along the top edge
                 AnimatedVisibility(
@@ -381,10 +196,10 @@ fun TeamilyAgentChatBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        contextChips.forEach { chipText ->
+                        for (chipText in contextChips) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -399,7 +214,7 @@ fun TeamilyAgentChatBar(
                                         imageVector = Icons.Outlined.AttachFile,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(13.dp),
+                                        modifier = Modifier.size(16.dp),
                                     )
                                     Text(
                                         text = chipText,
@@ -408,193 +223,82 @@ fun TeamilyAgentChatBar(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Remove $chipText",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    val removeChip = stringResource(R.string.composer_remove_chip, chipText)
+                                    Box(
                                         modifier = Modifier
-                                            .size(13.dp)
-                                            .clickable { onDismissChip(chipText) },
-                                    )
+                                            .touchTarget48(
+                                                Modifier
+                                                    .clickable(
+                                                        role = Role.Button,
+                                                        onClick = { onDismissChip(chipText) },
+                                                    )
+                                                    .semantics { contentDescription = removeChip },
+                                            )
+                                            .size(16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Ultra-Clean Single-Row Composer Layout
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 60.dp)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                ) {
-                    // 1. Left — + Icon Button (48.dp touch target)
-                    ToolbarIconButton(
-                        contentDescription = "Attach",
-                        onClick = onAttachClick,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-
-                    Spacer(Modifier.width(4.dp))
-
-                    // 2. Center — Multiline State-Based Input Field (Modifier.weight(1f))
+                if (expanded) {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 40.dp, max = 110.dp)
-                            .padding(horizontal = 4.dp),
-                        contentAlignment = Alignment.CenterStart,
+                            .fillMaxWidth()
+                            .heightIn(min = 80.dp)
+                            .padding(start = 20.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                        contentAlignment = Alignment.TopStart,
                     ) {
-                        BasicTextField(
-                            state = state,
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = enabled,
-                            textStyle = DuaGenAITextStyles.bubble.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 16.sp,
-                                lineHeight = 22.sp,
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.None,
-                                    mode = LineHeightStyle.Mode.PerLine,
-                                ),
-                            ),
-                            lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 1, maxHeightInLines = 4),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                            onKeyboardAction = { if (canSend) onSend() },
-                            decorator = { innerTextField ->
-                                if (state.text.isEmpty()) {
-                                    Text(
-                                        text = placeholder,
-                                        style = DuaGenAITextStyles.bubble.copy(
-                                            fontSize = 16.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        ),
-                                    )
-                                }
-                                innerTextField()
-                            },
-                        )
+                        field(fieldSpec)
                     }
-
-                    Spacer(Modifier.width(4.dp))
-
-                    // 3. Right 1 — Mic Icon Button (48.dp touch target)
-                    ToolbarIconButton(
-                        contentDescription = null,
-                        onClick = onDictateClick,
-                        modifier = Modifier.clearAndSetSemantics { },
-                    ) {
-                        OutlinedMicGlyph(
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-
-                    Spacer(Modifier.width(4.dp))
-
-                    // 4. Right 2 — Circular Primary Action Button (44.dp drawn circle inside 48.dp touch target)
-                    val actionSource = remember { MutableInteractionSource() }
-                    val trailing = when {
-                        showStop -> TrailingAction.Stop
-                        hasText -> TrailingAction.Send
-                        else -> TrailingAction.Voice
-                    }
-
-                    AnimatedContent(
-                        targetState = trailing,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
-                        label = "PrimaryActionTransition",
-                    ) { target ->
-                        when (target) {
-                            TrailingAction.Stop -> {
-                                Box(
-                                    modifier = Modifier
-                                        .touchTarget48(
-                                            Modifier
-                                                .clickable(
-                                                    interactionSource = actionSource,
-                                                    indication = null,
-                                                    role = Role.Button,
-                                                    onClick = { onStop?.invoke() },
-                                                )
-                                                .semantics { contentDescription = "Stop" },
-                                        )
-                                        .size(44.dp)
-                                        .clip(morphShape)
-                                        .background(MaterialTheme.colorScheme.errorContainer)
-                                        .indication(actionSource, LocalIndication.current),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Stop,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-                            TrailingAction.Send -> {
-                                Box(
-                                    modifier = Modifier
-                                        .touchTarget48(
-                                            Modifier
-                                                .clickable(
-                                                    interactionSource = actionSource,
-                                                    indication = null,
-                                                    role = Role.Button,
-                                                    onClick = { if (canSend) onSend() },
-                                                )
-                                                .semantics { contentDescription = "Send message" },
-                                        )
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                        .indication(actionSource, LocalIndication.current),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ArrowUpwardGlyph(
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-                            TrailingAction.Voice -> {
-                                Box(
-                                    modifier = Modifier
-                                        .touchTarget48(
-                                            Modifier
-                                                .clickable(
-                                                    interactionSource = actionSource,
-                                                    indication = null,
-                                                    role = Role.Button,
-                                                    onClick = onVoiceMessageClick,
-                                                )
-                                                .clearAndSetSemantics { },
-                                        )
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primaryContainer)
-                                        .indication(actionSource, LocalIndication.current),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    VoiceMessageGlyph(
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    ComposerToolRow(
+                        expanded = true,
+                        enabled = enabled,
+                        selectedMode = selectedMode,
+                        onModeChange = onModeChange,
+                        onOpenSkills = onOpenSkills,
+                        onOpenMcp = onOpenMcp,
+                        palette = palette,
+                        onAttachClick = onAttachClick,
+                        onMeetingMinutesClick = onMeetingMinutesClick,
+                        onEmojiClick = onEmojiClick,
+                        onDictateClick = onDictateClick,
+                        trailing = trailing,
+                        canSend = canSend,
+                        onSend = onSend,
+                        onStop = onStop,
+                        onVoiceMessageClick = onVoiceMessageClick,
+                        field = null,
+                    )
+                } else {
+                    ComposerToolRow(
+                        expanded = false,
+                        enabled = enabled,
+                        selectedMode = selectedMode,
+                        onModeChange = onModeChange,
+                        onOpenSkills = onOpenSkills,
+                        onOpenMcp = onOpenMcp,
+                        palette = palette,
+                        onAttachClick = onAttachClick,
+                        onMeetingMinutesClick = onMeetingMinutesClick,
+                        onEmojiClick = onEmojiClick,
+                        onDictateClick = onDictateClick,
+                        trailing = trailing,
+                        canSend = canSend,
+                        onSend = onSend,
+                        onStop = onStop,
+                        onVoiceMessageClick = onVoiceMessageClick,
+                        field = { field(fieldSpec) },
+                    )
                 }
             }
         }
@@ -633,11 +337,13 @@ fun TeamilyAgentChatBar(
             state.edit { replace(0, length, value) }
         }
     }
+    val latestValue = rememberUpdatedState(value)
+    val latestOnValueChange = rememberUpdatedState(onValueChange)
     LaunchedEffect(state) {
         snapshotFlow { state.text.toString() }
             .collect { newText ->
-                if (newText != value) {
-                    onValueChange(newText)
+                if (newText != latestValue.value) {
+                    latestOnValueChange.value(newText)
                 }
             }
     }
@@ -667,12 +373,333 @@ fun TeamilyAgentChatBar(
 /** The chat bar's single trailing control. */
 private enum class TrailingAction { Voice, Send, Stop }
 
-/** A 30dp toolbar glyph with a 48dp touch box ([touchTarget48]). */
+private data class ComposerFieldSpec(
+    val state: TextFieldState,
+    val placeholder: String,
+    val enabled: Boolean,
+    val expanded: Boolean,
+    val canSend: Boolean,
+    val onSend: () -> Unit,
+    val onFocusChange: (Boolean) -> Unit,
+)
+
+@Composable
+private fun ComposerInputField(spec: ComposerFieldSpec) {
+    val textStyle = DuaGenAITextStyles.bubble.copy(
+        color = MaterialTheme.colorScheme.onSurface,
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
+        lineHeightStyle = LineHeightStyle(
+            alignment = LineHeightStyle.Alignment.Center,
+            trim = LineHeightStyle.Trim.None,
+            mode = LineHeightStyle.Mode.PerLine,
+        ),
+    )
+    BasicTextField(
+        state = spec.state,
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { spec.onFocusChange(it.isFocused) },
+        enabled = spec.enabled,
+        textStyle = textStyle,
+        lineLimits = if (spec.expanded) {
+            TextFieldLineLimits.MultiLine(minHeightInLines = 1, maxHeightInLines = 4)
+        } else {
+            TextFieldLineLimits.SingleLine
+        },
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(
+            imeAction = if (spec.expanded) ImeAction.Default else ImeAction.Send,
+        ),
+        onKeyboardAction = { if (spec.canSend) spec.onSend() },
+        decorator = { innerTextField ->
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = if (spec.expanded) Alignment.TopStart else Alignment.CenterStart,
+            ) {
+                if (spec.state.text.isEmpty()) {
+                    Text(
+                        text = spec.placeholder,
+                        style = textStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                    )
+                }
+                innerTextField()
+            }
+        },
+    )
+}
+
+@Composable
+private fun ComposerToolRow(
+    expanded: Boolean,
+    enabled: Boolean,
+    selectedMode: String,
+    onModeChange: (String) -> Unit,
+    onOpenSkills: (() -> Unit)?,
+    onOpenMcp: (() -> Unit)?,
+    palette: TeamilyPalette,
+    onAttachClick: () -> Unit,
+    onMeetingMinutesClick: () -> Unit,
+    onEmojiClick: () -> Unit,
+    onDictateClick: () -> Unit,
+    trailing: TrailingAction,
+    canSend: Boolean,
+    onSend: () -> Unit,
+    onStop: (() -> Unit)?,
+    onVoiceMessageClick: () -> Unit,
+    field: (@Composable () -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val iconTint = MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (expanded) {
+                    Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                } else {
+                    Modifier
+                        .heightIn(min = 56.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (expanded) Arrangement.SpaceBetween else Arrangement.Start,
+    ) {
+        ToolbarIconButton(
+            contentDescription = stringResource(R.string.composer_attach),
+            onClick = onAttachClick,
+            enabled = enabled,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        if (!expanded && field != null) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                field()
+            }
+        }
+        if (expanded) {
+            ComposerModeButton(
+                selectedMode = selectedMode,
+                enabled = enabled,
+                onModeChange = onModeChange,
+                onOpenSkills = onOpenSkills,
+                onOpenMcp = onOpenMcp,
+                palette = palette,
+            )
+            ToolbarIconButton(
+                contentDescription = stringResource(R.string.composer_meeting_minutes),
+                onClick = onMeetingMinutesClick,
+                enabled = enabled,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoFixHigh,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            ToolbarIconButton(
+                contentDescription = stringResource(R.string.composer_emoji),
+                onClick = onEmojiClick,
+                enabled = enabled,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
+        ToolbarIconButton(
+            contentDescription = stringResource(R.string.composer_dictate),
+            onClick = onDictateClick,
+            enabled = enabled,
+        ) {
+            OutlinedMicGlyph(
+                tint = iconTint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        if (!expanded) Spacer(Modifier.width(8.dp))
+        AnimatedContent(
+            targetState = trailing,
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            label = "PrimaryActionTransition",
+        ) { target ->
+            when (target) {
+                TrailingAction.Stop -> ComposerCircleButton(
+                    contentDescription = stringResource(R.string.composer_stop),
+                    container = MaterialTheme.colorScheme.errorContainer,
+                    enabled = enabled,
+                    onClick = { onStop?.invoke() },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                TrailingAction.Send -> ComposerCircleButton(
+                    contentDescription = stringResource(R.string.composer_send),
+                    container = MaterialTheme.colorScheme.primary,
+                    enabled = enabled && canSend,
+                    onClick = onSend,
+                ) {
+                    ArrowUpwardGlyph(
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                TrailingAction.Voice -> ComposerCircleButton(
+                    contentDescription = stringResource(R.string.composer_voice_message),
+                    container = MaterialTheme.colorScheme.primaryContainer,
+                    enabled = enabled,
+                    onClick = onVoiceMessageClick,
+                ) {
+                    VoiceBarsGlyph(
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComposerModeButton(
+    selectedMode: String,
+    enabled: Boolean,
+    onModeChange: (String) -> Unit,
+    onOpenSkills: (() -> Unit)?,
+    onOpenMcp: (() -> Unit)?,
+    palette: TeamilyPalette,
+    modifier: Modifier = Modifier,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val modes = listOf(
+        stringResource(R.string.composer_mode_auto),
+        stringResource(R.string.composer_mode_instant),
+        stringResource(R.string.composer_mode_agentic),
+        stringResource(R.string.composer_mode_deep_research),
+        stringResource(R.string.composer_mode_fast),
+    )
+    Box(modifier) {
+        ToolbarIconButton(
+            contentDescription = stringResource(R.string.composer_mode, selectedMode),
+            onClick = { menuExpanded = true },
+            enabled = enabled,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.WorkspacePremium,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+            properties = PopupProperties(blurBehindRadius = 16.dp),
+        ) {
+            modes.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = mode,
+                            fontWeight = if (mode == selectedMode) FontWeight.Bold else FontWeight.Normal,
+                            color = if (mode == selectedMode) palette.signalGreen else MaterialTheme.colorScheme.onSurface,
+                        )
+                    },
+                    onClick = {
+                        onModeChange(mode)
+                        menuExpanded = false
+                    },
+                )
+            }
+            if (onOpenSkills != null || onOpenMcp != null) {
+                HorizontalDivider(color = palette.border)
+            }
+            if (onOpenSkills != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.composer_skills)) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Build, contentDescription = null)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenSkills()
+                    },
+                )
+            }
+            if (onOpenMcp != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.composer_mcp)) },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Extension, contentDescription = null)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onOpenMcp()
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComposerCircleButton(
+    contentDescription: String,
+    container: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val source = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .touchTarget48(
+                Modifier
+                    .clickable(
+                        enabled = enabled,
+                        interactionSource = source,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onClick,
+                    )
+                    .semantics { this.contentDescription = contentDescription },
+            )
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(container)
+            .indication(source, LocalIndication.current),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}
+
+/** A 32dp toolbar glyph with a 48dp touch box ([touchTarget48]). */
 @Composable
 private fun ToolbarIconButton(
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val source = remember { MutableInteractionSource() }
@@ -686,6 +713,7 @@ private fun ToolbarIconButton(
             .touchTarget48(
                 Modifier
                     .clickable(
+                        enabled = enabled,
                         role = Role.Button,
                         onClick = onClick,
                         interactionSource = source,
@@ -705,7 +733,7 @@ private fun ToolbarIconButton(
 /** Draws crisp outlined microphone glyph. */
 @Composable
 private fun OutlinedMicGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(22.dp)) {
+    Canvas(modifier = modifier.size(24.dp)) {
         val w = size.width
         val h = size.height
         val stroke = 1.6.dp.toPx()
@@ -757,18 +785,31 @@ private fun ArrowUpwardGlyph(tint: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Draws audio voice wave glyph for voice recording. */
+/** Two rounded bars, the resting voice control on the collapsed pill. */
 @Composable
-private fun VoiceMessageGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = Icons.Rounded.GraphicEq,
-        contentDescription = null,
-        tint = tint,
-        modifier = modifier.size(20.dp),
-    )
+private fun VoiceBarsGlyph(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(20.dp)) {
+        val stroke = 2.4.dp.toPx()
+        val gap = 3.dp.toPx()
+        val cx = size.width / 2f
+        drawLine(
+            color = tint,
+            start = Offset(cx - gap, size.height * 0.22f),
+            end = Offset(cx - gap, size.height * 0.78f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = tint,
+            start = Offset(cx + gap, size.height * 0.22f),
+            end = Offset(cx + gap, size.height * 0.78f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+    }
 }
 
-@Preview(name = "Single-Row Capsule — Empty", showBackground = true)
+@Preview(name = "Collapsed", showBackground = true, widthDp = 360)
 @Composable
 private fun SingleRowCapsuleEmptyPreview() = DuaGenAITheme(darkTheme = false) {
     Box(Modifier.padding(16.dp)) {
@@ -776,18 +817,36 @@ private fun SingleRowCapsuleEmptyPreview() = DuaGenAITheme(darkTheme = false) {
     }
 }
 
-@Preview(name = "Single-Row Capsule — With Text", showBackground = true)
+@Preview(name = "Expanded — With Text", showBackground = true, widthDp = 360)
 @Composable
 private fun SingleRowCapsuleTextPreview() = DuaGenAITheme(darkTheme = false) {
     Box(Modifier.padding(16.dp)) {
-        TeamilyAgentChatBar(value = "P1+P2+P3 ek hi PR me fix karo")
+        TeamilyAgentChatBar(value = "Hi")
     }
 }
 
-@Preview(name = "Single-Row Capsule — Dark", showBackground = true)
+@Preview(name = "Collapsed — Dark", showBackground = true, widthDp = 360)
 @Composable
 private fun SingleRowCapsuleDarkPreview() = DuaGenAITheme(darkTheme = true) {
     Box(Modifier.padding(16.dp)) {
         TeamilyAgentChatBar(value = "")
+    }
+}
+
+@Preview(name = "Toolbar Icon Button", showBackground = true)
+@Composable
+private fun ToolbarIconButtonPreview() = DuaGenAITheme(darkTheme = false) {
+    Box(Modifier.padding(16.dp)) {
+        ToolbarIconButton(
+            contentDescription = "Attach",
+            onClick = {},
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }

@@ -49,6 +49,22 @@
     <!-- Agent thread header pill + composer (every agent's chat) -->
     <string name="agent_invite">Invite</string>
     <string name="chat_agent_placeholder">Type a message...</string>
+    <string name="composer_attach">Attach</string>
+    <string name="composer_mode">Mode: %1$s</string>
+    <string name="composer_mode_auto">Auto</string>
+    <string name="composer_mode_instant">Instant</string>
+    <string name="composer_mode_agentic">Agentic</string>
+    <string name="composer_mode_deep_research">Deep Research</string>
+    <string name="composer_mode_fast">Fast</string>
+    <string name="composer_meeting_minutes">Meeting Minutes</string>
+    <string name="composer_dictate">Dictate</string>
+    <string name="composer_emoji">Emoji</string>
+    <string name="composer_voice_message">Voice message</string>
+    <string name="composer_send">Send message</string>
+    <string name="composer_stop">Stop</string>
+    <string name="composer_skills">Skills</string>
+    <string name="composer_mcp">MCP Tools</string>
+    <string name="composer_remove_chip">Remove %1$s</string>
     <!-- Agent profile: toggles, more-sheet, confirms -->
     <string name="agent_mute">Mute Notifications</string>
     <string name="agent_pin">Pin to Top</string>

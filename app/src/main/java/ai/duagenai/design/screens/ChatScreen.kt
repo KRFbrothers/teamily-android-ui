@@ -91,15 +91,16 @@ import ai.duagenai.design.theme.teamilyPalette
  *  `chatId` is a required parameter: the nav host passes the id of the row that
  *  was tapped, and `onBack` pops to Home.
  *
- *  COMPOSER — the 2-row Teamily chat bar
+ *  COMPOSER — collapsed pill, expands while drafting
  *  -------------------------------------
- *  The thread's composer is [TeamilyAgentChatBar] (TeamilyAgentChatBar.kt):
- *  row 1 the field, row 2 the toolbar. `+` opens ComposerPlusSheet, which hands
- *  off to ComposerSkillsSheet / ComposerMcpSheet; the mode pill's menu also
- *  lists Skills and MCP Tools. While Agent's reply is pending (`agentTyping`)
- *  the trailing control is Stop, which cancels the reply. Meeting Minutes,
- *  Dictate, Emoji, Voice message and Voice call have no backend yet, so a tap
- *  shows the "Jaldi aa raha hai" snackbar (the same answer Dua home gives).
+ *  The thread's composer is [TeamilyAgentChatBar] (TeamilyAgentChatBar.kt).
+ *  Empty and unfocused it is one row: `+`, the field, mic, voice circle.
+ *  Focus or text lifts the field and shows the tool row (mode, meeting
+ *  minutes, emoji, mic, Send). `+` opens ComposerPlusSheet. The mode icon's
+ *  menu also lists Skills and MCP Tools. While Agent's reply is pending
+ *  (`agentTyping`) the trailing circle is Stop. Meeting Minutes, Dictate,
+ *  Emoji and Voice message have no backend yet, so a tap shows the
+ *  "Jaldi aa raha hai" snackbar (the same answer Dua home gives).
  *
  *  HEADERS — the two pinned agents
  *  -------------------------------
@@ -592,7 +593,7 @@ fun ChatScreen(
                 ),
             )
         },
-        // The 2-row Teamily chat bar. Only the placeholder is thread-specific.
+        // Collapsed pill; it grows a tool row once the field is in use.
         bottomBar = {
             // The scaffold pins this bar to the screen bottom, which on an
             // edge-to-edge window is behind the navigation bar and the keyboard.
