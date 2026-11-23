@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.PhotoCamera
@@ -46,11 +47,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.TeamilyMarks
@@ -135,10 +138,12 @@ internal fun ComposerPlusSheet(
     onOpenCreate: (String) -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
+    // Preview does not run the expand animation, so start open there only.
+    val initialSheet = if (LocalInspectionMode.current) SheetValue.Expanded else SheetValue.Hidden
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(
-            initialValue = SheetValue.Hidden,
+            initialValue = initialSheet,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
         containerColor = MaterialTheme.colorScheme.surface,
@@ -173,6 +178,12 @@ internal fun ComposerPlusSheet(
                     supportingText = "App Connectors (MCP)",
                     shape = RoundedCornerShape(6.dp),
                     onClick = onOpenMcp,
+                )
+                SegmentedSheetActionRow(
+                    icon = Icons.Outlined.Description,
+                    label = "Meeting Minutes",
+                    shape = RoundedCornerShape(6.dp),
+                    onClick = onDismiss,
                 )
                 SegmentedSheetActionRow(
                     icon = Icons.Outlined.AutoAwesome,
@@ -417,10 +428,12 @@ internal fun ComposerMcpSheet(
     onDismiss: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
+    // Preview does not run the expand animation, so start open there only.
+    val initialSheet = if (LocalInspectionMode.current) SheetValue.Expanded else SheetValue.Hidden
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(
-            initialValue = SheetValue.Hidden,
+            initialValue = initialSheet,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
         ),
         containerColor = MaterialTheme.colorScheme.surface,
@@ -594,4 +607,28 @@ private fun ToolChips(ids: List<String>) {
             }
         }
     }
+}
+
+@Preview(name = "Composer plus — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ComposerPlusSheetLight() = DuaGenAITheme(darkTheme = false) {
+    ComposerPlusSheet(onOpenSkills = {}, onOpenMcp = {}, onDismiss = {})
+}
+
+@Preview(name = "Composer plus — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ComposerPlusSheetDark() = DuaGenAITheme(darkTheme = true) {
+    ComposerPlusSheet(onOpenSkills = {}, onOpenMcp = {}, onDismiss = {})
+}
+
+@Preview(name = "Quick actions — light", showBackground = true, widthDp = 390)
+@Composable
+private fun QuickActionsButtonGroupLight() = DuaGenAITheme(darkTheme = false) {
+    QuickActionsButtonGroup(onDismiss = {})
+}
+
+@Preview(name = "Tool chips — light", showBackground = true, widthDp = 390)
+@Composable
+private fun ToolChipsLight() = DuaGenAITheme(darkTheme = false) {
+    ToolChips(ids = ADK_BUILT_IN_TOOLS)
 }

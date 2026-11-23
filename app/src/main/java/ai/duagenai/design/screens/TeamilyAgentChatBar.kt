@@ -153,7 +153,7 @@ fun TeamilyAgentChatBar(
         targetValue = if (isFocused) {
             MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
         } else {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+            MaterialTheme.colorScheme.outlineVariant
         },
         label = "ComposerBorderAnimation",
     )
@@ -192,7 +192,7 @@ fun TeamilyAgentChatBar(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
-        color = palette.composerBg,
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = if (isDark) 2.dp else 4.dp,
     ) {
@@ -267,7 +267,7 @@ fun TeamilyAgentChatBar(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
                 // Row 1: Multiline State-Based Input Field
                 Box(
@@ -310,7 +310,7 @@ fun TeamilyAgentChatBar(
 
                 Spacer(Modifier.height(6.dp))
 
-                // Row 2: Expressive Action Toolbar
+                // Row 2: Expressive Action Toolbar (Fits cleanly on 363dp - 390dp screens)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -329,7 +329,7 @@ fun TeamilyAgentChatBar(
                         )
                     }
 
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
 
                     // 2. M3 1.5.0 Split Button (Auto | ▾) with anchored DropdownMenu
                     ModeSplitButton(
@@ -340,70 +340,52 @@ fun TeamilyAgentChatBar(
                         palette = palette,
                     )
 
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
 
                     // 3. Shape-Morphing Memory Toggle (Pill -> 12dp squircle)
                     var memoryActive by rememberSaveable { mutableStateOf(false) }
-                    FilledTonalToggleButton(
-                        checked = memoryActive,
-                        onCheckedChange = { memoryActive = it },
-                        shapes = ToggleButtonShapes(
-                            shape = CircleShape,
-                            pressedShape = CircleShape,
-                            checkedShape = RoundedCornerShape(12.dp),
-                        ),
-                        colors = FilledTonalToggleButtonDefaults.colors(
-                            containerColor = palette.surfaceRecessed,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        ),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
-                        modifier = Modifier.touchTarget48(
-                            Modifier.semantics {
-                                contentDescription = if (memoryActive) "Memory: On" else "Memory: Off"
-                            },
-                        ),
+                    val memorySource = remember { MutableInteractionSource() }
+                    val memoryShape = if (memoryActive) RoundedCornerShape(12.dp) else CircleShape
+                    Box(
+                        modifier = Modifier
+                            .touchTarget48(
+                                Modifier
+                                    .clickable(
+                                        interactionSource = memorySource,
+                                        indication = null,
+                                        role = Role.Button,
+                                        onClick = { memoryActive = !memoryActive },
+                                    )
+                                    .semantics {
+                                        contentDescription = if (memoryActive) "Memory: On" else "Memory: Off"
+                                    },
+                            )
+                            .size(36.dp)
+                            .clip(memoryShape)
+                            .background(
+                                if (memoryActive) MaterialTheme.colorScheme.primaryContainer
+                                else palette.surfaceRecessed,
+                            )
+                            .indication(memorySource, LocalIndication.current),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Psychology,
                             contentDescription = null,
+                            tint = if (memoryActive) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp),
                         )
                     }
 
-                    Spacer(Modifier.width(4.dp))
-                    VerticalDivider(color = palette.border)
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
 
-                    // Tool: Meeting Minutes
-                    ToolbarIconButton(
-                        contentDescription = "Meeting Minutes",
-                        onClick = onMeetingMinutesClick,
-                    ) {
-                        MeetingMinutesGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-
-                    Spacer(Modifier.width(2.dp))
-
-                    // Tool: Dictate
+                    // 4. Dictate wave icon button
                     ToolbarIconButton(
                         contentDescription = "Dictate",
                         onClick = onDictateClick,
                     ) {
                         DictateGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-
-                    Spacer(Modifier.width(4.dp))
-                    VerticalDivider(color = palette.border)
-                    Spacer(Modifier.width(4.dp))
-
-                    // Tool: Emoji
-                    ToolbarIconButton(
-                        contentDescription = "Emoji",
-                        onClick = onEmojiClick,
-                    ) {
-                        EmojiGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
                     Spacer(Modifier.weight(1f))
@@ -466,50 +448,39 @@ fun TeamilyAgentChatBar(
                                         .size(42.dp)
                                         .teamilyPrimaryGlow(palette)
                                         .clip(RoundedCornerShape(16.dp))
-                                        .background(palette.brandGradient)
+                                        .background(MaterialTheme.colorScheme.primary)
                                         .indication(sendSource, LocalIndication.current),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Outlined.Send,
                                         contentDescription = null,
-                                        tint = palette.sendButtonIcon,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
                             }
                             TrailingAction.Voice -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                val voiceSource = remember { MutableInteractionSource() }
+                                Box(
+                                    modifier = Modifier
+                                        .touchTarget48(
+                                            Modifier
+                                                .clickable(
+                                                    interactionSource = voiceSource,
+                                                    indication = null,
+                                                    role = Role.Button,
+                                                    onClick = onVoiceMessageClick,
+                                                )
+                                                .semantics { contentDescription = "Voice message" },
+                                        )
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(palette.surfaceRecessed)
+                                        .indication(voiceSource, LocalIndication.current),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    val voiceSource = remember { MutableInteractionSource() }
-                                    Box(
-                                        modifier = Modifier
-                                            .touchTarget48(
-                                                Modifier
-                                                    .clickable(
-                                                        interactionSource = voiceSource,
-                                                        indication = null,
-                                                        role = Role.Button,
-                                                        onClick = onVoiceMessageClick,
-                                                    )
-                                                    .semantics { contentDescription = "Voice message" },
-                                            )
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(palette.surfaceRecessed)
-                                            .indication(voiceSource, LocalIndication.current),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        VoiceMessageGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    ToolbarIconButton(
-                                        contentDescription = "Voice call",
-                                        onClick = onVoiceCallClick,
-                                    ) {
-                                        VoiceCallGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
+                                    VoiceMessageGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -596,6 +567,11 @@ private fun ModeSplitButton(
 ) {
     var modeMenuExpanded by remember { mutableStateOf(false) }
     val modes = listOf("Auto", "Instant", "Agentic", "Deep Research", "Fast")
+    val displayMode = when (selectedMode) {
+        "Agent Engine" -> "Agentic"
+        "Deep Research" -> "Research"
+        else -> selectedMode
+    }
 
     Box(modifier = modifier) {
         val leadingSource = remember { MutableInteractionSource() }
@@ -605,31 +581,30 @@ private fun ModeSplitButton(
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
                     onClick = { modeMenuExpanded = true },
-                    modifier = Modifier
-                        .touchTarget48(
-                            Modifier
-                                .clickable(
-                                    interactionSource = leadingSource,
-                                    indication = null,
-                                    role = Role.Button,
-                                    onClick = { modeMenuExpanded = true },
-                                )
-                                .semantics { contentDescription = "Mode: $selectedMode" },
-                        ),
+                    modifier = Modifier.touchTarget48(
+                        Modifier
+                            .clickable(
+                                interactionSource = leadingSource,
+                                indication = null,
+                                role = Role.Button,
+                                onClick = { modeMenuExpanded = true },
+                            )
+                            .semantics { contentDescription = "Mode: $selectedMode" },
+                    ),
                     shapes = SplitButtonDefaults.leadingButtonShapesFor(SplitButtonDefaults.ExtraSmallContainerHeight),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = palette.surfaceRecessed,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                 ) {
                     Text(
-                        text = selectedMode,
-                        style = MaterialTheme.typography.bodySmall.copy(
+                        text = displayMode,
+                        style = MaterialTheme.typography.labelMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.5.sp,
+                            fontSize = 12.sp,
                         ),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
             },
@@ -649,12 +624,12 @@ private fun ModeSplitButton(
                     ),
                     shapes = SplitButtonDefaults.trailingButtonShapesFor(SplitButtonDefaults.ExtraSmallContainerHeight),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = palette.surfaceRecessed,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                 ) {
-                    ChevronDownGlyph(tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ChevronDownGlyph(tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             },
         )
@@ -669,8 +644,8 @@ private fun ModeSplitButton(
                     text = {
                         Text(
                             text = mode,
-                            fontWeight = if (mode == selectedMode) FontWeight.Bold else FontWeight.Normal,
-                            color = if (mode == selectedMode) palette.signalGreen else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (mode == selectedMode || (mode == "Agentic" && selectedMode == "Agent Engine")) FontWeight.Bold else FontWeight.Normal,
+                            color = if (mode == selectedMode || (mode == "Agentic" && selectedMode == "Agent Engine")) palette.signalGreen else MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     onClick = {
@@ -886,5 +861,37 @@ private fun TeamilyChatBarEmptyPreview() = DuaGenAITheme(darkTheme = false) {
 private fun TeamilyChatBarTextPreview() = DuaGenAITheme(darkTheme = false) {
     Box(Modifier.padding(16.dp)) {
         TeamilyAgentChatBar(value = "P1+P2+P3 ek hi PR me fix karo")
+    }
+}
+
+@Preview(name = "Teamily Chat Bar — 363dp Light", widthDp = 363, showBackground = true)
+@Composable
+private fun TeamilyChatBar363dpLightPreview() = DuaGenAITheme(darkTheme = false) {
+    Box(Modifier.padding(12.dp)) {
+        TeamilyAgentChatBar(value = "")
+    }
+}
+
+@Preview(name = "Teamily Chat Bar — 363dp Dark", widthDp = 363, showBackground = true)
+@Composable
+private fun TeamilyChatBar363dpDarkPreview() = DuaGenAITheme(darkTheme = true) {
+    Box(Modifier.padding(12.dp)) {
+        TeamilyAgentChatBar(value = "")
+    }
+}
+
+@Preview(name = "Teamily Chat Bar — 363dp Typing", widthDp = 363, showBackground = true)
+@Composable
+private fun TeamilyChatBar363dpTypingPreview() = DuaGenAITheme(darkTheme = false) {
+    Box(Modifier.padding(12.dp)) {
+        TeamilyAgentChatBar(value = "P1+P2+P3 ek hi PR me fix karo")
+    }
+}
+
+@Preview(name = "Teamily Chat Bar — 363dp Streaming", widthDp = 363, showBackground = true)
+@Composable
+private fun TeamilyChatBar363dpStreamingPreview() = DuaGenAITheme(darkTheme = false) {
+    Box(Modifier.padding(12.dp)) {
+        TeamilyAgentChatBar(value = "", sending = true, onStop = {})
     }
 }

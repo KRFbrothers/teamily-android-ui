@@ -3581,7 +3581,7 @@ class DuaGenAINavHostTest {
         fun bounds(desc: String) =
             compose.onNodeWithContentDescription(desc, substring = true).fetchSemanticsNode().boundsInRoot
         val min = 48f * compose.density.density - 1f
-        val idle = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Meeting Minutes", "Dictate", "Emoji", THREAD_VOICE_LABEL, "Voice call")
+        val idle = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Memory", "Dictate", THREAD_VOICE_LABEL)
             .map { bounds(it) }
         for (i in 1 until idle.size) {
             assertTrue("toolbar order, item $i", idle[i - 1].center.x < idle[i].center.x)
@@ -3589,10 +3589,12 @@ class DuaGenAINavHostTest {
         compose.onNode(hasSetTextAction()).performTextInput("Hi")
         compose.waitForIdle()
         val send = bounds(SEND_LABEL)
-        assertTrue("Send sits at the end", idle[4].right <= send.left + 1f)
-        for (b in idle + send) {
-            assertTrue("chat bar control must be >= 48dp wide", b.width >= min)
-            assertTrue("chat bar control must be >= 48dp tall", b.height >= min)
+        assertTrue("Send sits at the end", idle[3].right <= send.left + 1f)
+        val names = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Memory", "Dictate", THREAD_VOICE_LABEL, SEND_LABEL)
+        for ((idx, b) in (idle + send).withIndex()) {
+            val name = names.getOrElse(idx) { "item $idx" }
+            assertTrue("chat bar control '$name' must be >= 48dp wide (was ${b.width})", b.width >= min)
+            assertTrue("chat bar control '$name' must be >= 48dp tall (was ${b.height})", b.height >= min)
         }
     }
 
