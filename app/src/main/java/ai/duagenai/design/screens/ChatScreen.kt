@@ -394,6 +394,7 @@ fun ChatScreen(
     var chatMode by rememberSaveable(chatId) {
         mutableStateOf(if (chatId == AGENT_CHAT_ID) "Agent Engine" else "Auto")
     }
+    var contextChips by rememberSaveable(chatId) { mutableStateOf(listOf<String>()) }
     val snackbarHostState = remember { SnackbarHostState() }
     val comingSoon = stringResource(R.string.composer_coming_soon)
     val showComingSoon: () -> Unit = {
@@ -423,6 +424,7 @@ fun ChatScreen(
         // of the transcript, so a message cannot be lost by a stale local list.
         transcriptStore.append(chatId, SavedMessage(SavedMessage.USER, text, nowLabel()))
         draftState.edit { replace(0, length, "") }
+        contextChips = emptyList()
         agentTyping = true
         // Offline until there is a session or an injected source. This branch is
         // what the existing UI tests drive: a 900ms beat, then [AGENT_REPLY].
@@ -621,11 +623,13 @@ fun ChatScreen(
                     onStop = { stop() },
                     onOpenSkills = { sheet = ComposerSheet.Skills },
                     onOpenMcp = { sheet = ComposerSheet.Mcp },
+                    contextChips = contextChips,
+                    onDismissChip = { chip -> contextChips = contextChips - chip },
                     modifier = Modifier.padding(
-                        start = spacing.gutter,
-                        end = spacing.gutter,
+                        start = 12.dp,
+                        end = 12.dp,
                         top = spacing.sm,
-                        bottom = spacing.md,
+                        bottom = 8.dp,
                     ),
                 )
             }

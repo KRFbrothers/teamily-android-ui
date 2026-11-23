@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -18,9 +19,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -35,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,6 +57,8 @@ import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.TeamilyShapes
+import ai.duagenai.design.theme.teamilyPalette
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.widthIn
 import ai.duagenai.design.theme.MaxContentWidth
 
@@ -114,7 +126,7 @@ internal enum class ComposerSheet { None, Plus, Skills, Mcp }
  * the Skills row). Under them, the eight Create tiles from the HTML each open
  * their own screen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ComposerPlusSheet(
     onOpenSkills: () -> Unit,
@@ -132,9 +144,44 @@ internal fun ComposerPlusSheet(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         SheetColumn(title = "Quick Actions") {
+            // Top M3 1.5.0 connected ButtonGroup
+            QuickActionsButtonGroup(onDismiss = onDismiss)
+
+            // Grouped Segmented List Items
             SheetSectionLabel("Agent tools")
-            SheetActionRow(icon = Icons.Outlined.Build, label = "Skills", onClick = onOpenSkills)
-            SheetActionRow(icon = Icons.Outlined.Extension, label = "MCP Tools", onClick = onOpenMcp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                SegmentedSheetActionRow(
+                    icon = Icons.Outlined.Psychology,
+                    label = "Attach Memory",
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 6.dp),
+                    onClick = onDismiss,
+                )
+                SegmentedSheetActionRow(
+                    icon = Icons.Outlined.Build,
+                    label = "Skills",
+                    shape = RoundedCornerShape(6.dp),
+                    onClick = onOpenSkills,
+                )
+                SegmentedSheetActionRow(
+                    icon = Icons.Outlined.Extension,
+                    label = "MCP Tools",
+                    supportingText = "App Connectors (MCP)",
+                    shape = RoundedCornerShape(6.dp),
+                    onClick = onOpenMcp,
+                )
+                SegmentedSheetActionRow(
+                    icon = Icons.Outlined.AutoAwesome,
+                    label = "Create Artifact",
+                    shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
+                    onClick = onDismiss,
+                )
+            }
+
             SheetSectionLabel("Create")
             for (row in CREATE_TILES.chunked(4)) {
                 Row(
@@ -153,6 +200,116 @@ internal fun ComposerPlusSheet(
                             },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun QuickActionsButtonGroup(
+    onDismiss: () -> Unit,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val palette = teamilyPalette()
+    val actions = listOf(
+        Triple("Upload", Icons.Outlined.UploadFile) { onDismiss() },
+        Triple("Photos", Icons.Outlined.PhotoLibrary) { onDismiss() },
+        Triple("Camera", Icons.Outlined.PhotoCamera) { onDismiss() },
+        Triple("Call", Icons.Outlined.Phone) { onDismiss() },
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = spacing.gutter, vertical = spacing.xs),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+    ) {
+        actions.forEachIndexed { index, (label, icon, onClick) ->
+            val shape = when (index) {
+                0 -> ButtonGroupDefaults.connectedLeadingButtonShape
+                actions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShape
+                else -> ButtonGroupDefaults.connectedMiddleButtonShapes().shape
+            }
+            Surface(
+                shape = shape,
+                color = palette.surfaceRecessed,
+                modifier = Modifier
+                    .weight(1f)
+                    .sizeIn(minHeight = MinTouchTarget)
+                    .clip(shape)
+                    .clickable(role = Role.Button, onClick = onClick)
+                    .semantics { contentDescription = label },
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentedSheetActionRow(
+    icon: ImageVector,
+    label: String,
+    shape: Shape,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    supportingText: String? = null,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    val palette = teamilyPalette()
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        shape = shape,
+        color = palette.surfaceRecessed,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .sizeIn(minHeight = MinTouchTarget)
+                .padding(horizontal = spacing.gutter, vertical = spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(spacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = DuaGenAITextStyles.rowTitle,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (supportingText != null) {
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
