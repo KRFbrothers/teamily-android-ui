@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -601,6 +602,8 @@ fun ChatScreen(
                     WindowInsets.navigationBars.union(WindowInsets.ime),
                 ),
             ) {
+                val isImeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+                val horizontalMargin = if (isImeOpen) 16.dp else 20.dp
                 TeamilyAgentChatBar(
                     state = draftState,
                     onSend = { send() },
@@ -626,10 +629,10 @@ fun ChatScreen(
                     contextChips = contextChips,
                     onDismissChip = { chip -> contextChips = contextChips - chip },
                     modifier = Modifier.padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = spacing.sm,
-                        bottom = 8.dp,
+                        start = horizontalMargin,
+                        end = horizontalMargin,
+                        top = 4.dp,
+                        bottom = 12.dp,
                     ),
                 )
             }
