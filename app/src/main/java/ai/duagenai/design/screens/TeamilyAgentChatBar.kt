@@ -55,6 +55,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -756,29 +757,15 @@ private fun ArrowUpwardGlyph(tint: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** Draws audio wave microphone glyph for voice recording. */
+/** Draws audio voice wave glyph for voice recording. */
 @Composable
 private fun VoiceMessageGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
-        val w = size.width
-        val h = size.height
-        val capsule = Path().apply {
-            moveTo(w * 0.38f, h * 0.25f)
-            lineTo(w * 0.62f, h * 0.25f)
-            lineTo(w * 0.62f, h * 0.55f)
-            quadraticTo(w * 0.62f, h * 0.68f, w * 0.50f, h * 0.68f)
-            quadraticTo(w * 0.38f, h * 0.68f, w * 0.38f, h * 0.55f)
-            close()
-        }
-        drawPath(capsule, color = tint, style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round))
-        val cradle = Path().apply {
-            moveTo(w * 0.28f, h * 0.50f)
-            quadraticTo(w * 0.28f, h * 0.78f, w * 0.50f, h * 0.78f)
-            quadraticTo(w * 0.72f, h * 0.78f, w * 0.72f, h * 0.50f)
-        }
-        drawPath(cradle, color = tint, style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round))
-        drawLine(tint, Offset(w * 0.50f, h * 0.78f), Offset(w * 0.50f, h * 0.90f), strokeWidth = 1.4.dp.toPx(), cap = StrokeCap.Round)
-    }
+    Icon(
+        imageVector = Icons.Rounded.GraphicEq,
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier.size(20.dp),
+    )
 }
 
 @Preview(name = "Single-Row Capsule — Empty", showBackground = true)
