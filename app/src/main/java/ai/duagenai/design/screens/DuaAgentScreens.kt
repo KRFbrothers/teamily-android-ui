@@ -1,5 +1,7 @@
 package ai.duagenai.design.screens
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.ScrollState
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -34,6 +37,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -79,8 +83,11 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -404,9 +411,9 @@ private fun AgentBadgeDot(size: Dp, c: AgentColors, ring: Color, modifier: Modif
 }
 
 /**
- * An agent thread's header (reference: Teamily chat): one rounded pill with
- * back · avatar + green badge · name, and an "Invite" text button. Tapping the
- * avatar or name opens that agent's profile; Invite opens its New Group.
+ * An agent thread's header: 3-part floating pill header
+ * (< circle · auto-sizing [Avatar + Name] capsule · ⋯ circle).
+ * Tapping the avatar or name opens that agent's profile; ⋯ opens its New Group / actions.
  */
 @Composable
 fun AgentChatHeaderPill(
@@ -420,45 +427,120 @@ fun AgentChatHeaderPill(
 ) {
     val c = rememberAgentColors()
     val backLabel = stringResource(R.string.back)
+    val inviteLabel = stringResource(R.string.agent_invite)
+    val profileLabel = stringResource(R.string.agent_open_profile, name)
+
     Row(
-        modifier
+        modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
-            .height(60.dp)
-            .clip(RoundedCornerShape(30.dp))
-            .background(c.chrome),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // 1. Left — Floating < Back Circle (44.dp drawn circle centered in 48.dp touch target)
         Box(
-            Modifier.padding(start = 4.dp).size(48.dp).clip(CircleShape).clickable(onClick = onBack)
-                .semantics { contentDescription = backLabel; role = Role.Button },
+            modifier = Modifier.size(48.dp),
             contentAlignment = Alignment.Center,
-        ) { AgentIcon("back", 24.dp, c.ink) }
-        Row(
-            Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(24.dp))
-                .clickable(onClickLabel = stringResource(R.string.agent_open_profile, name), role = Role.Button, onClick = onOpenProfile)
-                .padding(vertical = 6.dp, horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(42.dp)) {
-                AgentAvatar(agentId, name, 40.dp)
-                AgentBadgeDot(13.dp, c, c.chrome, Modifier.align(Alignment.BottomEnd))
-            }
-            Spacer(Modifier.width(10.dp))
-            Text(
-                name, style = t(18, 24, true), color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            if (verified) {
-                Spacer(Modifier.width(4.dp))
-                VerifiedCheck()
+            Surface(
+                onClick = onBack,
+                modifier = Modifier
+                    .size(44.dp)
+                    .semantics {
+                        contentDescription = backLabel
+                        role = Role.Button
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    AgentIcon("back", 24.dp, MaterialTheme.colorScheme.onSurface)
+                }
             }
         }
-        TextButton(onClick = onInvite, modifier = Modifier.padding(end = 6.dp)) {
-            Text(stringResource(R.string.agent_invite), style = t(16, 22, true), color = c.ink)
+
+        Spacer(Modifier.width(8.dp))
+
+        // 2. Middle — Auto-Sizing [Avatar + Name] Floating Capsule
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .wrapContentWidth(Alignment.Start)
+                .animateContentSize(),
+        ) {
+            Surface(
+                onClick = onOpenProfile,
+                modifier = Modifier
+                    .height(44.dp)
+                    .semantics {
+                        onClick(label = profileLabel) {
+                            onOpenProfile()
+                            true
+                        }
+                        role = Role.Button
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 6.dp, end = 16.dp),
+                ) {
+                    Box(Modifier.size(32.dp)) {
+                        AgentAvatar(agentId, name, 32.dp)
+                        AgentBadgeDot(
+                            size = 10.dp,
+                            c = c,
+                            ring = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (verified) {
+                        Spacer(Modifier.width(4.dp))
+                        VerifiedCheck()
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        // 3. Right — Floating ⋯ Circle (44.dp drawn circle centered in 48.dp touch target)
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Surface(
+                onClick = onInvite,
+                modifier = Modifier
+                    .size(44.dp)
+                    .semantics {
+                        text = AnnotatedString(inviteLabel)
+                        contentDescription = inviteLabel
+                        role = Role.Button
+                    },
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    AgentIcon("more", 24.dp, MaterialTheme.colorScheme.onSurface)
+                }
+            }
         }
     }
 }
@@ -1800,3 +1882,27 @@ private fun Agent13NewGroupLight() = DuaGenAITheme(darkTheme = false) { DuaAgent
 @Preview(name = "Agent 13 · New Group — dark", showBackground = true, widthDp = 390, heightDp = 844)
 @Composable
 private fun Agent13NewGroupDark() = DuaGenAITheme(darkTheme = true) { DuaAgentNewGroupScreen() }
+
+@Preview(name = "AgentChatHeaderPill · short — light", showBackground = true, widthDp = 390)
+@Composable
+private fun AgentChatHeaderPillShortLightPreview() = DuaGenAITheme(darkTheme = false) {
+    AgentChatHeaderPill(
+        agentId = "agent_dua",
+        name = "Dua",
+        onBack = {},
+        onOpenProfile = {},
+        onInvite = {},
+    )
+}
+
+@Preview(name = "AgentChatHeaderPill · long — dark", showBackground = true, widthDp = 390)
+@Composable
+private fun AgentChatHeaderPillLongDarkPreview() = DuaGenAITheme(darkTheme = true) {
+    AgentChatHeaderPill(
+        agentId = "agent_dua",
+        name = "Dua Gen AI Enterprise Assistant",
+        onBack = {},
+        onOpenProfile = {},
+        onInvite = {},
+    )
+}
