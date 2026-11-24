@@ -168,7 +168,7 @@ import org.robolectric.annotation.Config
  *  THE COMPOSER ON A THREAD
  *  ------------------------
  *  ChatScreen draws a composer under the conversation again, so Agent can be
- *  talked to. It is the SAME `DuaComposer` pill Dua's home draws \u2014 one
+ *  talked to. It is the SAME `ChatBar` pill Dua's home draws \u2014 one
  *  implementation, two call sites \u2014 and only its placeholder differs
  *  (`"Message <title>..."`). [assertComposer] therefore checks the placeholder
  *  text plus the composer's own controls, and [assertNoComposer] is kept for the
@@ -243,7 +243,7 @@ private const val CHAT_MARKER = "Agent \u00b7 always on"
 /**
  * The generic composer placeholder a thread must NOT show.
  *
- * `DuaComposer` is shared, so a thread's placeholder is `"Message <title>..."`.
+ * `ChatBar` is shared, so a thread's placeholder is `"Message <title>..."`.
  * This is the OLD generic string: if it ever reappeared on a thread it would mean
  * the placeholder stopped being thread-specific. Kept as a named constant so the
  * assertion reads as intent rather than as a magic string.
@@ -283,7 +283,7 @@ private const val SEND_LABEL = "Send message"
 private const val STOP_LABEL = "Stop"
 private const val VOICE_LABEL = "Voice input"
 
-/* The thread composer is the 2-row TeamilyAgentChatBar: its own labels. */
+/* The composer is ChatBar: its own labels. */
 private const val THREAD_VOICE_LABEL = "Voice message"
 private const val THREAD_MODE_PREFIX = "Mode: "
 
@@ -858,7 +858,7 @@ class DuaGenAINavHostTest {
     /**
      * Asserts the thread HAS a composer, with [placeholder] as its hint.
      *
-     * The composer is the 2-row `TeamilyAgentChatBar`: row 1 the field (exactly
+     * The composer is `ChatBar`: row 1 the field (exactly
      * one editable node, showing the placeholder), row 2 the toolbar — the
      * "Attach" `+`, the "Mode: …" pill (its menu lists Skills / MCP Tools, so
      * there are no separate Skills / MCP icons), Meeting Minutes, Dictate,
@@ -3506,7 +3506,7 @@ class DuaGenAINavHostTest {
      * Agent's thread shows the conversation AND the composer.
      *
      * A thread starts honestly empty — "No messages yet" — and the shared
-     * `DuaComposer` pill sits under it so the conversation can start. Both
+     * `ChatBar` pill sits under it so the conversation can start. Both
      * halves are asserted, because "the composer is there" is only meaningful
      * if the conversation it belongs to is still there.
      */

@@ -5,6 +5,7 @@ import android.os.Parcel
 import android.os.Parcelable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -93,7 +95,7 @@ import ai.duagenai.design.theme.teamilyPalette
  *
  *  COMPOSER — the 2-row Teamily chat bar
  *  -------------------------------------
- *  The thread's composer is [TeamilyAgentChatBar] (TeamilyAgentChatBar.kt):
+ *  The thread's composer is [ChatBar] (ChatBar.kt):
  *  row 1 the field, row 2 the toolbar. `+` opens ComposerPlusSheet, which hands
  *  off to ComposerSkillsSheet / ComposerMcpSheet; the mode pill's menu also
  *  lists Skills and MCP Tools. While Agent's reply is pending (`agentTyping`)
@@ -592,20 +594,29 @@ fun ChatScreen(
                 ),
             )
         },
-        // The 2-row Teamily chat bar. Only the placeholder is thread-specific.
+        // The floating adaptive Gemini-style chat bar with bottom ambient glow
         bottomBar = {
-            // The scaffold pins this bar to the screen bottom, which on an
-            // edge-to-edge window is behind the navigation bar and the keyboard.
-            // The inset keeps the composer inside the phone screen.
+            val isDark = isSystemInDarkTheme()
+            val glowAlpha = if (isDark) 0.18f else 0.42f
             Box(
-                Modifier.windowInsetsPadding(
-                    WindowInsets.navigationBars.union(WindowInsets.ime),
-                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = glowAlpha),
+                            ),
+                        ),
+                    )
+                    .windowInsetsPadding(
+                        WindowInsets.navigationBars.union(WindowInsets.ime),
+                    ),
+                contentAlignment = Alignment.BottomCenter,
             ) {
-                val isImeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-                val horizontalMargin = if (isImeOpen) 16.dp else 20.dp
-                TeamilyAgentChatBar(
+                ChatBar(
                     state = draftState,
+                    hasMessages = messages.isNotEmpty(),
                     onSend = { send() },
                     // Agent threads read "Type a message..." (reference);
                     // other threads name the conversation.
@@ -629,10 +640,8 @@ fun ChatScreen(
                     contextChips = contextChips,
                     onDismissChip = { chip -> contextChips = contextChips - chip },
                     modifier = Modifier.padding(
-                        start = horizontalMargin,
-                        end = horizontalMargin,
                         top = 4.dp,
-                        bottom = 12.dp,
+                        bottom = 16.dp,
                     ),
                 )
             }

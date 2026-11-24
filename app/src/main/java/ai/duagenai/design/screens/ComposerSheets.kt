@@ -66,7 +66,7 @@ import ai.duagenai.design.theme.MaxContentWidth
  *  Composer sheets — Attach (+), Skills and MCP Tools
  *
  *  The three ModalBottomSheets the live thread composer opens (see
- *  `DuaComposer` in HomeScreen.kt). They reuse the kit's existing sheet recipe
+ *  `ChatBar` in ChatBar.kt). They reuse the kit's existing sheet recipe
  *  (ArtifactsScreen's filter sheet: ModalBottomSheet on `colorScheme.surface`,
  *  `titleMedium` heading, gutter padding) and the Notifications row recipe
  *  (48dp+ row, label + M3 Switch) — no new visual language, no new colour.
