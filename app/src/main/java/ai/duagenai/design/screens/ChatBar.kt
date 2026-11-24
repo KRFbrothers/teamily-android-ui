@@ -3,7 +3,6 @@ package ai.duagenai.design.screens
 import ai.duagenai.design.R
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
-import ai.duagenai.design.theme.TeamilyPalette
 import ai.duagenai.design.theme.TeamilySansFontFamily
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.animation.AnimatedContent
@@ -25,9 +24,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
@@ -46,7 +43,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerRounding
@@ -71,7 +67,6 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -94,15 +89,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -118,7 +108,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupProperties
 
 /**
  * Adaptive Gemini-style Floating White Capsule Chatbar.
@@ -361,19 +350,13 @@ fun ChatBar(
     Box(modifier = modifier.fillMaxWidth()) {
         // Accessible Semantics Layer (Full-width so all >= 48dp controls fit across devices)
         var modeMenuExpanded by remember { mutableStateOf(false) }
-        val modes = listOf("Auto", "Instant", "Agentic", "Deep Research", "Fast")
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .drawWithContent { /* invisible overlay, doesn't draw visually */ },
         ) {
-            val modeSource = remember { MutableInteractionSource() }
-            val minutesSource = remember { MutableInteractionSource() }
-            val dictateSource = remember { MutableInteractionSource() }
-            val emojiSource = remember { MutableInteractionSource() }
-            val voiceSource = remember { MutableInteractionSource() }
-            val callSource = remember { MutableInteractionSource() }
+            val interactionSource = remember { MutableInteractionSource() }
 
             // 1. Mode pill: x inside composer ~ 58.dp..106.dp
             Box(
@@ -382,7 +365,7 @@ fun ChatBar(
                     .touchTarget48(
                         Modifier
                             .clickable(
-                                interactionSource = modeSource,
+                                interactionSource = interactionSource,
                                 indication = null,
                                 role = Role.Button,
                                 onClick = { modeMenuExpanded = true },
@@ -392,52 +375,35 @@ fun ChatBar(
                     .size(48.dp),
             )
 
-            DropdownMenu(
-                expanded = modeMenuExpanded,
-                onDismissRequest = { modeMenuExpanded = false },
-                properties = PopupProperties(blurBehindRadius = 16.dp),
-            ) {
-                modes.forEach { mode ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = mode,
-                                fontWeight = if (mode == selectedMode) FontWeight.Bold else FontWeight.Normal,
-                                color = if (mode == selectedMode) palette.signalGreen else MaterialTheme.colorScheme.onSurface,
-                            )
-                        },
-                        onClick = {
-                            onModeChange(mode)
-                            modeMenuExpanded = false
-                        },
-                    )
-                }
-                if (onOpenSkills != null || onOpenMcp != null) {
-                    HorizontalDivider(color = palette.border)
-                }
-                if (onOpenSkills != null) {
-                    DropdownMenuItem(
-                        text = { Text("Skills") },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Build, contentDescription = null)
-                        },
-                        onClick = {
-                            modeMenuExpanded = false
-                            onOpenSkills()
-                        },
-                    )
-                }
-                if (onOpenMcp != null) {
-                    DropdownMenuItem(
-                        text = { Text("MCP Tools") },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Extension, contentDescription = null)
-                        },
-                        onClick = {
-                            modeMenuExpanded = false
-                            onOpenMcp()
-                        },
-                    )
+            if (onOpenSkills != null || onOpenMcp != null) {
+                DropdownMenu(
+                    expanded = modeMenuExpanded,
+                    onDismissRequest = { modeMenuExpanded = false },
+                ) {
+                    if (onOpenSkills != null) {
+                        DropdownMenuItem(
+                            text = { Text("Skills") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Build, contentDescription = null)
+                            },
+                            onClick = {
+                                modeMenuExpanded = false
+                                onOpenSkills()
+                            },
+                        )
+                    }
+                    if (onOpenMcp != null) {
+                        DropdownMenuItem(
+                            text = { Text("MCP Tools") },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Extension, contentDescription = null)
+                            },
+                            onClick = {
+                                modeMenuExpanded = false
+                                onOpenMcp()
+                            },
+                        )
+                    }
                 }
             }
 
@@ -448,7 +414,7 @@ fun ChatBar(
                     .touchTarget48(
                         Modifier
                             .clickable(
-                                interactionSource = minutesSource,
+                                interactionSource = interactionSource,
                                 indication = null,
                                 role = Role.Button,
                                 onClick = onMeetingMinutesClick,
@@ -465,7 +431,7 @@ fun ChatBar(
                     .touchTarget48(
                         Modifier
                             .clickable(
-                                interactionSource = dictateSource,
+                                interactionSource = interactionSource,
                                 indication = null,
                                 role = Role.Button,
                                 onClick = onDictateClick,
@@ -482,7 +448,7 @@ fun ChatBar(
                     .touchTarget48(
                         Modifier
                             .clickable(
-                                interactionSource = emojiSource,
+                                interactionSource = interactionSource,
                                 indication = null,
                                 role = Role.Button,
                                 onClick = onEmojiClick,
@@ -500,13 +466,13 @@ fun ChatBar(
                         .touchTarget48(
                             Modifier
                                 .clickable(
-                                    interactionSource = voiceSource,
+                                    interactionSource = interactionSource,
                                     indication = null,
                                     role = Role.Button,
                                     onClick = onVoiceMessageClick,
                                 )
                                 .semantics { contentDescription = voiceContentDescription },
-                            )
+                        )
                         .size(48.dp),
                 )
             }
@@ -518,7 +484,7 @@ fun ChatBar(
                     .touchTarget48(
                         Modifier
                             .clickable(
-                                interactionSource = callSource,
+                                interactionSource = interactionSource,
                                 indication = null,
                                 role = Role.Button,
                                 onClick = onVoiceCallClick,
@@ -678,7 +644,9 @@ fun ChatBar(
                                         .indication(actionSource, LocalIndication.current),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    ArrowUpwardGlyph(
+                                    Icon(
+                                        imageVector = Icons.Rounded.ArrowUpward,
+                                        contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(20.dp),
                                     )
@@ -703,7 +671,9 @@ fun ChatBar(
                                         .indication(actionSource, LocalIndication.current),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    VoiceMessageGlyph(
+                                    Icon(
+                                        imageVector = Icons.Rounded.GraphicEq,
+                                        contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                         modifier = Modifier.size(20.dp),
                                     )
@@ -715,9 +685,16 @@ fun ChatBar(
 
                 // Plus button (bare icon with 48dp touch target)
                 val plusButton: @Composable () -> Unit = {
-                    ToolbarIconButton(
-                        contentDescription = "Attach",
-                        onClick = onAttachClick,
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onAttachClick,
+                            )
+                            .semantics { contentDescription = "Attach" },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add,
@@ -730,12 +707,20 @@ fun ChatBar(
 
                 // Mic button (bare icon with 48dp touch target)
                 val micButton: @Composable () -> Unit = {
-                    ToolbarIconButton(
-                        contentDescription = null,
-                        onClick = onDictateClick,
-                        modifier = Modifier.clearAndSetSemantics { },
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onDictateClick,
+                            )
+                            .clearAndSetSemantics { },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        OutlinedMicGlyph(
+                        Icon(
+                            imageVector = Icons.Outlined.Mic,
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(24.dp),
                         )
@@ -864,88 +849,6 @@ fun ChatBar(
 /** The chat bar's single trailing control. */
 private enum class TrailingAction { Voice, Send, Stop }
 
-/** A 32dp toolbar glyph with a 48dp touch box ([touchTarget48]). */
-@Composable
-private fun ToolbarIconButton(
-    contentDescription: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val source = remember { MutableInteractionSource() }
-    val semanticsMod = if (contentDescription != null) {
-        Modifier.semantics { this.contentDescription = contentDescription }
-    } else {
-        Modifier
-    }
-    Box(
-        modifier = modifier
-            .touchTarget48(
-                Modifier
-                    .clickable(
-                        role = Role.Button,
-                        onClick = onClick,
-                        interactionSource = source,
-                        indication = null,
-                    )
-                    .then(semanticsMod),
-            )
-            .size(32.dp)
-            .clip(CircleShape)
-            .indication(source, LocalIndication.current),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
-}
-
-/** Outlined microphone: rounded head, cradle, and stem. */
-@Composable
-private fun OutlinedMicGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = Icons.Outlined.Mic,
-        contentDescription = null,
-        tint = tint,
-        modifier = modifier.size(24.dp),
-    )
-}
-
-/** Draws crisp up-arrow ↑ Send glyph. */
-@Composable
-private fun ArrowUpwardGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(20.dp)) {
-        val w = size.width
-        val h = size.height
-        val stroke = 2.4.dp.toPx()
-        // vertical stem
-        drawLine(
-            color = tint,
-            start = Offset(w * 0.5f, h * 0.80f),
-            end = Offset(w * 0.5f, h * 0.22f),
-            strokeWidth = stroke,
-            cap = StrokeCap.Round,
-        )
-        // arrow head
-        val head = Path().apply {
-            moveTo(w * 0.26f, h * 0.44f)
-            lineTo(w * 0.5f, h * 0.20f)
-            lineTo(w * 0.74f, h * 0.44f)
-        }
-        drawPath(head, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
-    }
-}
-
-/** Draws audio voice wave glyph for voice recording. */
-@Composable
-private fun VoiceMessageGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Icon(
-        imageVector = Icons.Rounded.GraphicEq,
-        contentDescription = null,
-        tint = tint,
-        modifier = modifier.size(20.dp),
-    )
-}
-
 @Preview(name = "Light Idle (Empty)", showBackground = true)
 @Composable
 private fun ChatBarLightIdleEmptyPreview() = DuaGenAITheme(darkTheme = false) {
@@ -983,17 +886,5 @@ private fun ChatBarLightMultiLineExpandedPreview() = DuaGenAITheme(darkTheme = f
 private fun ChatBarDarkIdleEmptyPreview() = DuaGenAITheme(darkTheme = true) {
     Box(Modifier.padding(vertical = 16.dp)) {
         ChatBar(value = "", hasMessages = false)
-    }
-}
-
-@Preview(name = "Outlined Mic", showBackground = true)
-@Composable
-private fun OutlinedMicGlyphPreview() = DuaGenAITheme(darkTheme = false) {
-    Box(
-        Modifier
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-    ) {
-        OutlinedMicGlyph(tint = MaterialTheme.colorScheme.onSurface)
     }
 }
