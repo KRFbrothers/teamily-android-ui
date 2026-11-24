@@ -239,9 +239,10 @@ fun PersonalAgentDemoScreen(
 
             // Bottom Input Bar
             var selectedMode by remember { mutableStateOf("Auto") }
-            TeamilyAgentChatBar(
+            ChatBar(
                 value = inputText,
                 onValueChange = { inputText = it },
+                hasMessages = messages.isNotEmpty(),
                 onSend = { sendPrompt(inputText) },
                 placeholder = "Type a message...",
                 selectedMode = selectedMode,

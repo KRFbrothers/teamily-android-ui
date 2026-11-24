@@ -386,8 +386,10 @@ fun HomeScreen(
                     Column {
                         // Attach / Voice taps explain themselves here.
                         SnackbarHost(snackbarHostState)
-                        DuaComposer(
+                        var sheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
+                        ChatBar(
                             state = duaDraftState,
+                            hasMessages = false,
                             onSend = {
                                 val text = duaDraftState.text.toString().trim()
                                 if (text.isNotEmpty()) {
@@ -395,18 +397,64 @@ fun HomeScreen(
                                     onSendDuaMessage(text)
                                 }
                             },
-                            onUnavailable = {
+                            placeholder = "Ask Dua ...",
+                            onAttachClick = { sheet = ComposerSheet.Plus },
+                            onMeetingMinutesClick = {
                                 snackbarScope.launch {
                                     snackbarHostState.currentSnackbarData?.dismiss()
                                     snackbarHostState.showSnackbar(comingSoon)
                                 }
                             },
-                            // + opens the Quick Actions sheet; Voice looks and
-                            // reads enabled but still explains "coming soon".
-                            attachEnabled = true,
-                            voiceEnabled = true,
-                            onOpenCreate = onOpenCreate,
+                            onDictateClick = {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            },
+                            onEmojiClick = {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            },
+                            onVoiceMessageClick = {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            },
+                            onVoiceCallClick = {
+                                snackbarScope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(comingSoon)
+                                }
+                            },
+                            voiceContentDescription = "Voice input",
+                            modifier = Modifier.padding(bottom = 16.dp),
                         )
+                        if (sheet == ComposerSheet.Plus) {
+                            ComposerPlusSheet(
+                                onOpenSkills = {
+                                    sheet = ComposerSheet.None
+                                    snackbarScope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(comingSoon)
+                                    }
+                                },
+                                onOpenMcp = {
+                                    sheet = ComposerSheet.None
+                                    snackbarScope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(comingSoon)
+                                    }
+                                },
+                                onDismiss = { sheet = ComposerSheet.None },
+                                onOpenCreate = { key ->
+                                    sheet = ComposerSheet.None
+                                    onOpenCreate?.invoke(key)
+                                },
+                            )
+                        }
                     }
                 }
             } else {
@@ -658,419 +706,9 @@ private fun ModeToggle(
     }
 }
 
-/**
- * The ONE composer pill — Dua's home and every thread draw it.
- *
- * Layout, left to right:
- *
- *   Attach `+` · field (weight 1f) · [Skills · MCP Tools] · Send/Stop/Voice
- *
- * The field carries the row's `weight(1f)`, so it IS the flexible gap between
- * the left group (Attach) and the right group — there is no separate weighted
- * Spacer, which would split the free width with the field and squash it.
- * Every control is a 48dp touch target (`minTouchTarget()` / `MinTouchTarget`).
- *
- * The old dead 20dp mic glyph is gone; voice lives in the single trailing
- * Send/Stop/Voice control ([SendStopVoiceButton]).
- *
- * TWO CALL SITES, ONE COMPONENT
- * -----------------------------
- * `internal`, with optional parameters, because ChatScreen draws the SAME pill
- * under every thread. Dua's home passes value / change / send (a live field
- * whose Send opens a new Dua thread) plus [onUnavailable], so the disabled
- * Attach and the (unwired) voice waveform answer a tap with a snackbar. A
- * thread passes the
- * value / change / send handlers, which make the field live, and the skills /
- * MCP state, which turns on the agent tools: the Skills and MCP Tools icons and
- * a working Attach `+` that opens [ComposerPlusSheet].
- *
- * The agent tools are deliberately NOT drawn on Dua's home: Dua is the plain
- * chatbot and its home has no agent entry point of any kind (see the header of
- * this file). Skills and MCP are Dua Agent capabilities.
- */
-@Composable
-internal fun DuaComposer(
-    placeholder: String = "Ask Dua ...",
-    state: TextFieldState? = null,
-    value: String? = null,
-    onValueChange: ((String) -> Unit)? = null,
-    onSend: (() -> Unit)? = null,
-    // A reply is in flight. With [onStop] supplied the trailing control becomes
-    // Stop, and IME send is guarded so a second message cannot race the first.
-    sending: Boolean = false,
-    onStop: (() -> Unit)? = null,
-    // Agent tools. Both handlers must be supplied for the Skills / MCP icons and
-    // the `+` sheet to appear — Dua's home supplies neither.
-    enabledSkillIds: Set<String> = DEFAULT_DUA_SKILLS,
-    onToggleSkill: ((String) -> Unit)? = null,
-    mcpEnabled: Boolean = true,
-    onToggleMcp: ((Boolean) -> Unit)? = null,
-    /** Create tiles in the + sheet. Null keeps the tiles on screen; they dismiss only. */
-    onOpenCreate: ((String) -> Unit)? = null,
-    /**
-     * Tap on a control that is shown disabled (Attach without agent tools,
-     * Voice). The controls stay visually disabled and keep their labels; Dua
-     * home uses this to show a "Jaldi aa raha hai" snackbar. Null: no click.
-     */
-    onUnavailable: (() -> Unit)? = null,
-    /**
-     * Dua home: Attach `+` is live and opens [ComposerPlusSheet] even without
-     * the agent tools. Its Skills / MCP rows then answer with [onUnavailable]
-     * (Dua is not the agent); its Create tiles call [onOpenCreate].
-     */
-    attachEnabled: Boolean = false,
-    /**
-     * Voice is announced enabled (not `disabled()`). There is still no voice
-     * capture in this kit, so a tap goes to [onUnavailable] ("Jaldi aa raha hai").
-     */
-    voiceEnabled: Boolean = false,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-    // Editable only when a caller supplies a change handler or a TextFieldState.
-    // This is the single switch between "Dua's presentational pill" and "a thread's live composer".
-    val editable = state != null || onValueChange != null
-    val fieldState = state ?: if (editable) rememberTextFieldState(initialText = value.orEmpty()) else null
-    val hasContent = fieldState?.text?.isNotBlank() ?: !value.isNullOrBlank()
-    val canSend = editable && hasContent && !sending
-    val live = editable && onStop != null
-    val agentTools = onToggleSkill != null && onToggleMcp != null
-    val plusLive = agentTools || attachEnabled
-    var sheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = spacing.gutter,
-                end = spacing.gutter,
-                top = spacing.sm,
-                bottom = spacing.md,
-            ),
-    ) {
-        // Forest-slate composer capsule: 32dp (`--kit-radius-composer`) on `composerBg`, 1dp
-        // `borderGradient` edge, soft floating shadow.
-        val palette = teamilyPalette()
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = TeamilyShapes.composer,
-            color = palette.composerBg,
-            border = BorderStroke(1.dp, palette.borderGradient),
-            shadowElevation = palette.restingShadowElevation,
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .sizeIn(minHeight = 42.dp)
-                    .padding(horizontal = spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // LEFT — Attach
-                ComposerIconButton(
-                    icon = Icons.Outlined.Add,
-                    contentDescription = "Attach",
-                    enabled = plusLive,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    onClick = { sheet = ComposerSheet.Plus },
-                    onDisabledClick = onUnavailable,
-                )
-                if (editable && fieldState != null) {
-                    if (state == null) {
-                        LaunchedEffect(value) {
-                            val currentText = value.orEmpty()
-                            if (fieldState.text.toString() != currentText) {
-                                fieldState.edit {
-                                    replace(0, length, currentText)
-                                }
-                            }
-                        }
-                        LaunchedEffect(fieldState) {
-                            snapshotFlow { fieldState.text.toString() }
-                                .collect { newText ->
-                                    if (newText != value) {
-                                        onValueChange?.invoke(newText)
-                                    }
-                                }
-                        }
-                    }
-                    val canSendLive = editable && fieldState.text.isNotBlank() && !sending
-                    BasicTextField(
-                        state = fieldState,
-                        modifier = Modifier.weight(1f).heightIn(min = 38.dp),
-                        textStyle = DuaGenAITextStyles.bubble.copy(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 13.5.sp,
-                        ),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 4),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        onKeyboardAction = {
-                            if (canSendLive) onSend?.invoke()
-                        },
-                        decorator = { innerTextField ->
-                            // Centres the hint + text inside the >=48dp field box.
-                            Box(contentAlignment = Alignment.CenterStart) {
-                                if (fieldState.text.isEmpty()) {
-                                    Text(
-                                        text = placeholder,
-                                        style = DuaGenAITextStyles.bubble,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                                Box(Modifier.fillMaxWidth(), propagateMinConstraints = true) { innerTextField() }
-                            }
-                        },
-                    )
-                } else {
-                    Text(
-                        text = placeholder,
-                        style = DuaGenAITextStyles.bubble,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                // RIGHT — Skills, MCP Tools, then the one Send/Stop/Voice control.
-                if (agentTools) {
-                    ComposerIconButton(
-                        icon = Icons.Outlined.Build,
-                        contentDescription = "Skills",
-                        enabled = true,
-                        tint = if (enabledSkillIds.isNotEmpty()) palette.toolActive
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        activeDot = enabledSkillIds.isNotEmpty(),
-                        onClick = { sheet = ComposerSheet.Skills },
-                    )
-                    ComposerIconButton(
-                        icon = Icons.Outlined.Extension,
-                        contentDescription = "MCP Tools",
-                        enabled = true,
-                        tint = if (mcpEnabled) palette.toolActive
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        activeDot = mcpEnabled,
-                        onClick = { sheet = ComposerSheet.Mcp },
-                    )
-                }
-                SendStopVoiceButton(
-                    mode = when {
-                        sending && live -> SendMode.Stop
-                        editable && hasContent -> SendMode.Send
-                        else -> SendMode.Voice
-                    },
-                    onSend = { if (canSend) onSend?.invoke() },
-                    onStop = { onStop?.invoke() },
-                    onVoiceUnavailable = onUnavailable,
-                    voiceEnabled = voiceEnabled,
-                )
-            }
-        }
-    }
 
-    // The sheets. Opened from the icons above; the `+` sheet hands off to the
-    // Skills / MCP sheets rather than duplicating them.
-    if (plusLive) {
-        when (sheet) {
-            ComposerSheet.Plus -> ComposerPlusSheet(
-                // Without agent tools (Dua home) the Skills / MCP rows close the
-                // sheet and explain themselves instead of opening a dead sheet.
-                onOpenSkills = {
-                    if (agentTools) sheet = ComposerSheet.Skills
-                    else { sheet = ComposerSheet.None; onUnavailable?.invoke() }
-                },
-                onOpenMcp = {
-                    if (agentTools) sheet = ComposerSheet.Mcp
-                    else { sheet = ComposerSheet.None; onUnavailable?.invoke() }
-                },
-                onDismiss = { sheet = ComposerSheet.None },
-                onOpenCreate = { key ->
-                    sheet = ComposerSheet.None
-                    onOpenCreate?.invoke(key)
-                },
-            )
-            ComposerSheet.Skills -> if (onToggleSkill != null) ComposerSkillsSheet(
-                enabledSkillIds = enabledSkillIds,
-                onToggleSkill = onToggleSkill,
-                onDismiss = { sheet = ComposerSheet.None },
-            )
-            ComposerSheet.Mcp -> if (onToggleMcp != null) ComposerMcpSheet(
-                mcpEnabled = mcpEnabled,
-                onToggleMcp = onToggleMcp,
-                onDismiss = { sheet = ComposerSheet.None },
-            )
-            ComposerSheet.None -> Unit
-        }
-    }
-}
 
-/**
- * A 48dp composer icon button: a 24dp glyph centred in the M3 minimum target,
- * with an optional small active dot (Skills / MCP). A disabled button takes no
- * click and publishes `disabled()` (audit fix #9).
- */
-@Composable
-private fun ComposerIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    tint: Color,
-    onClick: () -> Unit,
-    activeDot: Boolean = false,
-    /** Disabled only: a tap still reaches this (e.g. a "coming soon" snackbar). */
-    onDisabledClick: (() -> Unit)? = null,
-) {
-    val palette = teamilyPalette()
-    Box(
-        modifier = Modifier
-            .size(MinTouchTarget)
-            .clip(CircleShape)
-            .then(
-                when {
-                    enabled -> Modifier.clickable(role = Role.Button, onClick = onClick)
-                    onDisabledClick != null -> Modifier.clickable(role = Role.Button, onClick = onDisabledClick)
-                    else -> Modifier
-                },
-            )
-            .semantics {
-                this.contentDescription = contentDescription
-                if (!enabled) disabled()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = if (enabled) tint else tint.copy(alpha = 0.45f),
-            modifier = Modifier.size(20.dp),
-        )
-        if (activeDot) {
-            // 8dp logoMint dot at the glyph's top-end, ringed in the pill's own
-            // fill so it reads as a badge rather than part of the glyph.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(start = 18.dp, bottom = 18.dp)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(palette.composerBg)
-                    .padding(1.5.dp)
-                    .clip(CircleShape)
-                    .background(palette.logoMint),
-            )
-        }
-    }
-}
-
-private enum class SendMode { Send, Stop, Voice }
-
-/**
- * The single trailing control: a 48dp touch target wrapping a 42dp
- * `brandGradient` disc (emerald #0B8249 -> #087C45 in light and dark, with the
- * `sendButtonIcon` glyph — white — and the subtle primary glow), replacing the old separate 40dp voice disc +
- * 36dp send disc.
- *
- *  • Stop  — a reply is in flight on a live thread; calls `onStop`.
- *  • Send  — the field has text; calls `onSend`.
- *  • Voice — otherwise: a four-bar waveform. Voice capture is NOT wired in this
- *            kit, so this state is announced disabled and takes no click.
- */
-@Composable
-private fun SendStopVoiceButton(
-    mode: SendMode,
-    onSend: () -> Unit,
-    onStop: () -> Unit,
-    // Voice is not wired: still drawn and announced disabled, but a tap can
-    // explain that (Dua home's "Jaldi aa raha hai" snackbar). Null: no click.
-    onVoiceUnavailable: (() -> Unit)? = null,
-    // Voice announced enabled (Dua home). The tap still goes to
-    // [onVoiceUnavailable] because no voice capture exists yet.
-    voiceEnabled: Boolean = false,
-) {
-    val palette = teamilyPalette()
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .size(MinTouchTarget)
-            .teamilyPressScale(interactionSource)
-            .then(
-                when (mode) {
-                    SendMode.Send -> Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = LocalIndication.current,
-                        role = Role.Button,
-                        onClick = onSend,
-                    )
-                    SendMode.Stop -> Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = LocalIndication.current,
-                        role = Role.Button,
-                        onClick = onStop,
-                    )
-                    SendMode.Voice -> if (onVoiceUnavailable != null) {
-                        Modifier.clickable(
-                            interactionSource = interactionSource,
-                            indication = LocalIndication.current,
-                            role = Role.Button,
-                            onClick = onVoiceUnavailable,
-                        )
-                    } else {
-                        Modifier
-                    }
-                },
-            )
-            .semantics {
-                contentDescription = when (mode) {
-                    SendMode.Send -> "Send message"
-                    SendMode.Stop -> "Stop"
-                    SendMode.Voice -> "Voice input"
-                }
-                if (mode == SendMode.Voice && !voiceEnabled) disabled()
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                // Subtle primary green glow (light and dark).
-                .teamilyPrimaryGlow(palette)
-                .clip(CircleShape)
-                .background(palette.brandGradient),
-            contentAlignment = Alignment.Center,
-        ) {
-            when (mode) {
-                SendMode.Send -> Icon(
-                    Icons.AutoMirrored.Outlined.Send,
-                    contentDescription = null,
-                    tint = palette.sendButtonIcon,
-                    modifier = Modifier.size(20.dp),
-                )
-                SendMode.Stop -> Icon(
-                    Icons.Filled.Stop,
-                    contentDescription = null,
-                    tint = palette.sendButtonIcon,
-                    modifier = Modifier.size(20.dp),
-                )
-                SendMode.Voice -> Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Four bars, drawn as shapes so no icon asset is needed.
-                    listOf(8.dp, 14.dp, 10.dp, 6.dp).forEach { h ->
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(h)
-                                .clip(CircleShape)
-                                .background(palette.sendButtonIcon),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 /* ============================================================================
  *  AGENT HOME — the Teamily chat-list layout (agent-home-reference.jpg)
