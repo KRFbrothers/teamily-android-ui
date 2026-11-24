@@ -65,6 +65,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material3.DropdownMenu
@@ -736,7 +737,7 @@ fun ChatBar(
                     ) {
                         OutlinedMicGlyph(
                             tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
@@ -898,34 +899,15 @@ private fun ToolbarIconButton(
     }
 }
 
-/** Draws crisp outlined microphone glyph. */
+/** Outlined microphone: rounded head, cradle, and stem. */
 @Composable
 private fun OutlinedMicGlyph(tint: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(22.dp)) {
-        val w = size.width
-        val h = size.height
-        val stroke = 1.6.dp.toPx()
-        // mic capsule
-        val capsule = Path().apply {
-            moveTo(w * 0.38f, h * 0.20f)
-            lineTo(w * 0.62f, h * 0.20f)
-            lineTo(w * 0.62f, h * 0.52f)
-            quadraticTo(w * 0.62f, h * 0.66f, w * 0.50f, h * 0.66f)
-            quadraticTo(w * 0.38f, h * 0.66f, w * 0.38f, h * 0.52f)
-            close()
-        }
-        drawPath(capsule, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round))
-        // cradle
-        val cradle = Path().apply {
-            moveTo(w * 0.26f, h * 0.46f)
-            quadraticTo(w * 0.26f, h * 0.76f, w * 0.50f, h * 0.76f)
-            quadraticTo(w * 0.74f, h * 0.76f, w * 0.74f, h * 0.46f)
-        }
-        drawPath(cradle, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round))
-        // stem & base
-        drawLine(tint, Offset(w * 0.50f, h * 0.76f), Offset(w * 0.50f, h * 0.90f), strokeWidth = stroke, cap = StrokeCap.Round)
-        drawLine(tint, Offset(w * 0.34f, h * 0.90f), Offset(w * 0.66f, h * 0.90f), strokeWidth = stroke, cap = StrokeCap.Round)
-    }
+    Icon(
+        imageVector = Icons.Outlined.Mic,
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier.size(24.dp),
+    )
 }
 
 /** Draws crisp up-arrow ↑ Send glyph. */
@@ -1001,5 +983,17 @@ private fun ChatBarLightMultiLineExpandedPreview() = DuaGenAITheme(darkTheme = f
 private fun ChatBarDarkIdleEmptyPreview() = DuaGenAITheme(darkTheme = true) {
     Box(Modifier.padding(vertical = 16.dp)) {
         ChatBar(value = "", hasMessages = false)
+    }
+}
+
+@Preview(name = "Outlined Mic", showBackground = true)
+@Composable
+private fun OutlinedMicGlyphPreview() = DuaGenAITheme(darkTheme = false) {
+    Box(
+        Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .padding(16.dp),
+    ) {
+        OutlinedMicGlyph(tint = MaterialTheme.colorScheme.onSurface)
     }
 }
