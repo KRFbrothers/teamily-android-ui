@@ -22,21 +22,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -58,8 +67,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import ai.duagenai.design.R
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -667,7 +680,7 @@ fun ChatScreen(
                     Column(
                         modifier = Modifier
                             .fillParentMaxSize()
-                            .padding(spacing.lg),
+                            .padding(horizontal = spacing.lg, vertical = spacing.md),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -687,6 +700,16 @@ fun ChatScreen(
                             QuickActionChips(
                                 label = "Try asking:",
                                 actions = PERSONAL_AGENT_QUICK_ACTIONS,
+                                onPick = { prompt ->
+                                    if (!agentTyping) {
+                                        draftState.edit { replace(0, length, prompt) }
+                                        send()
+                                    }
+                                },
+                            )
+                        } else {
+                            Spacer(Modifier.height(24.dp))
+                            ChatStarterChips(
                                 onPick = { prompt ->
                                     if (!agentTyping) {
                                         draftState.edit { replace(0, length, prompt) }
@@ -756,16 +779,13 @@ fun ChatScreen(
 }
 
 /**
- * The typing indicator — the same agent bubble, with three dots instead of text.
- *
- * It reuses [AgentBubble]'s own geometry (28dp cube, same gap, same bubble fill
- * and radius) so the "Agent is replying" state is the agent bubble mid-sentence
- * rather than a new component.
+ * The typing indicator — expressive floating pill with M3 1.5 wavy progress indicator
+ * and a subtle thinking status label.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TypingBubble(chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val palette = teamilyPalette()
     val look = LocalBotAppearance.current
     Row(verticalAlignment = Alignment.Bottom) {
         BabyGrokMark(
@@ -775,25 +795,31 @@ private fun TypingBubble(chatTitle: String) {
             contentDescription = "$chatTitle, ${look.shape.label}",
         )
         Spacer(Modifier.width(spacing.sm))
-        Box(
-            modifier = Modifier
-                .clip(DuaGenAITheme.shapes.agentBubble)
-                .background(palette.bubbleAgent)
-                .padding(horizontal = 14.dp, vertical = 11.dp)
-                .semantics { contentDescription = "Agent is typing" },
+        Surface(
+            shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+            modifier = Modifier.semantics { contentDescription = "Agent is typing" },
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                repeat(3) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(palette.bubbleAgentText.copy(alpha = 0.45f)),
-                    )
-                }
+                LinearWavyProgressIndicator(
+                    modifier = Modifier
+                        .width(44.dp)
+                        .height(10.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                )
+                Text(
+                    text = stringResource(R.string.chat_thinking),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -802,7 +828,6 @@ private fun TypingBubble(chatTitle: String) {
 @Composable
 private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val palette = teamilyPalette()
     val effectiveTitle = msg.agentName?.takeIf { it.isNotBlank() } ?: chatTitle
     val look = LocalBotAppearance.current
 
@@ -815,21 +840,31 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
         )
         Spacer(Modifier.width(spacing.sm))
         Column {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .clip(DuaGenAITheme.shapes.agentBubble)
-                    .background(palette.bubbleAgent)
-                    .padding(horizontal = 14.dp, vertical = 11.dp),
+            Surface(
+                shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                modifier = Modifier.widthIn(max = 300.dp),
             ) {
                 Text(
                     text = msg.text,
-                    style = DuaGenAITextStyles.bubble,
-                    color = palette.bubbleAgentText,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.None,
+                        ),
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
-            Spacer(Modifier.height(spacing.xxs))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 4.dp),
+            ) {
                 val metaText = if (!msg.agentName.isNullOrBlank()) {
                     "${msg.agentName} \u00b7 ${msg.time}"
                 } else {
@@ -837,7 +872,7 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
                 }
                 Text(
                     text = metaText,
-                    style = DuaGenAITextStyles.meta,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 // The offline canned reply is not a real answer: say so.
@@ -861,26 +896,31 @@ private fun UserBubble(msg: SavedMessage, chatTitle: String) {
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(horizontalAlignment = Alignment.End) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    // User bubble: `bubbleUser`, 20dp corners with the 6dp
-                    // `--kit-radius-tail` at the bottom end, beside the avatar.
-                    .clip(TeamilyShapes.userBubble)
-                    .background(palette.bubbleUser)
-                    .padding(horizontal = 14.dp, vertical = 11.dp),
+            Surface(
+                shape = RoundedCornerShape(24.dp, 24.dp, 8.dp, 24.dp),
+                color = palette.bubbleUser,
+                modifier = Modifier.widthIn(max = 300.dp),
             ) {
                 Text(
                     text = msg.text,
-                    style = DuaGenAITextStyles.bubble,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                        lineHeightStyle = LineHeightStyle(
+                            alignment = LineHeightStyle.Alignment.Center,
+                            trim = LineHeightStyle.Trim.None,
+                        ),
+                    ),
                     color = palette.bubbleUserText,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
-            Spacer(Modifier.height(spacing.xxs))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = msg.time,
-                style = DuaGenAITextStyles.meta,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 4.dp),
             )
         }
         Spacer(Modifier.width(spacing.sm))
@@ -890,6 +930,74 @@ private fun UserBubble(msg: SavedMessage, chatTitle: String) {
             size = 32.dp,
             contentDescription = "$chatTitle, ${look.shape.label}",
         )
+    }
+}
+
+/**
+ * Three airy floating starter suggestion chips for empty chat threads.
+ */
+@Composable
+private fun ChatStarterChips(
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val starters = listOf(
+        Triple(
+            stringResource(R.string.chat_starter_plan_day),
+            Icons.Outlined.CalendarToday,
+            stringResource(R.string.chat_starter_plan_day),
+        ),
+        Triple(
+            stringResource(R.string.chat_starter_draft_reply),
+            Icons.Outlined.EditNote,
+            stringResource(R.string.chat_starter_draft_reply),
+        ),
+        Triple(
+            stringResource(R.string.chat_starter_brainstorm),
+            Icons.Outlined.Lightbulb,
+            stringResource(R.string.chat_starter_brainstorm),
+        ),
+    )
+    Column(
+        modifier = modifier
+            .widthIn(max = 320.dp)
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        starters.forEach { (text, icon, _) ->
+            Surface(
+                onClick = { onPick(text) },
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -915,4 +1023,16 @@ private fun AgentChatLight() = DuaGenAITheme(darkTheme = false) {
 @Composable
 private fun AgentChatDark() = DuaGenAITheme(darkTheme = true) {
     ChatScreen(chatId = AGENT_CHAT_ID, chatTitle = AGENT_CHAT_TITLE, seed = agentThread)
+}
+
+@Preview(name = "Chat Empty State — light", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ChatEmptyStateLightPreview() = DuaGenAITheme(darkTheme = false) {
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = emptyList())
+}
+
+@Preview(name = "Chat Empty State — dark", showBackground = true, widthDp = 390, heightDp = 844)
+@Composable
+private fun ChatEmptyStateDarkPreview() = DuaGenAITheme(darkTheme = true) {
+    ChatScreen(chatId = SAMPLE_CHAT_ID, chatTitle = "Webpage Developer", seed = emptyList())
 }

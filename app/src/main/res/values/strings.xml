@@ -90,4 +90,9 @@
     <string name="agent_overview_description">%1$s — your AI agent</string>
     <string name="agent_share_failed">Couldn\'t open share</string>
     <string name="chat_default_title">Chat</string>
+    <!-- Chat Screen Empty State Starters & Typing -->
+    <string name="chat_starter_plan_day">Plan my day</string>
+    <string name="chat_starter_draft_reply">Draft a quick reply</string>
+    <string name="chat_starter_brainstorm">Brainstorm ideas</string>
+    <string name="chat_thinking">Thinking...</string>
 </resources>
