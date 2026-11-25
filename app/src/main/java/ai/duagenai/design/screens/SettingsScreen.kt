@@ -1,7 +1,9 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.R
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +23,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -85,6 +88,7 @@ const val SETTINGS_SIGN_OUT_LABEL = "Sign out"
 /** Legacy helper — no longer shown; Edit profile is now the way into Profile. */
 const val SETTINGS_ACCOUNT_HELPER = "Account editing is not available in this build."
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
@@ -116,7 +120,6 @@ fun SettingsScreen(
     onSignedOut: () -> Unit = {},
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
     val palette = teamilyPalette()
     val sessionToken by TokenStore.state.collectAsStateWithLifecycle()
     val signedIn = sessionToken != null
@@ -124,6 +127,7 @@ fun SettingsScreen(
     var showSignIn by rememberSaveable { mutableStateOf(false) }
     val searchFocus = remember { FocusRequester() }
     val scroll = rememberScrollState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val headerName = displayName.ifBlank { stringResource(R.string.profile_not_signed_in) }
     val openProfileLabel = stringResource(R.string.profile_open)
@@ -135,7 +139,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
@@ -164,6 +168,7 @@ fun SettingsScreen(
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = palette.atmosphereBase,
                     scrolledContainerColor = palette.atmosphereBase,
@@ -230,26 +235,32 @@ fun SettingsScreen(
                             style = DuaGenAITextStyles.eyebrow,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Surface(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = DuaGenAITheme.shapes.card,
-                            color = MaterialTheme.colorScheme.surface,
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            Column {
-                                if (!signedIn) {
-                                    SettingsRow(
-                                        title = SETTINGS_SIGN_IN_LABEL,
-                                        subtitle = stringResource(R.string.settings_sign_in_subtitle),
-                                        icon = Icons.AutoMirrored.Outlined.Login,
-                                        onClick = { showSignIn = true },
-                                    )
-                                    HorizontalDivider(color = colors.hairline)
-                                }
+                            if (!signedIn) {
+                                SettingsRow(
+                                    title = SETTINGS_SIGN_IN_LABEL,
+                                    subtitle = stringResource(R.string.settings_sign_in_subtitle),
+                                    icon = Icons.AutoMirrored.Outlined.Login,
+                                    onClick = { showSignIn = true },
+                                    position = SegmentedItemPosition.First,
+                                )
                                 SettingsRow(
                                     title = SETTINGS_EDIT_PROFILE_LABEL,
                                     subtitle = stringResource(R.string.settings_edit_profile_subtitle),
                                     icon = Icons.Outlined.Person,
                                     onClick = onOpenProfile,
+                                    position = SegmentedItemPosition.Last,
+                                )
+                            } else {
+                                SettingsRow(
+                                    title = SETTINGS_EDIT_PROFILE_LABEL,
+                                    subtitle = stringResource(R.string.settings_edit_profile_subtitle),
+                                    icon = Icons.Outlined.Person,
+                                    onClick = onOpenProfile,
+                                    position = SegmentedItemPosition.Single,
                                 )
                             }
                         }
@@ -259,12 +270,18 @@ fun SettingsScreen(
                             style = DuaGenAITextStyles.eyebrow,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        val isDark = isSystemInDarkTheme()
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = DuaGenAITheme.shapes.card,
-                            color = MaterialTheme.colorScheme.background,
+                            shape = segmentedShape(SegmentedItemPosition.Single),
+                            color = if (isDark) {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         ) {
-                            Column(modifier = Modifier.padding(spacing.lg)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     text = stringResource(R.string.settings_about_app_name),
                                     style = DuaGenAITextStyles.rowTitle,

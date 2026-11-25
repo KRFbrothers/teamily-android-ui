@@ -10,9 +10,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,12 +23,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -42,7 +46,6 @@ import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,8 +74,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -80,6 +85,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
@@ -107,6 +113,31 @@ import kotlinx.coroutines.withContext
  *  saved cube. The green camera FAB opens the Profile picture sheet.
  * ==========================================================================*/
 
+internal enum class SegmentedItemPosition {
+    Single,
+    First,
+    Middle,
+    Last,
+}
+
+internal fun segmentedShape(position: SegmentedItemPosition): RoundedCornerShape = when (position) {
+    SegmentedItemPosition.Single -> RoundedCornerShape(20.dp)
+    SegmentedItemPosition.First -> RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = 6.dp,
+        bottomEnd = 6.dp,
+    )
+    SegmentedItemPosition.Middle -> RoundedCornerShape(6.dp)
+    SegmentedItemPosition.Last -> RoundedCornerShape(
+        topStart = 6.dp,
+        topEnd = 6.dp,
+        bottomStart = 20.dp,
+        bottomEnd = 20.dp,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     photoPath: String? = null,
@@ -204,9 +235,10 @@ fun ProfileScreen(
 
     val notSet = stringResource(R.string.profile_not_set)
     val reserveUsername = stringResource(R.string.profile_reserve_username)
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -227,6 +259,7 @@ fun ProfileScreen(
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                 ),
@@ -277,54 +310,52 @@ fun ProfileScreen(
                 }
             }
             item {
-                Surface(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = DuaGenAITheme.shapes.card,
-                    color = MaterialTheme.colorScheme.surface,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Column {
-                        val nameValue = displayName.ifBlank { notSet }
-                        SettingsRow(
-                            title = stringResource(R.string.profile_field_name),
-                            subtitle = nameValue,
-                            icon = Icons.Outlined.Person,
-                            onClick = { editing = "name" },
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = stringResource(R.string.profile_field_about),
-                            subtitle = about.ifBlank { notSet },
-                            icon = Icons.Outlined.Info,
-                            onClick = { editing = "about" },
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        val usernameEmpty = username.isBlank()
-                        SettingsRow(
-                            title = stringResource(R.string.profile_field_username),
-                            subtitle = if (usernameEmpty) reserveUsername else username,
-                            icon = Icons.Outlined.AlternateEmail,
-                            onClick = { editing = "username" },
-                            subtitleColor = if (usernameEmpty) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.Unspecified
-                            },
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = stringResource(R.string.profile_field_phone),
-                            subtitle = phone.ifBlank { notSet },
-                            icon = Icons.Outlined.Phone,
-                            onClick = { editing = "phone" },
-                        )
-                        HorizontalDivider(color = colors.hairline)
-                        SettingsRow(
-                            title = stringResource(R.string.profile_field_links),
-                            subtitle = links.ifBlank { notSet },
-                            icon = Icons.Outlined.Link,
-                            onClick = { editing = "links" },
-                        )
-                    }
+                    val nameValue = displayName.ifBlank { notSet }
+                    SettingsRow(
+                        title = stringResource(R.string.profile_field_name),
+                        subtitle = nameValue,
+                        icon = Icons.Outlined.Person,
+                        onClick = { editing = "name" },
+                        position = SegmentedItemPosition.First,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.profile_field_about),
+                        subtitle = about.ifBlank { notSet },
+                        icon = Icons.Outlined.Info,
+                        onClick = { editing = "about" },
+                        position = SegmentedItemPosition.Middle,
+                    )
+                    val usernameEmpty = username.isBlank()
+                    SettingsRow(
+                        title = stringResource(R.string.profile_field_username),
+                        subtitle = if (usernameEmpty) reserveUsername else username,
+                        icon = Icons.Outlined.AlternateEmail,
+                        onClick = { editing = "username" },
+                        subtitleColor = if (usernameEmpty) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.Unspecified
+                        },
+                        position = SegmentedItemPosition.Middle,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.profile_field_phone),
+                        subtitle = phone.ifBlank { notSet },
+                        icon = Icons.Outlined.Phone,
+                        onClick = { editing = "phone" },
+                        position = SegmentedItemPosition.Middle,
+                    )
+                    SettingsRow(
+                        title = stringResource(R.string.profile_field_links),
+                        subtitle = links.ifBlank { notSet },
+                        icon = Icons.Outlined.Link,
+                        onClick = { editing = "links" },
+                        position = SegmentedItemPosition.Last,
+                    )
                 }
             }
             item {
@@ -460,7 +491,6 @@ internal fun ProfilePictureSheet(
     onDelete: () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
-    val colors = DuaGenAITheme.colors
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(
@@ -501,19 +531,27 @@ internal fun ProfilePictureSheet(
                     )
                 }
             }
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_camera),
-                subtitle = " ",
-                icon = Icons.Outlined.PhotoCamera,
-                onClick = onCamera,
-            )
-            HorizontalDivider(color = colors.hairline)
-            SettingsRow(
-                title = stringResource(R.string.profile_picture_gallery),
-                subtitle = " ",
-                icon = Icons.Outlined.Image,
-                onClick = onGallery,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                SettingsRow(
+                    title = stringResource(R.string.profile_picture_camera),
+                    subtitle = " ",
+                    icon = Icons.Outlined.PhotoCamera,
+                    onClick = onCamera,
+                    position = SegmentedItemPosition.First,
+                )
+                SettingsRow(
+                    title = stringResource(R.string.profile_picture_gallery),
+                    subtitle = " ",
+                    icon = Icons.Outlined.Image,
+                    onClick = onGallery,
+                    position = SegmentedItemPosition.Last,
+                )
+            }
         }
     }
 }
@@ -613,20 +651,39 @@ internal fun SettingsRow(
     titleColor: Color = Color.Unspecified,
     /** Overrides the subtitle colour. [Color.Unspecified] keeps onSurfaceVariant. */
     subtitleColor: Color = Color.Unspecified,
+    position: SegmentedItemPosition? = null,
+    shape: Shape = if (position != null) segmentedShape(position) else RoundedCornerShape(16.dp),
+    modifier: Modifier = Modifier,
 ) {
-    val spacing = LocalDuaGenAISpacing.current
-    Row(
-        modifier = Modifier
+    val isDark = isSystemInDarkTheme()
+    val containerColor = if (position != null) {
+        if (isDark) {
+            MaterialTheme.colorScheme.surfaceContainerHigh
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+    } else {
+        Color.Transparent
+    }
+    val borderStroke = if (position != null) {
+        BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    } else {
+        null
+    }
+
+    Surface(
+        shape = shape,
+        color = containerColor,
+        border = borderStroke,
+        modifier = modifier
             .fillMaxWidth()
             .then(
                 if (onClick != null && enabled) {
-                    Modifier.clickable(onClick = onClick)
+                    Modifier.clickable(role = Role.Button, onClick = onClick)
                 } else {
                     Modifier
                 },
             )
-            .sizeIn(minHeight = 48.dp)
-            .padding(horizontal = spacing.md, vertical = spacing.md)
             .then(
                 if (enabled) {
                     Modifier
@@ -634,49 +691,68 @@ internal fun SettingsRow(
                     Modifier.semantics(mergeDescendants = true) { disabled() }
                 },
             ),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (leading != null) {
-            leading()
-            Spacer(Modifier.width(spacing.md))
-        }
-        if (icon != null) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(spacing.md))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = DuaGenAITextStyles.rowTitle,
-                color = when {
-                    titleColor != Color.Unspecified -> titleColor
-                    enabled -> MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-            if (subtitle.isNotBlank()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .sizeIn(minHeight = 56.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(16.dp))
+            } else if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(16.dp))
+            }
+            Column(Modifier.weight(1f)) {
                 Text(
-                    text = subtitle,
-                    style = DuaGenAITextStyles.snippet,
-                    color = if (subtitleColor != Color.Unspecified) {
-                        subtitleColor
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium,
+                    ),
+                    color = when {
+                        titleColor != Color.Unspecified -> titleColor
+                        enabled -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
                     },
                 )
+                if (subtitle.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (subtitleColor != Color.Unspecified) {
+                            subtitleColor
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
             }
-        }
-        if (enabled) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (enabled) {
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
