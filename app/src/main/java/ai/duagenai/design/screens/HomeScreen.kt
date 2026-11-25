@@ -301,6 +301,8 @@ fun HomeScreen(
     onSendDuaMessage: (String) -> Unit = {},
     /** Dua home's Attach `+` sheet: a Create tile was tapped (its key). */
     onOpenCreate: (String) -> Unit = {},
+    /** Opens full-screen Gemini Live voice session. */
+    onOpenVoiceLive: () -> Unit = {},
     /** Header "+" menu. Every entry must DO something real today. */
     onCreateAgent: () -> Unit = {},
     onNewGroup: () -> Unit = {},
@@ -450,12 +452,7 @@ fun HomeScreen(
                                     snackbarHostState.showSnackbar(comingSoon)
                                 }
                             },
-                            onVoiceMessageClick = {
-                                snackbarScope.launch {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    snackbarHostState.showSnackbar(comingSoon)
-                                }
-                            },
+                            onVoiceMessageClick = onOpenVoiceLive,
                             onVoiceCallClick = {
                                 snackbarScope.launch {
                                     snackbarHostState.currentSnackbarData?.dismiss()

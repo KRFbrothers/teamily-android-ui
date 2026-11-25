@@ -1156,7 +1156,7 @@ class DuaGenAINavHostTest {
 
     /**
      * Dua home's + opens the Quick Actions sheet; its Skills row (Dua is not
-     * the agent) and the Voice control answer with "Jaldi aa raha hai".
+     * the agent) answers with "Jaldi aa raha hai", and Voice opens VoiceLive.
      */
     @Test
     fun duaHomePlusOpensQuickActionsAndVoiceShowsComingSoon() {
@@ -1171,10 +1171,8 @@ class DuaGenAINavHostTest {
         }
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
         compose.onNodeWithContentDescription(VOICE_LABEL).performClick()
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText(COMING_SOON).fetchSemanticsNodes().isNotEmpty()
-        }
-        assertEquals(DuaGenAIRoutes.HOME, currentRoute())
+        compose.waitForIdle()
+        assertEquals(DuaGenAIRoutes.VOICE_LIVE, currentRoute())
     }
 
     /** Dua home's welcome: badge, greeting and starters; a starter opens a new Dua chat. */

@@ -328,6 +328,8 @@ fun ChatScreen(
     onOpenAgentProfile: (() -> Unit)? = null,
     /** Create tiles in the composer + sheet. */
     onOpenCreate: ((String) -> Unit)? = null,
+    /** Opens full-screen Gemini Live voice session. */
+    onOpenVoiceLive: () -> Unit = {},
     /** The agent header pill's "Invite": this agent's New Group. */
     onInvite: () -> Unit = {},
     // Where the transcript LIVES. A ViewModel, not `rememberSaveable`: see
@@ -688,7 +690,7 @@ fun ChatScreen(
                     onMeetingMinutesClick = showComingSoon,
                     onDictateClick = handleDictate,
                     onEmojiClick = showComingSoon,
-                    onVoiceMessageClick = showComingSoon,
+                    onVoiceMessageClick = onOpenVoiceLive,
                     onVoiceCallClick = showComingSoon,
                     sending = agentTyping,
                     onStop = { stop() },

@@ -111,6 +111,7 @@ import ai.duagenai.design.screens.SettingsStore
 import ai.duagenai.design.screens.SidebarDrawer
 import ai.duagenai.design.screens.SkillConfigScreen
 import ai.duagenai.design.screens.StorageScreen
+import ai.duagenai.design.screens.VoiceLiveScreen
 import ai.duagenai.design.screens.decodeChannels
 import ai.duagenai.design.screens.decodeConnectors
 import ai.duagenai.design.screens.encodeChannels
@@ -209,6 +210,7 @@ object DuaGenAIRoutes {
     const val SETTINGS_LANGUAGE = "settings/language"
     const val SETTINGS_CHANNELS = "settings/channels"
     const val SETTINGS_SKILLS = "settings/skills"
+    const val VOICE_LIVE = "voice/live"
     const val CREATE = "create/{kind}"
 
     fun create(kind: String): String = "create/${Uri.encode(kind)}"
@@ -584,6 +586,7 @@ fun DuaGenAINavHost(
                     // Dua home's + sheet: Create tiles open the same create
                     // route a thread's + sheet uses.
                     onOpenCreate = { kind -> navController.navigate(DuaGenAIRoutes.create(kind)) },
+                    onOpenVoiceLive = { navController.navigate(DuaGenAIRoutes.VOICE_LIVE) },
                     onOpenSettings = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                     onNewChat = { navController.navigate(DuaGenAIRoutes.HOME) },
                     // Every tab has a destination (see [navigateToTab]).
@@ -799,6 +802,7 @@ fun DuaGenAINavHost(
                     onOpenCreate = { kind ->
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
+                    onOpenVoiceLive = { navController.navigate(DuaGenAIRoutes.VOICE_LIVE) },
                 )
             }
 
@@ -1052,6 +1056,12 @@ fun DuaGenAINavHost(
                 CreateKindScreen(
                     kind = entry.arguments?.getString("kind").orEmpty(),
                     onBack = { navController.popBackStack() },
+                )
+            }
+            composable(DuaGenAIRoutes.VOICE_LIVE) {
+                VoiceLiveScreen(
+                    onBack = { navController.popBackStack() },
+                    userName = profileName,
                 )
             }
         }
