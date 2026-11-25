@@ -120,4 +120,36 @@
     <string name="voice_live_captions_cd">Captions toggle</string>
     <string name="voice_live_speaker_cd">Speaker toggle</string>
     <string name="voice_live_more_cd">More options</string>
+    <!-- Quick Actions (ComposerPlusSheet) -->
+    <string name="quick_actions_title">Quick Actions</string>
+    <string name="quick_actions_close_cd">Close quick actions</string>
+    <string name="quick_actions_agent_tools">Agent tools</string>
+    <string name="quick_actions_skills">Skills</string>
+    <string name="quick_actions_connectors">Connectors</string>
+    <string name="quick_actions_frequently_used">Frequently used</string>
+    <string name="quick_actions_upload">Upload</string>
+    <string name="quick_actions_photos">Photos</string>
+    <string name="quick_actions_camera">Camera</string>
+    <string name="quick_actions_videos">Videos</string>
+    <string name="quick_actions_voice_call">Voice call</string>
+    <string name="quick_actions_create">Create</string>
+    <string name="quick_actions_explore_more">Explore more</string>
+    <string name="quick_actions_pro">Pro</string>
+    <string name="quick_actions_website">Website</string>
+    <string name="quick_actions_document">Document</string>
+    <string name="quick_actions_slides">Slides</string>
+    <string name="quick_actions_spreadsheet">Spreadsheet</string>
+    <string name="quick_actions_image">Image</string>
+    <string name="quick_actions_video">Video</string>
+    <string name="quick_actions_music">Music</string>
+    <string name="quick_actions_3d_model">3D model</string>
+    <string name="quick_actions_automate">Automate</string>
+    <string name="quick_actions_all_automations">All automations</string>
+    <string name="quick_actions_meeting_reminder">Meeting reminder</string>
+    <string name="quick_actions_daily_brief">Daily work brief</string>
+    <string name="quick_actions_expert_research">Expert group research</string>
+    <string name="quick_actions_drive_goal">Drive a goal (deck...)</string>
+    <string name="quick_actions_context">Context</string>
+    <string name="quick_actions_memory">Memory</string>
+    <string name="quick_actions_recall">Recall</string>
 </resources>
