@@ -31,6 +31,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -691,11 +692,14 @@ private fun ModeToggle(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
+    val isDark = isSystemInDarkTheme()
+    val trackColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceVariant
+    val activePillColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surface
 
     Row(
         modifier = modifier
             .clip(DuaGenAITheme.shapes.pill)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(trackColor)
             .padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -705,7 +709,7 @@ private fun ModeToggle(
                 modifier = Modifier
                     .weight(1f)
                     .clip(DuaGenAITheme.shapes.pill)
-                    .background(if (active) MaterialTheme.colorScheme.surface else Color.Transparent)
+                    .background(if (active) activePillColor else Color.Transparent)
                     .clickable { onModeChange(entry) }
                     // A stable, unique label per cell. The visible text is just
                     // "Dua" / "Agent", which also appears in the drawer's nav

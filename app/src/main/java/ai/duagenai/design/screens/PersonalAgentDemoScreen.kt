@@ -3,6 +3,7 @@ package ai.duagenai.design.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +62,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -347,14 +349,19 @@ internal fun QuickActionChips(
     onPick: (String) -> Unit,
     modifier: Modifier = Modifier,
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
 ) {
     val palette = teamilyPalette()
-    Column(modifier.fillMaxWidth().padding(top = 6.dp)) {
+    Column(
+        modifier = modifier.fillMaxWidth().padding(top = 6.dp),
+        horizontalAlignment = horizontalAlignment,
+    ) {
         if (label != null) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = if (horizontalAlignment == Alignment.CenterHorizontally) TextAlign.Center else TextAlign.Start,
             )
             Spacer(Modifier.height(2.dp))
         }
@@ -381,14 +388,18 @@ internal fun ActionChip(
     onClick: () -> Unit,
     palette: ai.duagenai.design.theme.TeamilyPalette,
 ) {
+    val isDark = isSystemInDarkTheme()
+    val chipColor = if (isDark) MaterialTheme.colorScheme.surfaceContainer else palette.surfaceRecessed
+    val chipBorder = if (isDark) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                     else BorderStroke(1.dp, palette.border)
     Surface(
         onClick = onClick,
         modifier = Modifier
             .minTouchTarget()
             .semantics { role = Role.Button },
         shape = TeamilyShapes.capsule,
-        color = palette.surfaceRecessed,
-        border = BorderStroke(1.dp, palette.border),
+        color = chipColor,
+        border = chipBorder,
     ) {
         Text(
             text = label,

@@ -752,6 +752,8 @@ fun ChatScreen(
                                         send()
                                     }
                                 },
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             )
                         } else {
                             Spacer(Modifier.height(24.dp))
@@ -1004,6 +1006,13 @@ private fun ChatStarterChips(
             stringResource(R.string.chat_starter_brainstorm),
         ),
     )
+    val isDark = isSystemInDarkTheme()
+    val chipColor = if (isDark) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+    val chipBorder = if (isDark) {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    }
     Column(
         modifier = modifier
             .widthIn(max = 320.dp)
@@ -1015,8 +1024,8 @@ private fun ChatStarterChips(
             Surface(
                 onClick = { onPick(text) },
                 shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                color = chipColor,
+                border = chipBorder,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
