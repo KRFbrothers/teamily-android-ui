@@ -106,4 +106,18 @@
     <string name="voice_recording_indicator">Recording...</string>
     <string name="voice_dictate_cd">Voice dictate</string>
     <string name="voice_note_cd">Voice message</string>
+    <!-- Voice Live Screen -->
+    <string name="voice_live_greeting">Hi, what\'s the plan?</string>
+    <string name="voice_live_greeting_name">Hi %1$s, what\'s the plan?</string>
+    <string name="voice_live_callout_title">Get Live Translations</string>
+    <string name="voice_live_callout_subtitle">Follow along as someone speaks in another language</string>
+    <string name="voice_live_listening">Listening…</string>
+    <string name="voice_live_paused">Paused</string>
+    <string name="voice_live_camera_cd">Camera toggle</string>
+    <string name="voice_live_add_cd">Add context</string>
+    <string name="voice_live_mic_cd">Microphone toggle</string>
+    <string name="voice_live_end_cd">End voice session</string>
+    <string name="voice_live_captions_cd">Captions toggle</string>
+    <string name="voice_live_speaker_cd">Speaker toggle</string>
+    <string name="voice_live_more_cd">More options</string>
 </resources>
