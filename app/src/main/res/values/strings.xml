@@ -95,4 +95,15 @@
     <string name="chat_starter_draft_reply">Draft a quick reply</string>
     <string name="chat_starter_brainstorm">Brainstorm ideas</string>
     <string name="chat_thinking">Thinking...</string>
+    <!-- Voice Dictation & Voice Note Recording -->
+    <string name="voice_dictate_prompt">Speak to type...</string>
+    <string name="voice_dictate_unavailable">Speech recognition is not available on this device</string>
+    <string name="voice_permission_denied">Microphone permission is needed for voice features</string>
+    <string name="voice_recording_discarded">Voice note discarded</string>
+    <string name="voice_recording_failed">Could not record audio</string>
+    <string name="voice_cancel_recording">Cancel recording</string>
+    <string name="voice_send_recording">Send voice note</string>
+    <string name="voice_recording_indicator">Recording...</string>
+    <string name="voice_dictate_cd">Voice dictate</string>
+    <string name="voice_note_cd">Voice message</string>
 </resources>
