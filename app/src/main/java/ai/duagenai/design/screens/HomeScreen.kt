@@ -14,6 +14,12 @@
 
 package ai.duagenai.design.screens
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import ai.duagenai.design.bot.BabyGrokMark
 import ai.duagenai.design.bot.LocalBotAppearance
 import androidx.compose.foundation.shape.CircleShape
@@ -387,6 +393,20 @@ fun HomeScreen(
                         // Attach / Voice taps explain themselves here.
                         SnackbarHost(snackbarHostState)
                         var sheet by rememberSaveable { mutableStateOf(ComposerSheet.None) }
+                        val dictatePrompt = stringResource(R.string.voice_dictate_prompt)
+                        val dictateUnavailable = stringResource(R.string.voice_dictate_unavailable)
+                        val dictateLauncher = rememberLauncherForActivityResult(
+                            ActivityResultContracts.StartActivityForResult(),
+                        ) { result ->
+                            if (result.resultCode == Activity.RESULT_OK) {
+                                val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+                                if (!spoken.isNullOrBlank()) {
+                                    val existing = duaDraftState.text.toString()
+                                    val merged = if (existing.isBlank()) spoken else "$existing $spoken"
+                                    duaDraftState.edit { replace(0, length, merged) }
+                                }
+                            }
+                        }
                         ChatBar(
                             state = duaDraftState,
                             hasMessages = false,
@@ -406,9 +426,22 @@ fun HomeScreen(
                                 }
                             },
                             onDictateClick = {
-                                snackbarScope.launch {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    snackbarHostState.showSnackbar(comingSoon)
+                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                    putExtra(RecognizerIntent.EXTRA_PROMPT, dictatePrompt)
+                                }
+                                try {
+                                    dictateLauncher.launch(intent)
+                                } catch (_: ActivityNotFoundException) {
+                                    snackbarScope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(dictateUnavailable)
+                                    }
+                                } catch (_: Exception) {
+                                    snackbarScope.launch {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(dictateUnavailable)
+                                    }
                                 }
                             },
                             onEmojiClick = {

@@ -1,8 +1,16 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.theme.DemoBadge
+import android.Manifest
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Parcel
 import android.os.Parcelable
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -63,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -74,6 +83,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
+import java.util.Locale
 import ai.duagenai.design.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CancellationException
@@ -419,6 +430,39 @@ fun ChatScreen(
             snackbarHostState.showSnackbar(comingSoon)
         }
     }
+    val dictatePrompt = stringResource(R.string.voice_dictate_prompt)
+    val dictateUnavailable = stringResource(R.string.voice_dictate_unavailable)
+    val dictateLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spoken.isNullOrBlank()) {
+                val existing = draftState.text.toString()
+                val merged = if (existing.isBlank()) spoken else "$existing $spoken"
+                draftState.edit { replace(0, length, merged) }
+            }
+        }
+    }
+    val handleDictate: () -> Unit = {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, dictatePrompt)
+        }
+        try {
+            dictateLauncher.launch(intent)
+        } catch (_: ActivityNotFoundException) {
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(dictateUnavailable)
+            }
+        } catch (_: Exception) {
+            scope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(dictateUnavailable)
+            }
+        }
+    }
     val isPersonal = chatId == PERSONAL_AGENT_CHAT_ID
     val isDuaAgent = chatId == AGENT_CHAT_ID
 
@@ -642,7 +686,7 @@ fun ChatScreen(
                     onModeChange = { chatMode = it },
                     onAttachClick = { sheet = ComposerSheet.Plus },
                     onMeetingMinutesClick = showComingSoon,
-                    onDictateClick = showComingSoon,
+                    onDictateClick = handleDictate,
                     onEmojiClick = showComingSoon,
                     onVoiceMessageClick = showComingSoon,
                     onVoiceCallClick = showComingSoon,
