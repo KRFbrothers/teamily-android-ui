@@ -200,8 +200,8 @@ fun ChatBar(
     )
     val containerShape = RoundedCornerShape(animatedCornerRadius)
 
-    // Border: null in Light Mode, 0.5.dp outlineVariant in Dark Mode
-    val containerBorder = if (isDark) BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant) else null
+    // Border: null in Light Mode, 0.8.dp outlineVariant in Dark Mode
+    val containerBorder = if (isDark) BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant) else null
 
     // Shadow: soft floating shadow (10.dp Light, 3.dp Dark) with theme token colors
     val shadowElevation = if (isDark) 3.dp else 10.dp
@@ -230,7 +230,7 @@ fun ChatBar(
     }
 
     val scrollState = rememberScrollState()
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    val surfaceColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface
 
     // Dynamic Gemini-style placeholder text
     val isStreaming = sending
