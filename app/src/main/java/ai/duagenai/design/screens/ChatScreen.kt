@@ -13,7 +13,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -655,7 +654,7 @@ fun ChatScreen(
         },
         // The floating adaptive Gemini-style chat bar with bottom ambient glow
         bottomBar = {
-            val isDark = isSystemInDarkTheme()
+            val isDark = DuaGenAITheme.isDark
             val glowAlpha = if (isDark) 0.18f else 0.42f
             Box(
                 modifier = Modifier
@@ -731,20 +730,20 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
-                            text = "No messages yet",
+                            text = stringResource(R.string.chat_empty_title),
                             style = DuaGenAITextStyles.rowTitle,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Spacer(Modifier.height(spacing.xs))
                         Text(
-                            text = "Say something below to start the conversation.",
+                            text = stringResource(R.string.chat_empty_body),
                             style = DuaGenAITextStyles.snippet,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (isPersonal) {
                             Spacer(Modifier.height(spacing.lg))
                             QuickActionChips(
-                                label = "Try asking:",
+                                label = stringResource(R.string.chat_empty_try_asking),
                                 actions = PERSONAL_AGENT_QUICK_ACTIONS,
                                 onPick = { prompt ->
                                     if (!agentTyping) {
@@ -785,7 +784,7 @@ fun ChatScreen(
             if (isPersonal && messages.isNotEmpty()) {
                 item {
                     QuickActionChips(
-                        label = "Try asking:",
+                        label = stringResource(R.string.chat_empty_try_asking),
                         actions = PERSONAL_AGENT_QUICK_ACTIONS,
                         onPick = { prompt ->
                             if (!agentTyping) {
@@ -801,6 +800,16 @@ fun ChatScreen(
 
     // The composer's sheets. `+` opens Quick Actions, which hands off to the
     // Skills / MCP sheets rather than duplicating them.
+    val automatePrompts = mapOf(
+        "meeting_reminder" to stringResource(R.string.quick_actions_prompt_meeting_reminder),
+        "daily_brief" to stringResource(R.string.quick_actions_prompt_daily_brief),
+        "expert_research" to stringResource(R.string.quick_actions_prompt_expert_research),
+        "drive_goal" to stringResource(R.string.quick_actions_prompt_drive_goal),
+    )
+    val contextLabels = mapOf(
+        "memory" to stringResource(R.string.quick_actions_memory),
+        "recall" to stringResource(R.string.quick_actions_recall),
+    )
     when (sheet) {
         ComposerSheet.Plus -> ComposerPlusSheet(
             onOpenSkills = { sheet = ComposerSheet.Skills },
@@ -809,6 +818,31 @@ fun ChatScreen(
             onOpenCreate = { key ->
                 sheet = ComposerSheet.None
                 onOpenCreate?.invoke(key)
+            },
+            onUpload = { sheet = ComposerSheet.None; showComingSoon() },
+            onPhotos = { sheet = ComposerSheet.None; showComingSoon() },
+            onCamera = { sheet = ComposerSheet.None; showComingSoon() },
+            onVideos = { sheet = ComposerSheet.None; showComingSoon() },
+            onVoiceCall = { sheet = ComposerSheet.None; showComingSoon() },
+            onExploreMore = { sheet = ComposerSheet.None; showComingSoon() },
+            onAllAutomations = { sheet = ComposerSheet.None; showComingSoon() },
+            onAutomate = { key ->
+                sheet = ComposerSheet.None
+                val prompt = automatePrompts[key]
+                if (prompt != null) {
+                    draftState.edit { replace(0, length, prompt) }
+                } else {
+                    showComingSoon()
+                }
+            },
+            onContext = { key ->
+                sheet = ComposerSheet.None
+                val chip = contextLabels[key]
+                if (chip != null) {
+                    if (chip !in contextChips) contextChips = contextChips + chip
+                } else {
+                    showComingSoon()
+                }
             },
         )
         ComposerSheet.Skills -> ComposerSkillsSheet(
@@ -1006,7 +1040,7 @@ private fun ChatStarterChips(
             stringResource(R.string.chat_starter_brainstorm),
         ),
     )
-    val isDark = isSystemInDarkTheme()
+    val isDark = DuaGenAITheme.isDark
     val chipColor = if (isDark) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerHigh
     val chipBorder = if (isDark) {
         BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))

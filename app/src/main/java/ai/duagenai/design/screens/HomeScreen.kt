@@ -31,7 +31,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.selection.selectableGroup
@@ -347,6 +346,12 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
     val comingSoon = stringResource(R.string.composer_coming_soon)
+    val showComingSoon: () -> Unit = {
+        snackbarScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(comingSoon)
+        }
+    }
 
     val isLightAgentHome = mode == HomeMode.Agent && palette.borderStrong != null
     Box(
@@ -422,12 +427,7 @@ fun HomeScreen(
                             },
                             placeholder = "Ask Dua ...",
                             onAttachClick = { sheet = ComposerSheet.Plus },
-                            onMeetingMinutesClick = {
-                                snackbarScope.launch {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    snackbarHostState.showSnackbar(comingSoon)
-                                }
-                            },
+                            onMeetingMinutesClick = showComingSoon,
                             onDictateClick = {
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -447,19 +447,9 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            onEmojiClick = {
-                                snackbarScope.launch {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    snackbarHostState.showSnackbar(comingSoon)
-                                }
-                            },
+                            onEmojiClick = showComingSoon,
                             onVoiceMessageClick = onOpenVoiceLive,
-                            onVoiceCallClick = {
-                                snackbarScope.launch {
-                                    snackbarHostState.currentSnackbarData?.dismiss()
-                                    snackbarHostState.showSnackbar(comingSoon)
-                                }
-                            },
+                            onVoiceCallClick = showComingSoon,
                             voiceContentDescription = "Voice input",
                             modifier = Modifier.padding(bottom = 16.dp),
                         )
@@ -467,23 +457,26 @@ fun HomeScreen(
                             ComposerPlusSheet(
                                 onOpenSkills = {
                                     sheet = ComposerSheet.None
-                                    snackbarScope.launch {
-                                        snackbarHostState.currentSnackbarData?.dismiss()
-                                        snackbarHostState.showSnackbar(comingSoon)
-                                    }
+                                    showComingSoon()
                                 },
                                 onOpenMcp = {
                                     sheet = ComposerSheet.None
-                                    snackbarScope.launch {
-                                        snackbarHostState.currentSnackbarData?.dismiss()
-                                        snackbarHostState.showSnackbar(comingSoon)
-                                    }
+                                    showComingSoon()
                                 },
                                 onDismiss = { sheet = ComposerSheet.None },
                                 onOpenCreate = { key ->
                                     sheet = ComposerSheet.None
                                     onOpenCreate?.invoke(key)
                                 },
+                                onUpload = { sheet = ComposerSheet.None; showComingSoon() },
+                                onPhotos = { sheet = ComposerSheet.None; showComingSoon() },
+                                onCamera = { sheet = ComposerSheet.None; showComingSoon() },
+                                onVideos = { sheet = ComposerSheet.None; showComingSoon() },
+                                onVoiceCall = { sheet = ComposerSheet.None; showComingSoon() },
+                                onAutomate = { sheet = ComposerSheet.None; showComingSoon() },
+                                onContext = { sheet = ComposerSheet.None; showComingSoon() },
+                                onExploreMore = { sheet = ComposerSheet.None; showComingSoon() },
+                                onAllAutomations = { sheet = ComposerSheet.None; showComingSoon() },
                             )
                         }
                     }
@@ -692,7 +685,7 @@ private fun ModeToggle(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val colors = DuaGenAITheme.colors
-    val isDark = isSystemInDarkTheme()
+    val isDark = DuaGenAITheme.isDark
     val trackColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceVariant
     val activePillColor = if (isDark) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surface
 
