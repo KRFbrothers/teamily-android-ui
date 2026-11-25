@@ -262,7 +262,7 @@ object DuaGenAITheme {
      * Read from the ACTIVE background rather than from the parameter, so a
      * nested `DuaGenAITheme` and its tokens can never disagree.
      */
-    private val isDark: Boolean
+    val isDark: Boolean
         @Composable @ReadOnlyComposable
         get() = MaterialTheme.colorScheme.background.luminance() < 0.5f
 

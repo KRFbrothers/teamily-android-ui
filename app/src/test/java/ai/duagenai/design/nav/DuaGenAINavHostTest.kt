@@ -1052,6 +1052,23 @@ class DuaGenAINavHostTest {
     }
 
     @Test
+    fun duaGenAITheme_isDarkFollowsExplicitThemeMode() {
+        var resolvedLight = true
+        var resolvedDark = false
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                resolvedLight = DuaGenAITheme.isDark
+            }
+            DuaGenAITheme(darkTheme = true) {
+                resolvedDark = DuaGenAITheme.isDark
+            }
+        }
+        compose.waitForIdle()
+        assertFalse(resolvedLight)
+        assertTrue(resolvedDark)
+    }
+
+    @Test
     fun duaModeShowsOnlyTheComposerAndNoAgentSurface() {
         launch()
         switchTo(HomeMode.Dua)
@@ -3646,6 +3663,32 @@ class DuaGenAINavHostTest {
         compose.onNode(hasText(SKILLS_LABEL) and hasContentDescription(SKILLS_LABEL)).performClick()
         compose.waitForIdle()
         compose.onNode(hasContentDescription(DUA_AGENT_SKILL_TITLES.first())).assertExists()
+    }
+
+    /** Quick Actions sheet displays all 5 sections and Context/Automate respond cleanly. */
+    @Test
+    fun quickActionsSheet_contextMemoryAttachesChipAndAutomatePrefillsDraft() {
+        openAgentThread()
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
+        compose.waitForIdle()
+
+        listOf("Agent tools", "Frequently used", "Create", "Automate", "Context").forEach { section ->
+            compose.onNodeWithText(section).assertExists()
+        }
+
+        compose.onNode(hasText("Memory") and hasContentDescription("Memory"))
+            .performScrollTo()
+            .performClick()
+        compose.waitForIdle()
+        compose.onNodeWithContentDescription("Remove Memory").assertExists()
+
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
+        compose.waitForIdle()
+        compose.onNode(hasText("Daily work brief") and hasContentDescription("Daily work brief"))
+            .performScrollTo()
+            .performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Prepare my daily work brief").assertExists()
     }
 
     /**

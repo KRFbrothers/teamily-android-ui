@@ -17,7 +17,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +65,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -88,7 +86,7 @@ fun VoiceLiveScreen(
     userName: String = "",
     modifier: Modifier = Modifier,
 ) {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val isDark = DuaGenAITheme.isDark
     val palette = teamilyPalette()
     val look = LocalBotAppearance.current
 

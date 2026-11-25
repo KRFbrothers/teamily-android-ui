@@ -3,7 +3,6 @@ package ai.duagenai.design.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -388,7 +387,7 @@ internal fun ActionChip(
     onClick: () -> Unit,
     palette: ai.duagenai.design.theme.TeamilyPalette,
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = DuaGenAITheme.isDark
     val chipColor = if (isDark) MaterialTheme.colorScheme.surfaceContainer else palette.surfaceRecessed
     val chipBorder = if (isDark) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
                      else BorderStroke(1.dp, palette.border)

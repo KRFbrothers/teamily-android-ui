@@ -91,6 +91,9 @@
     <string name="agent_share_failed">Couldn\'t open share</string>
     <string name="chat_default_title">Chat</string>
     <!-- Chat Screen Empty State Starters & Typing -->
+    <string name="chat_empty_title">No messages yet</string>
+    <string name="chat_empty_body">Say something below to start the conversation.</string>
+    <string name="chat_empty_try_asking">Try asking:</string>
     <string name="chat_starter_plan_day">Plan my day</string>
     <string name="chat_starter_draft_reply">Draft a quick reply</string>
     <string name="chat_starter_brainstorm">Brainstorm ideas</string>
@@ -152,4 +155,8 @@
     <string name="quick_actions_context">Context</string>
     <string name="quick_actions_memory">Memory</string>
     <string name="quick_actions_recall">Recall</string>
+    <string name="quick_actions_prompt_meeting_reminder">Set up a meeting reminder for </string>
+    <string name="quick_actions_prompt_daily_brief">Prepare my daily work brief</string>
+    <string name="quick_actions_prompt_expert_research">Run expert group research on </string>
+    <string name="quick_actions_prompt_drive_goal">Help me drive a goal: </string>
 </resources>

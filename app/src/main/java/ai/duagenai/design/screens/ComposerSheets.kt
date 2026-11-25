@@ -1,7 +1,6 @@
 package ai.duagenai.design.screens
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,16 +17,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Biotech
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CoPresent
@@ -45,11 +44,8 @@ import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.TableChart
 import androidx.compose.material.icons.outlined.TrackChanges
-import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.ViewInAr
-import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,7 +62,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -83,11 +78,8 @@ import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
-import ai.duagenai.design.theme.TeamilyShapes
-import ai.duagenai.design.theme.teamilyPalette
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.widthIn
 import ai.duagenai.design.theme.MaxContentWidth
+import ai.duagenai.design.theme.TeamilyShapes
 
 /* ============================================================================
  *  Composer sheets — Attach (+), Skills and MCP Tools
@@ -736,20 +728,20 @@ private fun QuickActionCreateTile(
             )
             if (isPro) {
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(x = 18.dp, y = (-6).dp),
+                        .offset(x = 16.dp, y = (-4).dp),
                 ) {
                     Text(
                         text = stringResource(R.string.quick_actions_pro),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                         ),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                     )
                 }
             }
@@ -964,25 +956,6 @@ private fun SheetSectionLabel(text: String) {
             bottom = spacing.xs,
         ),
     )
-}
-
-/** A 48dp+ tappable row: icon + label. */
-@Composable
-private fun SheetActionRow(icon: ImageVector, label: String, onClick: () -> Unit) {
-    val spacing = LocalDuaGenAISpacing.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .sizeIn(minHeight = MinTouchTarget)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label }
-            .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.width(spacing.md))
-        Text(text = label, style = DuaGenAITextStyles.rowTitle, color = MaterialTheme.colorScheme.onSurface)
-    }
 }
 
 /**
