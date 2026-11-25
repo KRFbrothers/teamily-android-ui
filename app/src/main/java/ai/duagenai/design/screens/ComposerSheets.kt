@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -19,18 +22,37 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Biotech
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CoPresent
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.TableChart
+import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material.icons.outlined.UploadFile
+import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -46,12 +68,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import ai.duagenai.design.R
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -122,19 +149,32 @@ val ADK_BUILT_IN_TOOLS: List<String> = listOf(
 internal enum class ComposerSheet { None, Plus, Skills, Mcp }
 
 /**
- * The `+` sheet. Agent tools stay Skills and MCP Tools (the attach test clicks
- * the Skills row). Under them, the eight Create tiles from the HTML each open
- * their own screen.
+ * The Quick Action sheet (`QuickActionSheet`). Matches the 5-section layout:
+ * Sticky header with centered title + close button.
+ * Body:
+ * 1. Agent tools (Skills, Connectors)
+ * 2. Frequently used (Upload, Photos, Camera, Videos, Voice call)
+ * 3. Create (Website, Document, Slides, Spreadsheet, Image, Video (Pro), Music, 3D model)
+ * 4. Automate (Meeting reminder, Daily work brief, Expert group research, Drive a goal)
+ * 5. Context (Memory, Recall)
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ComposerPlusSheet(
+internal fun QuickActionSheet(
     onOpenSkills: () -> Unit,
     onOpenMcp: () -> Unit,
     onDismiss: () -> Unit,
     onOpenCreate: (String) -> Unit = {},
+    onUpload: () -> Unit = onDismiss,
+    onPhotos: () -> Unit = onDismiss,
+    onCamera: () -> Unit = onDismiss,
+    onVideos: () -> Unit = onDismiss,
+    onVoiceCall: () -> Unit = onDismiss,
+    onAutomate: (String) -> Unit = { onDismiss() },
+    onContext: (String) -> Unit = { onDismiss() },
+    onExploreMore: () -> Unit = onDismiss,
+    onAllAutomations: () -> Unit = onDismiss,
 ) {
-    val spacing = LocalDuaGenAISpacing.current
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(
@@ -143,120 +183,488 @@ internal fun ComposerPlusSheet(
         ),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
-        SheetColumn(title = "Quick Actions") {
-            // Top M3 1.5.0 connected ButtonGroup
-            QuickActionsButtonGroup(onDismiss = onDismiss)
+        QuickActionSheetContent(
+            onOpenSkills = onOpenSkills,
+            onOpenMcp = onOpenMcp,
+            onDismiss = onDismiss,
+            onOpenCreate = onOpenCreate,
+            onUpload = onUpload,
+            onPhotos = onPhotos,
+            onCamera = onCamera,
+            onVideos = onVideos,
+            onVoiceCall = onVoiceCall,
+            onAutomate = onAutomate,
+            onContext = onContext,
+            onExploreMore = onExploreMore,
+            onAllAutomations = onAllAutomations,
+        )
+    }
+}
 
-            // Grouped Segmented List Items
-            SheetSectionLabel("Agent tools")
+/**
+ * Backward compatibility alias for [QuickActionSheet].
+ */
+@Composable
+internal fun ComposerPlusSheet(
+    onOpenSkills: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpenCreate: (String) -> Unit = {},
+    onUpload: () -> Unit = onDismiss,
+    onPhotos: () -> Unit = onDismiss,
+    onCamera: () -> Unit = onDismiss,
+    onVideos: () -> Unit = onDismiss,
+    onVoiceCall: () -> Unit = onDismiss,
+    onAutomate: (String) -> Unit = { onDismiss() },
+    onContext: (String) -> Unit = { onDismiss() },
+    onExploreMore: () -> Unit = onDismiss,
+    onAllAutomations: () -> Unit = onDismiss,
+) = QuickActionSheet(
+    onOpenSkills = onOpenSkills,
+    onOpenMcp = onOpenMcp,
+    onDismiss = onDismiss,
+    onOpenCreate = onOpenCreate,
+    onUpload = onUpload,
+    onPhotos = onPhotos,
+    onCamera = onCamera,
+    onVideos = onVideos,
+    onVoiceCall = onVoiceCall,
+    onAutomate = onAutomate,
+    onContext = onContext,
+    onExploreMore = onExploreMore,
+    onAllAutomations = onAllAutomations,
+)
+
+/** Alias for plural naming [QuickActionsSheet] */
+@Composable
+internal fun QuickActionsSheet(
+    onOpenSkills: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpenCreate: (String) -> Unit = {},
+    onUpload: () -> Unit = onDismiss,
+    onPhotos: () -> Unit = onDismiss,
+    onCamera: () -> Unit = onDismiss,
+    onVideos: () -> Unit = onDismiss,
+    onVoiceCall: () -> Unit = onDismiss,
+    onAutomate: (String) -> Unit = { onDismiss() },
+    onContext: (String) -> Unit = { onDismiss() },
+    onExploreMore: () -> Unit = onDismiss,
+    onAllAutomations: () -> Unit = onDismiss,
+) = QuickActionSheet(
+    onOpenSkills = onOpenSkills,
+    onOpenMcp = onOpenMcp,
+    onDismiss = onDismiss,
+    onOpenCreate = onOpenCreate,
+    onUpload = onUpload,
+    onPhotos = onPhotos,
+    onCamera = onCamera,
+    onVideos = onVideos,
+    onVoiceCall = onVoiceCall,
+    onAutomate = onAutomate,
+    onContext = onContext,
+    onExploreMore = onExploreMore,
+    onAllAutomations = onAllAutomations,
+)
+
+@Composable
+internal fun QuickActionSheetContent(
+    onOpenSkills: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpenCreate: (String) -> Unit = {},
+    onUpload: () -> Unit = onDismiss,
+    onPhotos: () -> Unit = onDismiss,
+    onCamera: () -> Unit = onDismiss,
+    onVideos: () -> Unit = onDismiss,
+    onVoiceCall: () -> Unit = onDismiss,
+    onAutomate: (String) -> Unit = { onDismiss() },
+    onContext: (String) -> Unit = { onDismiss() },
+    onExploreMore: () -> Unit = onDismiss,
+    onAllAutomations: () -> Unit = onDismiss,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = MaxContentWidth)
+                .fillMaxWidth(),
+        ) {
+            // Header (sticky at top of sheet): Centered "Quick Actions" title (18.sp, bold, onSurface) + far-right ✕ close IconButton (48.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = spacing.gutter, vertical = 4.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.quick_actions_title),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.CenterEnd),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Close,
+                        contentDescription = stringResource(R.string.quick_actions_close_cd),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Scrollable Body (verticalScroll, navigationBarsPadding() at bottom)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.gutter),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = spacing.gutter)
+                    .navigationBarsPadding()
+                    .padding(bottom = spacing.lg),
             ) {
-                SegmentedSheetActionRow(
-                    icon = Icons.Outlined.Psychology,
-                    label = "Attach Memory",
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 6.dp, bottomEnd = 6.dp),
-                    onClick = onDismiss,
+                // 1. Agent tools (2-column row, 48.dp min-height clickable rows with 22.dp outlined icon + 12.dp gap + label)
+                Text(
+                    text = stringResource(R.string.quick_actions_agent_tools),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
-                SegmentedSheetActionRow(
-                    icon = Icons.Outlined.Build,
-                    label = "Skills",
-                    shape = RoundedCornerShape(6.dp),
-                    onClick = onOpenSkills,
-                )
-                SegmentedSheetActionRow(
-                    icon = Icons.Outlined.Extension,
-                    label = "MCP Tools",
-                    supportingText = "App Connectors (MCP)",
-                    shape = RoundedCornerShape(6.dp),
-                    onClick = onOpenMcp,
-                )
-                SegmentedSheetActionRow(
-                    icon = Icons.Outlined.AutoAwesome,
-                    label = "Create Artifact",
-                    shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp, bottomStart = 20.dp, bottomEnd = 20.dp),
-                    onClick = onDismiss,
-                )
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Extension,
+                        label = stringResource(R.string.quick_actions_skills),
+                        onClick = onOpenSkills,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Link,
+                        label = stringResource(R.string.quick_actions_connectors),
+                        onClick = onOpenMcp,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
-            SheetSectionLabel("Create")
-            for (row in CREATE_TILES.chunked(4)) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+
+                // 2. Frequently used (2-column grid, 5 items)
+                Text(
+                    text = stringResource(R.string.quick_actions_frequently_used),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.AttachFile,
+                        label = stringResource(R.string.quick_actions_upload),
+                        onClick = onUpload,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.PhotoLibrary,
+                        label = stringResource(R.string.quick_actions_photos),
+                        onClick = onPhotos,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.PhotoCamera,
+                        label = stringResource(R.string.quick_actions_camera),
+                        onClick = onCamera,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Movie,
+                        label = stringResource(R.string.quick_actions_videos),
+                        onClick = onVideos,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Phone,
+                        label = stringResource(R.string.quick_actions_voice_call),
+                        onClick = onVoiceCall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.weight(1f))
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+
+                // 3. Create (Header left "Create", header right "Explore more >")
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = spacing.gutter, vertical = spacing.xs),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    for (tile in row) {
-                        CreateTileButton(
-                            tile = tile,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                onDismiss()
-                                onOpenCreate(tile.key)
-                            },
+                    Text(
+                        text = stringResource(R.string.quick_actions_create),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .sizeIn(minHeight = 48.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable(role = Role.Button, onClick = onExploreMore),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.quick_actions_explore_more),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
-            }
-        }
-    }
-}
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun QuickActionsButtonGroup(
-    onDismiss: () -> Unit,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-    val palette = teamilyPalette()
-    val actions = listOf(
-        Triple("Upload", Icons.Outlined.UploadFile) { onDismiss() },
-        Triple("Photos", Icons.Outlined.PhotoLibrary) { onDismiss() },
-        Triple("Camera", Icons.Outlined.PhotoCamera) { onDismiss() },
-        Triple("Call", Icons.Outlined.Phone) { onDismiss() },
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = spacing.gutter, vertical = spacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-    ) {
-        actions.forEachIndexed { index, (label, icon, onClick) ->
-            val shape = when (index) {
-                0 -> ButtonGroupDefaults.connectedLeadingButtonShape
-                actions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShape
-                else -> ButtonGroupDefaults.connectedMiddleButtonShapes().shape
-            }
-            Surface(
-                shape = shape,
-                color = palette.surfaceRecessed,
-                modifier = Modifier
-                    .weight(1f)
-                    .sizeIn(minHeight = MinTouchTarget)
-                    .clip(shape)
-                    .clickable(role = Role.Button, onClick = onClick)
-                    .semantics { contentDescription = label },
-            ) {
-                Column(
-                    modifier = Modifier.padding(vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                // 4-column icon-above-label grid (2 rows × 4 items, 48.dp+ hit area per tile)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.Public,
+                        label = stringResource(R.string.quick_actions_website),
+                        iconTint = TeamilyMarks.tileWebsite,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("website")
+                        },
+                        modifier = Modifier.weight(1f),
                     )
-                    Spacer(Modifier.height(4.dp))
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.Description,
+                        label = stringResource(R.string.quick_actions_document),
+                        iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("document")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.CoPresent,
+                        label = stringResource(R.string.quick_actions_slides),
+                        iconTint = TeamilyMarks.tileSlides,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("slides")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.TableChart,
+                        label = stringResource(R.string.quick_actions_spreadsheet),
+                        iconTint = TeamilyMarks.tileSheet,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("spreadsheet")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.Image,
+                        label = stringResource(R.string.quick_actions_image),
+                        iconTint = TeamilyMarks.tileImage,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("image")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.PhotoCamera,
+                        label = stringResource(R.string.quick_actions_video),
+                        iconTint = TeamilyMarks.tileVideo,
+                        isPro = true,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("video")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.MusicNote,
+                        label = stringResource(R.string.quick_actions_music),
+                        iconTint = TeamilyMarks.tileMusic,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("music")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionCreateTile(
+                        icon = Icons.Outlined.ViewInAr,
+                        label = stringResource(R.string.quick_actions_3d_model),
+                        iconTint = TeamilyMarks.tileModel,
+                        onClick = {
+                            onDismiss()
+                            onOpenCreate("model")
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+
+                // 4. Automate (Header left "Automate", header right "All automations >")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
+                        text = stringResource(R.string.quick_actions_automate),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Row(
+                        modifier = Modifier
+                            .sizeIn(minHeight = 48.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable(role = Role.Button, onClick = onAllAutomations),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.quick_actions_all_automations),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Notifications,
+                        label = stringResource(R.string.quick_actions_meeting_reminder),
+                        onClick = { onAutomate("meeting_reminder") },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.AutoMirrored.Outlined.Article,
+                        label = stringResource(R.string.quick_actions_daily_brief),
+                        onClick = { onAutomate("daily_brief") },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Biotech,
+                        label = stringResource(R.string.quick_actions_expert_research),
+                        onClick = { onAutomate("expert_research") },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.TrackChanges,
+                        label = stringResource(R.string.quick_actions_drive_goal),
+                        onClick = { onAutomate("drive_goal") },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+
+                // 5. Context (2-column row, 2 items)
+                Text(
+                    text = stringResource(R.string.quick_actions_context),
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    QuickActionRowItem(
+                        icon = Icons.AutoMirrored.Outlined.MenuBook,
+                        label = stringResource(R.string.quick_actions_memory),
+                        onClick = { onContext("memory") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuickActionRowItem(
+                        icon = Icons.Outlined.Psychology,
+                        label = stringResource(R.string.quick_actions_recall),
+                        onClick = { onContext("recall") },
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -265,101 +673,148 @@ private fun QuickActionsButtonGroup(
 }
 
 @Composable
-private fun SegmentedSheetActionRow(
+private fun QuickActionRowItem(
     icon: ImageVector,
     label: String,
-    shape: Shape,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    supportingText: String? = null,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
 ) {
-    val spacing = LocalDuaGenAISpacing.current
-    val palette = teamilyPalette()
-    Surface(
+    Row(
         modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
+            .sizeIn(minHeight = 48.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = label },
-        shape = shape,
-        color = palette.surfaceRecessed,
+            .semantics { contentDescription = label }
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .sizeIn(minHeight = MinTouchTarget)
-                .padding(horizontal = spacing.gutter, vertical = spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = maxLines,
+            overflow = overflow,
+        )
+    }
+}
+
+@Composable
+private fun QuickActionCreateTile(
+    icon: ImageVector,
+    label: String,
+    iconTint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    isPro: Boolean = false,
+) {
+    Column(
+        modifier = modifier
+            .sizeIn(minHeight = 64.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label }
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
+                tint = iconTint,
+                modifier = Modifier.size(28.dp),
             )
-            Spacer(Modifier.width(spacing.md))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = DuaGenAITextStyles.rowTitle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                if (supportingText != null) {
+            if (isPro) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 18.dp, y = (-6).dp),
+                ) {
                     Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = stringResource(R.string.quick_actions_pro),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
                     )
                 }
             }
         }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 @Composable
-private fun CreateTileButton(
-    tile: CreateTile,
-    onClick: () -> Unit,
+internal fun ComposerPlusSheetContent(
+    onOpenSkills: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onDismiss: () -> Unit,
+    onOpenCreate: (String) -> Unit = {},
+    onUpload: () -> Unit = onDismiss,
+    onPhotos: () -> Unit = onDismiss,
+    onCamera: () -> Unit = onDismiss,
+    onVideos: () -> Unit = onDismiss,
+    onVoiceCall: () -> Unit = onDismiss,
+    onAutomate: (String) -> Unit = { onDismiss() },
+    onContext: (String) -> Unit = { onDismiss() },
+    onExploreMore: () -> Unit = onDismiss,
+    onAllAutomations: () -> Unit = onDismiss,
     modifier: Modifier = Modifier,
-) {
-    val spacing = LocalDuaGenAISpacing.current
-    val ink = tile.color ?: MaterialTheme.colorScheme.onSurface
-    Column(
-        modifier = modifier
-            .sizeIn(minHeight = MinTouchTarget)
-            .clip(TeamilyShapes.md)
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = tile.title }
-            .padding(vertical = spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            Text(
-                text = tile.title.take(1),
-                style = DuaGenAITextStyles.rowTitle,
-                color = ink,
-                modifier = Modifier.padding(top = if (tile.pro) 8.dp else 0.dp),
+) = QuickActionSheetContent(
+    onOpenSkills = onOpenSkills,
+    onOpenMcp = onOpenMcp,
+    onDismiss = onDismiss,
+    onOpenCreate = onOpenCreate,
+    onUpload = onUpload,
+    onPhotos = onPhotos,
+    onCamera = onCamera,
+    onVideos = onVideos,
+    onVoiceCall = onVoiceCall,
+    onAutomate = onAutomate,
+    onContext = onContext,
+    onExploreMore = onExploreMore,
+    onAllAutomations = onAllAutomations,
+    modifier = modifier,
+)
+
+@Preview(name = "QuickActionSheet - Light", showBackground = true)
+@Preview(
+    name = "QuickActionSheet - Dark",
+    showBackground = true,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Composable
+private fun QuickActionSheetPreview() {
+    DuaGenAITheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            QuickActionSheetContent(
+                onOpenSkills = {},
+                onOpenMcp = {},
+                onDismiss = {},
             )
-            if (tile.pro) {
-                Text(
-                    text = "Pro",
-                    modifier = Modifier
-                        .clip(TeamilyShapes.capsule)
-                        .background(TeamilyMarks.proBadge)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
-                    style = DuaGenAITextStyles.meta.copy(fontWeight = FontWeight.Bold),
-                    color = TeamilyMarks.paper,
-                )
-            }
         }
-        Spacer(Modifier.size(spacing.xs))
-        Text(
-            text = tile.title,
-            style = DuaGenAITextStyles.meta,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-        )
     }
 }
 
