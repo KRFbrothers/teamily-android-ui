@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      Adaptive-icon background. Matches TeamilyTokens.bgCanvas (0xFF1D2220) so
-      the launcher tile sits on the same dark canvas the app opens on.
+      Adaptive-icon background. Solid dark sampled from the panda photo
+      wallpaper (average of the near-black floral, #0F1010). Chosen over
+      the previous Teamily bgCanvas (#1D2220) and Dua green (#087C45) so
+      the floral around the ears blends into the tile instead of leaving
+      a halo.
     -->
-    <color name="ic_launcher_background">#1D2220</color>
+    <color name="ic_launcher_background">#0F1010</color>
 </resources>

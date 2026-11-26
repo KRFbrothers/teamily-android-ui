@@ -39,10 +39,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import ai.duagenai.design.bot.BotColor
-import ai.duagenai.design.bot.BotLook
-import ai.duagenai.design.bot.BotShape
-import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.cube.CreateAgentScreen
 import ai.duagenai.design.screens.PersonalAgentDemoScreen
 import ai.duagenai.design.screens.DuaAgentDemoScreen
@@ -421,8 +417,6 @@ fun DuaGenAINavHost(
     // value because the `Flow<T>` overload of `collectAsStateWithLifecycle` has
     // no default — the same reason `savedCubeId` passes one above.
     val themeMode by settings.themeMode.collectAsStateWithLifecycle(ThemeMode.System)
-    val botShape by settings.botShape.collectAsStateWithLifecycle(BotShape.DEFAULT)
-    val botColor by settings.botColor.collectAsStateWithLifecycle(BotColor.DEFAULT)
     val storageUsedGb by settings.storageUsedGb
         .collectAsStateWithLifecycle(SettingsStore.DEFAULT_STORAGE_USED_GB)
     val storageTotalGb by settings.storageTotalGb
@@ -501,7 +495,6 @@ fun DuaGenAINavHost(
     val layoutDirection = if (languageId == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     CompositionLocalProvider(
         LocalLayoutDirection provides layoutDirection,
-        LocalBotAppearance provides BotLook(botShape, botColor),
     ) {
     ModalNavigationDrawer(
         modifier = modifier,
@@ -694,10 +687,6 @@ fun DuaGenAINavHost(
                     // Persist through the existing store; the Flow re-emits and
                     // the Profile row's subtitle updates on its own.
                     onSelect = { mode -> scope.launch { settings.setThemeMode(mode) } },
-                    shape = botShape,
-                    color = botColor,
-                    onShape = { picked -> scope.launch { settings.setBotShape(picked) } },
-                    onColor = { picked -> scope.launch { settings.setBotColor(picked) } },
                     onBack = { navController.popBackStack() },
                 )
             }

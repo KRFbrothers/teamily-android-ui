@@ -20,12 +20,11 @@ import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.platform.testTag
 import ai.duagenai.design.theme.DemoBadge
+import ai.duagenai.design.theme.PandaMark
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -124,7 +123,6 @@ import android.graphics.BitmapFactory
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
@@ -809,7 +807,7 @@ private fun AgentHomeTopBar(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBadge(size = 28.dp, shape = TeamilyShapes.xs)
+            AppBadge(size = 28.dp)
             Spacer(Modifier.width(8.dp))
             Text(
                 text = APP_NAME,
@@ -915,28 +913,12 @@ private fun DuaHomeWelcome(
 }
 
 /**
- * The green app badge: the cube logo (approved agent-home SVG `cube-logo`).
- * A `logoMint` tile or disc with the cube glyph in `tileInk`. The glyph is 65%
- * of the 30dp / 48dp badge and 75% of the 16dp mini badge, stroked at 1.75dp
- * (1.25dp on the mini) — the same values the preview page draws.
+ * The app badge: the panda mark, at [size]. The panda is already a circle
+ * with transparent corners, so this does not add a green tile behind it.
  */
 @Composable
-private fun AppBadge(size: Dp, shape: Shape) {
-    val palette = teamilyPalette()
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(shape)
-            .background(palette.logoMint),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(size * 0.82f),
-        )
-    }
+private fun AppBadge(size: Dp) {
+    PandaMark(size = size)
 }
 
 /**
@@ -1047,8 +1029,7 @@ private fun SearchRow(
  *
  * `cardHeroColor` fill, 12dp corners, a soft floating shadow and the 0.97 press
  * scale. Rendered height stays in 76–80dp (the reference's 95px card, not the
- * 129px overflow). The 46dp avatar and its mini-badge render the 3D bot mascot
- * ([R.drawable.dua_bot_head]).
+ * 129px overflow). The 46dp avatar is the panda mark.
  */
 @Composable
 internal fun PersonalAgentHeroCard(
@@ -1110,26 +1091,10 @@ internal fun PersonalAgentHeroCard(
         ) {
             ChatAvatar(
                 ring = if (palette.borderStrong == null) palette.cardHeroColor else TeamilyMarks.paper,
-                miniBadge = true,
+                miniBadge = false,
                 size = 46.dp,
-                mini = {
-                    AppBadge(size = 15.dp, shape = CircleShape)
-                },
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(TeamilyMarks.heroAvatarFill),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.dua_bot_head),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(36.dp),
-                    )
-                }
+                PandaMark(size = 46.dp)
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
@@ -1184,7 +1149,7 @@ private fun ChatAvatar(
     ring: Color,
     miniBadge: Boolean,
     size: Dp = 40.dp,
-    mini: @Composable () -> Unit = { AppBadge(size = 14.dp, shape = CircleShape) },
+    mini: @Composable () -> Unit = { AppBadge(size = 14.dp) },
     content: @Composable () -> Unit,
 ) {
     val badgeSize = if (size > 44.dp) 18.dp else 17.dp
@@ -1207,40 +1172,21 @@ private fun ChatAvatar(
 }
 
 /**
- * Personal Agent avatar. Draws the Appearance pick (Grok Bot shape + color).
- * Decorative: the row already names the agent.
+ * Personal Agent avatar: the panda mark. Decorative: the row already names
+ * the agent.
  */
 @Composable
 internal fun BotBadge(size: Dp) {
-    val look = LocalBotAppearance.current
-    BabyGrokMark(
-        shape = look.shape,
-        color = look.color,
-        size = size,
-    )
+    PandaMark(size = size)
 }
 
 /**
- * Dua Agent's official row avatar: 3D T-Cube mascot ([R.drawable.dua_bot_head])
- * on a `signalGreen` (`#00D95A`) circle, matching Teamily AI 1:1.
+ * Dua Agent's official row avatar: the panda mark, at [size]. The panda
+ * already fills the circle, so this does not add a green disc behind it.
  */
 @Composable
 internal fun SignalBotBadge(size: Dp = 46.dp) {
-    val green = teamilyPalette().signalGreen
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(green),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(size * 0.81f),
-        )
-    }
+    PandaMark(size = size)
 }
 
 /** One chat row's 3D character, cropped to the avatar circle. */
@@ -1545,14 +1491,10 @@ private fun AgentHomeList(
                     ) {
                         ChatAvatar(
                             ring = if (palette.borderStrong == null) palette.bgCanvas else TeamilyMarks.paper,
-                            miniBadge = true,
+                            miniBadge = false,
                             size = 46.dp,
-                            mini = { AppBadge(size = 15.dp, shape = CircleShape) },
                         ) {
-                            val look = LocalBotAppearance.current
-                            BabyGrokMark(
-                                shape = look.shape,
-                                color = look.color,
+                            PandaMark(
                                 size = 46.dp,
                                 contentDescription = item.title,
                             )
@@ -1719,15 +1661,10 @@ internal fun HomeBottomNav(
  */
 @Composable
 private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
-    // The chat list keeps Chats selected. That tab's glyph is the 3D T-Cube
-    // mascot (R.drawable.dua_bot_head), matching Teamily AI 1:1.
+    // The chat list keeps Chats selected. That tab's glyph is the panda
+    // mark, drawn untinted at 28dp.
     if (tab == HomeTab.Chats) {
-        Image(
-            painter = painterResource(R.drawable.dua_bot_head),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(28.dp),
-        )
+        PandaMark(size = 28.dp)
         return
     }
     Canvas(Modifier.size(22.dp)) {
@@ -1738,7 +1675,7 @@ private fun TabGlyph(tab: HomeTab, tint: Color, strong: Boolean = false) {
         val stroke = Stroke(width = width.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
 
         when (tab) {
-            // Drawn above as the 3D bot. This branch is only for exhaustiveness.
+            // Drawn above as the panda mark. This branch is only for exhaustiveness.
             HomeTab.Chats -> Unit
 
             // A robot: antenna, rounded head, two eyes, side ears.

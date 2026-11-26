@@ -11,9 +11,8 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.R
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.DemoBadge
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
@@ -86,8 +85,8 @@ import kotlinx.coroutines.launch
  *
  *  What it deliberately reuses instead of re-implementing:
  *
- *    • [CubeAvatar] for the footer avatar — the USER's saved cube, the same id
- *      Home's top bar and Profile draw. No second avatar implementation.
+ *    • [PandaMark] for the footer avatar — the same panda mark the rest of
+ *      the app draws. No second avatar implementation.
  *    • [ChatRow] for the history entries — the same list Home renders. The
  *      drawer shows only the title (ChatGPT style); opening a row lands on
  *      that conversation's own cube in ChatScreen.
@@ -123,8 +122,8 @@ enum class DrawerDestination(val label: String, val comingSoon: Boolean = false)
 /** The drawer's one width cap (ChatGPT-like; leaves a home strip beside it). */
 internal val DRAWER_MAX_WIDTH = 280.dp
 
-/** Test tag on the footer avatar, carrying the bot shape it draws. */
-internal fun drawerAvatarTag(shapeKey: String) = "drawerAvatar:$shapeKey"
+/** Test tag on the footer avatar. */
+internal const val DRAWER_AVATAR_TAG = "drawerAvatar"
 
 /**
  * The drawer sheet, laid out like the ChatGPT Android drawer in Dua colours:
@@ -361,18 +360,15 @@ fun SidebarDrawer(
                 // Round avatar only. TalkBack hears one label, e.g.
                 // "Profile, Not signed in".
                 val profileLabel = "Profile, ${if (signedIn) "Signed in" else "Not signed in"}"
-                val look = LocalBotAppearance.current
                 Box(
                     modifier = Modifier
                         .size(48.dp)
                         .clickable(role = Role.Button, onClick = onOpenProfile)
                         .semantics { contentDescription = profileLabel }
-                        .testTag(drawerAvatarTag(look.shape.key)),
+                        .testTag(DRAWER_AVATAR_TAG),
                     contentAlignment = Alignment.Center,
                 ) {
-                    BabyGrokMark(
-                        shape = look.shape,
-                        color = look.color,
+                    PandaMark(
                         size = 40.dp,
                         contentDescription = null,
                     )

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon monochrome layer for themed icons: a simple panda
+  silhouette (head, ears, eye-patch and nose holes). White-on-transparent
+  so the system can tint it. The silhouette is drawn inside the official
+  66dp safe zone of the 108dp canvas (21..87) so no launcher mask clips it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M80.81,56.06 C80.81,70.16 68.81,81.59 54,81.59 C39.19,81.59 27.19,70.16 27.19,56.06 C27.19,41.97 39.19,30.54 54,30.54 C68.81,30.54 80.81,41.97 80.81,56.06 Z M47.59,38.17 C46.27,41.78 41.85,43.49 37.7,41.98 C33.55,40.47 31.25,36.32 32.57,32.7 C33.88,29.09 38.31,27.39 42.46,28.9 C46.61,30.41 48.9,34.56 47.59,38.17 Z M75.43,32.7 C76.75,36.32 74.45,40.47 70.3,41.98 C66.15,43.49 61.73,41.78 60.41,38.17 C59.1,34.56 61.39,30.41 65.54,28.9 C69.69,27.39 74.12,29.09 75.43,32.7 Z M48.48,57.44 C50.67,52.03 48.91,46.22 44.55,44.46 C40.2,42.7 34.89,45.66 32.71,51.07 C30.52,56.48 32.28,62.3 36.63,64.06 C40.99,65.82 46.3,62.86 48.48,57.44 Z M75.29,51.07 C73.11,45.66 67.8,42.7 63.45,44.46 C59.09,46.22 57.33,52.03 59.52,57.44 C61.7,62.86 67.01,65.82 71.37,64.06 C75.72,62.3 77.48,56.48 75.29,51.07 Z M56.84,66.38 C56.84,65.24 55.57,64.31 54,64.31 C52.43,64.31 51.16,65.24 51.16,66.38 C51.16,67.51 52.43,68.44 54,68.44 C55.57,68.44 56.84,67.51 56.84,66.38 Z" />
+</vector>

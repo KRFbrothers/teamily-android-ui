@@ -75,7 +75,7 @@
     <string name="agent_delete_confirm_body">This agent and its chat will be removed.</string>
     <string name="agent_delete_confirm">Delete</string>
     <!-- Profile / Settings photo + labels moved out of code -->
-    <string name="profile_avatar_cd">Your avatar, %1$s</string>
+    <string name="profile_avatar_cd">Your avatar</string>
     <string name="profile_plan_pro">DUA GEN AI PRO</string>
     <string name="profile_plan_free">DUA GEN AI FREE</string>
     <string name="profile_stat_chats">CHATS</string>

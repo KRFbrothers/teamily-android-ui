@@ -1,6 +1,7 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.R
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DemoBadge
 import android.Manifest
 import android.content.ActivityNotFoundException
@@ -91,8 +92,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -284,7 +283,6 @@ fun ProfileScreen(
                         .size(148.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val look = LocalBotAppearance.current
                     ProfileOrCubeAvatar(
                         photoPath = photoPath,
                         photoVersion = photoVersion,
@@ -292,7 +290,7 @@ fun ProfileScreen(
                         contentDescription = if (photoPath != null) {
                             stringResource(R.string.profile_photo_cd)
                         } else {
-                            stringResource(R.string.profile_avatar_cd, "${look.shape.label}, ${look.color.label}")
+                            stringResource(R.string.profile_avatar_cd)
                         },
                     )
                     SmallFloatingActionButton(
@@ -557,7 +555,7 @@ internal fun ProfilePictureSheet(
 
 /**
  * The Profile / Settings avatar: the locally saved photo when one exists,
- * otherwise the selected bot shape & color.
+ * otherwise the panda mark.
  */
 @Composable
 internal fun ProfileOrCubeAvatar(
@@ -586,10 +584,7 @@ internal fun ProfileOrCubeAvatar(
             contentScale = ContentScale.Crop,
         )
     } else {
-        val look = LocalBotAppearance.current
-        BabyGrokMark(
-            shape = look.shape,
-            color = look.color,
+        PandaMark(
             size = size,
             contentDescription = contentDescription,
             modifier = modifier,

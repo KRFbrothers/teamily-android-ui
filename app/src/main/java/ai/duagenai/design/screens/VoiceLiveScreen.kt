@@ -1,9 +1,7 @@
 package ai.duagenai.design.screens
 
 import ai.duagenai.design.R
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.BotLook
-import ai.duagenai.design.bot.LocalBotAppearance
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.TeamilySansFontFamily
 import ai.duagenai.design.theme.teamilyPalette
@@ -14,7 +12,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,10 +58,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -88,7 +83,6 @@ fun VoiceLiveScreen(
 ) {
     val isDark = DuaGenAITheme.isDark
     val palette = teamilyPalette()
-    val look = LocalBotAppearance.current
 
     var isMicMuted by remember { mutableStateOf(false) }
     var isCameraOn by remember { mutableStateOf(false) }
@@ -289,19 +283,10 @@ fun VoiceLiveScreen(
                             ),
                     )
 
-                    if (look == BotLook.DEFAULT) {
-                        // Iconic Gemini Live 4-point concave sparkle
-                        GeminiLiveSparkle(
-                            modifier = Modifier.size(44.dp),
-                        )
-                    } else {
-                        BabyGrokMark(
-                            shape = look.shape,
-                            color = look.color,
-                            size = 52.dp,
-                            contentDescription = null,
-                        )
-                    }
+                    PandaMark(
+                        size = 52.dp,
+                        contentDescription = null,
+                    )
                 }
 
                 Spacer(Modifier.height(24.dp))
@@ -459,50 +444,6 @@ fun VoiceLiveScreen(
                 )
             }
         }
-    }
-}
-
-/**
- * 4-point concave star sparkle matching the Gemini Live avatar in 12241.jpg,
- * rendered with MaterialTheme semantic color tokens (zero hardcoded colors).
- */
-@Composable
-private fun GeminiLiveSparkle(
-    modifier: Modifier = Modifier,
-) {
-    val primary = MaterialTheme.colorScheme.primary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val cx = w / 2f
-        val cy = h / 2f
-
-        val path = Path().apply {
-            moveTo(cx, 0f)
-            quadraticTo(cx, cy, w, cy)
-            quadraticTo(cx, cy, cx, h)
-            quadraticTo(cx, cy, 0f, cy)
-            quadraticTo(cx, cy, cx, 0f)
-            close()
-        }
-
-        drawPath(
-            path = path,
-            brush = Brush.sweepGradient(
-                listOf(
-                    primary,
-                    tertiary,
-                    secondary,
-                    primaryContainer,
-                    primary,
-                ),
-                center = Offset(cx, cy),
-            ),
-        )
     }
 }
 
