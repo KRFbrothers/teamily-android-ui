@@ -55,6 +55,7 @@ import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -1634,11 +1635,21 @@ internal fun SkillConfigScreen(
 }
 
 @Composable
-internal fun CreateKindScreen(kind: String, onBack: () -> Unit) {
+internal fun CreateKindScreen(
+    kind: String,
+    onBack: () -> Unit,
+    signedIn: Boolean = false,
+    onBanao: (suspend (String) -> WriteResult)? = null,
+    onOpenLibrary: () -> Unit = {},
+    onSignIn: () -> Unit = {},
+) {
     val spacing = LocalDuaGenAISpacing.current
     val tile = createTile(kind)
     val ink = tile.color ?: MaterialTheme.colorScheme.onSurface
     var draft by rememberSaveable(kind) { mutableStateOf("") }
+    var busy by remember(kind) { mutableStateOf(false) }
+    var error by remember(kind) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     FlowPage(title = tile.title, onBack = onBack) {
         Column(
             Modifier
@@ -1669,11 +1680,62 @@ internal fun CreateKindScreen(kind: String, onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            Text(
-                text = "Yahan generation nahi hoti. Yeh screen sirf navigation hai.",
-                style = DuaGenAITextStyles.meta,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (kind == "document" && onBanao != null) {
+                if (!signedIn) {
+                    Text(
+                        text = "Document save karne ke liye pehle sign in karo.",
+                        style = DuaGenAITextStyles.meta,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = onSignIn,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sizeIn(minHeight = 48.dp),
+                    ) {
+                        Text("Sign in")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            val topic = draft.trim()
+                            if (topic.isEmpty() || busy) return@Button
+                            busy = true
+                            error = null
+                            scope.launch {
+                                val result = onBanao(topic)
+                                busy = false
+                                when (result) {
+                                    WriteResult.Success -> onOpenLibrary()
+                                    is WriteResult.Failure -> error = result.message
+                                }
+                            }
+                        },
+                        enabled = draft.isNotBlank() && !busy,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sizeIn(minHeight = 48.dp)
+                            .semantics { contentDescription = "Banao" },
+                    ) {
+                        Text(if (busy) "Likh raha hai…" else "Banao")
+                    }
+                    Text(
+                        text = error ?: "Banao dabane par yeh page Artifacts mein save hoga.",
+                        style = DuaGenAITextStyles.meta,
+                        color = if (error == null) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                }
+            } else {
+                Text(
+                    text = "Yahan generation nahi hoti. Yeh screen sirf navigation hai.",
+                    style = DuaGenAITextStyles.meta,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
