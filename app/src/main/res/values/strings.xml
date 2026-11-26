@@ -49,9 +49,17 @@
     <!-- Agent thread header pill + composer (every agent's chat) -->
     <string name="agent_invite">Invite</string>
     <string name="chat_agent_placeholder">Type a message...</string>
+    <string name="chat_thread_placeholder">Message %1$s…</string>
+    <string name="chat_dua_placeholder">Ask Dua ...</string>
     <string name="chat_placeholder_empty">Ask Dua...</string>
     <string name="chat_placeholder_empty_focused">Ask Dua</string>
     <string name="chat_placeholder_active">What\'s next?</string>
+    <string name="chat_attach_cd">Attach</string>
+    <string name="chat_dictate_cd">Dictate</string>
+    <string name="chat_send_cd">Send message</string>
+    <string name="chat_stop_cd">Stop</string>
+    <string name="chat_voice_input_cd">Voice input</string>
+    <string name="chat_remove_chip_cd">Remove %1$s</string>
     <!-- Agent profile: toggles, more-sheet, confirms -->
     <string name="agent_mute">Mute Notifications</string>
     <string name="agent_pin">Pin to Top</string>

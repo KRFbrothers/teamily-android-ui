@@ -251,31 +251,22 @@ fun DuaAgentDemoScreen(
             }
 
             // Bottom Input Bar
-            var selectedMode by remember { mutableStateOf("Auto") }
             ChatBar(
                 value = inputText,
                 onValueChange = { inputText = it },
                 hasMessages = messages.isNotEmpty(),
                 onSend = { sendCommand(inputText) },
                 placeholder = "Type a message...",
-                selectedMode = selectedMode,
-                onModeChange = { selectedMode = it },
-                onMeetingMinutesClick = {
-                    sendCommand("Generate meeting minutes from recent discussions")
-                },
                 onDictateClick = {
                     sendCommand("Start dictation session")
                 },
                 onVoiceMessageClick = {
                     sendCommand("Voice message recording started")
                 },
-                onVoiceCallClick = {
-                    sendCommand("Initiate voice call session")
-                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-                    .padding(horizontal = spacing.gutter, vertical = spacing.sm),
+                    .padding(vertical = spacing.sm),
             )
         }
     }

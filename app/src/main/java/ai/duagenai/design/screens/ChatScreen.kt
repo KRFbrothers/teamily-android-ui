@@ -116,15 +116,13 @@ import ai.duagenai.design.theme.teamilyPalette
  *  `chatId` is a required parameter: the nav host passes the id of the row that
  *  was tapped, and `onBack` pops to Home.
  *
- *  COMPOSER — the 2-row Teamily chat bar
- *  -------------------------------------
+ *  COMPOSER — the adaptive floating ChatBar
+ *  -----------------------------------------
  *  The thread's composer is [ChatBar] (ChatBar.kt):
- *  row 1 the field, row 2 the toolbar. `+` opens ComposerPlusSheet, which hands
- *  off to ComposerSkillsSheet / ComposerMcpSheet; the mode pill's menu also
- *  lists Skills and MCP Tools. While Agent's reply is pending (`agentTyping`)
- *  the trailing control is Stop, which cancels the reply. Meeting Minutes,
- *  Dictate, Emoji, Voice message and Voice call have no backend yet, so a tap
- *  shows the "Jaldi aa raha hai" snackbar (the same answer Dua home gives).
+ *  `+` opens ComposerPlusSheet (Quick Actions), which hands off to
+ *  ComposerSkillsSheet / ComposerMcpSheet; Mic triggers speech dictation; the
+ *  trailing action morphs between Voice Live, Send, and Stop while Agent's
+ *  reply is pending (`agentTyping`).
  *
  *  HEADERS — the two pinned agents
  *  -------------------------------
@@ -417,11 +415,8 @@ fun ChatScreen(
         }
     }
 
-    // Composer sheets (+ / Skills / MCP) and the display-only mode pill.
+    // Composer sheets (+ / Skills / MCP).
     var sheet by rememberSaveable(chatId) { mutableStateOf(ComposerSheet.None) }
-    var chatMode by rememberSaveable(chatId) {
-        mutableStateOf(if (chatId == AGENT_CHAT_ID) "Agent Engine" else "Auto")
-    }
     var contextChips by rememberSaveable(chatId) { mutableStateOf(listOf<String>()) }
     val snackbarHostState = remember { SnackbarHostState() }
     val comingSoon = stringResource(R.string.composer_coming_soon)
@@ -681,20 +676,13 @@ fun ChatScreen(
                     placeholder = if (agentHeader) {
                         stringResource(R.string.chat_agent_placeholder)
                     } else {
-                        "Message $chatTitle…"
+                        stringResource(R.string.chat_thread_placeholder, chatTitle)
                     },
-                    selectedMode = chatMode,
-                    onModeChange = { chatMode = it },
                     onAttachClick = { sheet = ComposerSheet.Plus },
-                    onMeetingMinutesClick = showComingSoon,
                     onDictateClick = handleDictate,
-                    onEmojiClick = showComingSoon,
                     onVoiceMessageClick = onOpenVoiceLive,
-                    onVoiceCallClick = showComingSoon,
                     sending = agentTyping,
                     onStop = { stop() },
-                    onOpenSkills = { sheet = ComposerSheet.Skills },
-                    onOpenMcp = { sheet = ComposerSheet.Mcp },
                     contextChips = contextChips,
                     onDismissChip = { chip -> contextChips = contextChips - chip },
                     modifier = Modifier.padding(
