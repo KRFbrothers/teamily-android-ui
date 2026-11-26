@@ -285,7 +285,7 @@ private const val VOICE_LABEL = "Voice input"
 
 /* The composer is ChatBar: its own labels. */
 private const val THREAD_VOICE_LABEL = "Voice message"
-private const val THREAD_MODE_PREFIX = "Mode: "
+private const val DICTATE_LABEL = "Dictate"
 
 /** Dua home's welcome: greeting and the four quick starters. */
 private const val DUA_GREETING = "How can I help you today?"
@@ -858,28 +858,16 @@ class DuaGenAINavHostTest {
     /**
      * Asserts the thread HAS a composer, with [placeholder] as its hint.
      *
-     * The composer is `ChatBar`: row 1 the field (exactly
-     * one editable node, showing the placeholder), row 2 the toolbar — the
-     * "Attach" `+`, the "Mode: …" pill (its menu lists Skills / MCP Tools, so
-     * there are no separate Skills / MCP icons), Meeting Minutes, Dictate,
-     * Emoji and, with an empty field, "Voice message" + "Voice call". No
-     * "Send message" node exists yet — Send appears only once text is typed.
-     *
-     * The old generic placeholder must be gone: a thread's hint is
-     * `"Message <title>..."`, so seeing `"Type a message"` would mean the
-     * placeholder stopped being thread-specific.
+     * The composer is the single-row floating `ChatBar`: "Attach" `+`, the
+     * editable field (showing [placeholder]), "Dictate" mic, and "Voice message"
+     * when empty. "Send message" appears only once text is typed.
      */
     private fun assertComposer(placeholder: String) {
         assertVisible(placeholder)
         if (placeholder != AGENT_COMPOSER_HINT) assertNotVisible(AGENT_COMPOSER_HINT)
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 1)
-        assertEquals(
-            "the composer must have exactly one mode pill",
-            1,
-            compose.onAllNodes(hasContentDescription(THREAD_MODE_PREFIX, substring = true))
-                .fetchSemanticsNodes().count { isOnScreen(it) },
-        )
+        assertVisibleDescCount(DICTATE_LABEL, 1)
         assertVisibleDescCount(THREAD_VOICE_LABEL, 1)
         assertVisibleDescCount(SEND_LABEL, 0)
         assertEquals(
@@ -898,8 +886,9 @@ class DuaGenAINavHostTest {
      *
      *   1. no node accepts text input (`hasSetTextAction`);
      *   2. no composer placeholder is on screen;
-     *   3. the composer's own controls ("Attach", "Voice input", "Skills",
-     *      "MCP Tools") are absent — they would only exist inside a composer.
+     *   3. the composer's own controls ("Attach", "Dictate", "Voice input",
+     *      "Skills", "MCP Tools") are absent — they would only exist inside a
+     *      composer.
      */
     private fun assertNoComposer() {
         val editable = compose.onAllNodes(hasSetTextAction())
@@ -908,6 +897,7 @@ class DuaGenAINavHostTest {
 
         assertNotVisible(COMPOSER_PLACEHOLDER)
         assertVisibleDescCount(ATTACH_LABEL, 0)
+        assertVisibleDescCount(DICTATE_LABEL, 0)
         assertVisibleDescCount(VOICE_LABEL, 0)
         assertVisibleDescCount(THREAD_VOICE_LABEL, 0)
         assertVisibleDescCount(SKILLS_LABEL, 0)
@@ -3586,38 +3576,42 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The thread chat bar's toolbar reads Attach, the mode pill, then the
-     * tools, with Send at the far end once text is typed — and every control's
-     * touch box is at least the 48dp M3 minimum (drawn smaller, [touchTarget48]).
+     * The thread chat bar reads Attach, the text field, Dictate, then Voice
+     * (replaced by Send once text is typed) — and every interactive control's
+     * touch box is at least the 48dp M3 minimum.
      */
     @Test
     fun theChatBarToolbarOrderAndAll48dp() {
         openAgentThread()
         fun bounds(desc: String) =
-            compose.onNodeWithContentDescription(desc, substring = true).fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithContentDescription(desc).fetchSemanticsNode().boundsInRoot
         val min = 48f * compose.density.density - 1f
-        val idle = listOf(ATTACH_LABEL, THREAD_MODE_PREFIX, "Meeting Minutes", "Dictate", "Emoji", THREAD_VOICE_LABEL, "Voice call")
-            .map { bounds(it) }
-        for (i in 1 until idle.size) {
-            assertTrue("toolbar order, item $i", idle[i - 1].center.x < idle[i].center.x)
-        }
+        val attach = bounds(ATTACH_LABEL)
+        val field = compose.onNode(hasSetTextAction()).fetchSemanticsNode().boundsInRoot
+        val dictate = bounds(DICTATE_LABEL)
+        val voice = bounds(THREAD_VOICE_LABEL)
+        assertTrue("Attach sits before text field", attach.center.x < field.center.x)
+        assertTrue("Text field sits before Dictate", field.center.x < dictate.center.x)
+        assertTrue("Dictate sits before Voice", dictate.center.x < voice.center.x)
+        assertTrue("Text field touch box >= 48dp tall", field.height >= min)
+
         compose.onNode(hasSetTextAction()).performTextInput("Hi")
         compose.waitForIdle()
         val send = bounds(SEND_LABEL)
-        assertTrue("Send sits at the end", idle[4].right <= send.left + 1f)
-        for (b in idle + send) {
+        assertTrue("Send sits after Dictate", dictate.right <= send.left + 1f)
+        for (b in listOf(attach, dictate, voice, send)) {
             assertTrue("chat bar control must be >= 48dp wide", b.width >= min)
             assertTrue("chat bar control must be >= 48dp tall", b.height >= min)
         }
     }
 
-    /** The mode pill's menu opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
+    /** Quick Actions' Skills row opens the Skills sheet: five Dua Agent skills, all on, toggleable. */
     @Test
-    fun theModePillOpensTheSkillsSheetAndTogglesASkill() {
+    fun thePlusSheetOpensTheSkillsSheetAndTogglesASkill() {
         openAgentThread()
-        compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
         compose.waitForIdle()
-        compose.onNodeWithText(SKILLS_LABEL).performClick()
+        compose.onNode(hasText(SKILLS_LABEL) and hasContentDescription(SKILLS_LABEL)).performClick()
         compose.waitForIdle()
 
         for (title in DUA_AGENT_SKILL_TITLES) {
@@ -3630,15 +3624,15 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * MCP Tools opens the MCP sheet: the master switch (on by default), no
-     * invented external servers, and the built-in tool ids as status chips.
+     * Quick Actions' Connectors row opens the MCP sheet: the master switch (on by default),
+     * no invented external servers, and the built-in tool ids as status chips.
      */
     @Test
-    fun theModePillOpensTheMcpSheetWithTheBuiltInTools() {
+    fun thePlusSheetOpensTheMcpSheetWithTheBuiltInTools() {
         openAgentThread()
-        compose.onNodeWithContentDescription(THREAD_MODE_PREFIX, substring = true).performClick()
+        compose.onNodeWithContentDescription(ATTACH_LABEL).performClick()
         compose.waitForIdle()
-        compose.onNodeWithText(MCP_LABEL).performClick()
+        compose.onNode(hasText("Connectors") and hasContentDescription("Connectors")).performClick()
         compose.waitForIdle()
 
         compose.onNode(hasContentDescription(MCP_LABEL) and isOn()).assertExists()

@@ -415,6 +415,7 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        val voiceInputCd = stringResource(R.string.chat_voice_input_cd)
                         ChatBar(
                             state = duaDraftState,
                             hasMessages = false,
@@ -425,9 +426,8 @@ fun HomeScreen(
                                     onSendDuaMessage(text)
                                 }
                             },
-                            placeholder = "Ask Dua ...",
+                            placeholder = stringResource(R.string.chat_dua_placeholder),
                             onAttachClick = { sheet = ComposerSheet.Plus },
-                            onMeetingMinutesClick = showComingSoon,
                             onDictateClick = {
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -447,10 +447,8 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            onEmojiClick = showComingSoon,
                             onVoiceMessageClick = onOpenVoiceLive,
-                            onVoiceCallClick = showComingSoon,
-                            voiceContentDescription = "Voice input",
+                            voiceContentDescription = voiceInputCd,
                             modifier = Modifier.padding(bottom = 16.dp),
                         )
                         if (sheet == ComposerSheet.Plus) {
