@@ -50,9 +50,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import kotlinx.coroutines.launch
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -363,34 +362,16 @@ fun isAgentChatId(chatId: String): Boolean =
 fun isUserMadeAgent(agentId: String): Boolean = agentId.startsWith(MADE_AGENT_PREFIX)
 
 /**
- * One agent's avatar, circular: the bot art for Dua Agent / Personal Agent,
- * otherwise that thread's own cube (the same `CubeCatalog.forEntity` the chat
- * bubbles use). The old per-agent 3D character art belonged to the sample
- * roster and is gone with it.
+ * One agent's avatar: the panda mark. [agentId] is kept so call sites stay
+ * unchanged; every agent now shares the same mark.
  */
 @Composable
 internal fun AgentAvatar(agentId: String, name: String, size: Dp, modifier: Modifier = Modifier) {
-    val res = when (agentId) {
-        AGENT_CHAT_ID, PERSONAL_AGENT_CHAT_ID -> R.drawable.dua_bot_badge
-        else -> null
-    }
-    if (res != null) {
-        Image(
-            painter = painterResource(res),
-            contentDescription = "$name avatar",
-            contentScale = ContentScale.Crop,
-            modifier = modifier.size(size).clip(CircleShape),
-        )
-    } else {
-        val look = LocalBotAppearance.current
-        BabyGrokMark(
-            shape = look.shape,
-            color = look.color,
-            size = size,
-            contentDescription = "$name avatar, ${look.shape.label}",
-            modifier = modifier,
-        )
-    }
+    PandaMark(
+        size = size,
+        contentDescription = "$name avatar",
+        modifier = modifier,
+    )
 }
 
 /** The Activity behind [this] context, unwrapping ContextWrappers; null if none. */

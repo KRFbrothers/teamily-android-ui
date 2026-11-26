@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DemoBadge
 import android.Manifest
 import android.app.Activity
@@ -92,8 +93,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -631,12 +630,9 @@ fun ChatScreen(
                         // Personal Agent: its badge is already in the title.
                         isPersonal || isDuaAgent -> Unit
                         else -> {
-                            val look = LocalBotAppearance.current
-                            BabyGrokMark(
-                                shape = look.shape,
-                                color = look.color,
+                            PandaMark(
                                 size = 32.dp,
-                                contentDescription = "$chatTitle avatar, ${look.shape.label}",
+                                contentDescription = "$chatTitle avatar",
                                 modifier = Modifier.padding(end = spacing.gutter),
                             )
                         }
@@ -856,13 +852,10 @@ fun ChatScreen(
 @Composable
 private fun TypingBubble(chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
-    val look = LocalBotAppearance.current
     Row(verticalAlignment = Alignment.Bottom) {
-        BabyGrokMark(
-            shape = look.shape,
-            color = look.color,
+        PandaMark(
             size = 28.dp,
-            contentDescription = "$chatTitle, ${look.shape.label}",
+            contentDescription = "$chatTitle bubble",
         )
         Spacer(Modifier.width(spacing.sm))
         Surface(
@@ -899,14 +892,10 @@ private fun TypingBubble(chatTitle: String) {
 private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val effectiveTitle = msg.agentName?.takeIf { it.isNotBlank() } ?: chatTitle
-    val look = LocalBotAppearance.current
-
     Row(verticalAlignment = Alignment.Bottom) {
-        BabyGrokMark(
-            shape = look.shape,
-            color = look.color,
+        PandaMark(
             size = 28.dp,
-            contentDescription = "$effectiveTitle, ${look.shape.label}",
+            contentDescription = "$effectiveTitle bubble",
         )
         Spacer(Modifier.width(spacing.sm))
         Column {
@@ -959,7 +948,6 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
 private fun UserBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
     val palette = teamilyPalette()
-    val look = LocalBotAppearance.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
@@ -994,11 +982,9 @@ private fun UserBubble(msg: SavedMessage, chatTitle: String) {
             )
         }
         Spacer(Modifier.width(spacing.sm))
-        BabyGrokMark(
-            shape = look.shape,
-            color = look.color,
+        PandaMark(
             size = 32.dp,
-            contentDescription = "$chatTitle, ${look.shape.label}",
+            contentDescription = "$chatTitle bubble",
         )
     }
 }

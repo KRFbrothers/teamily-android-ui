@@ -13,8 +13,6 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import ai.duagenai.design.bot.BotColor
-import ai.duagenai.design.bot.BotShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -53,8 +51,6 @@ private val Context.settingsDataStore: DataStore<Preferences> by
 class SettingsStore(private val context: Context) {
 
     private val themeKey = stringPreferencesKey("theme_mode")
-    private val botShapeKey = stringPreferencesKey("bot_shape")
-    private val botColorKey = stringPreferencesKey("bot_color")
     private val storageUsedKey = doublePreferencesKey("storage_used_gb")
     private val storageTotalKey = doublePreferencesKey("storage_total_gb")
     private val photoPathKey = stringPreferencesKey("profile_photo_path")
@@ -97,29 +93,9 @@ class SettingsStore(private val context: Context) {
             }
         }
 
-    /** The saved bot shape. Unknown / missing values fall back to Blob. */
-    val botShape: Flow<BotShape> = context.settingsDataStore.data.map { prefs ->
-        BotShape.fromKey(prefs[botShapeKey])
-    }
-
-    /** The saved bot color. Unknown / missing values fall back to Black. */
-    val botColor: Flow<BotColor> = context.settingsDataStore.data.map { prefs ->
-        BotColor.fromKey(prefs[botColorKey])
-    }
-
     /** Persists the theme mode. */
     suspend fun setThemeMode(mode: ThemeMode) {
         context.settingsDataStore.edit { prefs -> prefs[themeKey] = mode.name }
-    }
-
-    /** Persists the bot shape from the Appearance screen. */
-    suspend fun setBotShape(shape: BotShape) {
-        context.settingsDataStore.edit { prefs -> prefs[botShapeKey] = shape.key }
-    }
-
-    /** Persists the bot color from the Appearance screen. */
-    suspend fun setBotColor(color: BotColor) {
-        context.settingsDataStore.edit { prefs -> prefs[botColorKey] = color.name }
     }
 
     /** Persists the used-storage value (called after "Clear cache"). */

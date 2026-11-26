@@ -45,8 +45,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import ai.duagenai.design.bot.BotColor
-import ai.duagenai.design.bot.BotShape
 import ai.duagenai.design.BuildConfig
 import ai.duagenai.design.screens.ApiConfig
 import ai.duagenai.design.screens.ApiError
@@ -3181,15 +3179,10 @@ class DuaGenAINavHostTest {
 
     @Test
     fun theDrawerFooterShowsTheSavedCube() {
-        runBlocking {
-            val settings = ai.duagenai.design.screens.SettingsStore(compose.activity.applicationContext)
-            settings.setBotShape(BotShape.DEFAULT)
-            settings.setBotColor(BotColor.DEFAULT)
-        }
         launch()
         openDrawer()
 
-        compose.onNodeWithTag(ai.duagenai.design.screens.drawerAvatarTag(BotShape.DEFAULT.key)).assertExists()
+        compose.onNodeWithTag(ai.duagenai.design.screens.DRAWER_AVATAR_TAG).assertExists()
     }
 
     // ------------------------------------------------- drawer avatar -> Settings
@@ -5249,13 +5242,11 @@ class DuaGenAINavHostTest {
      * fail rather than silently keep matching.
      */
 
-    /** Chat header & agent avatar: `"<name> avatar, Blob"`. */
-    private fun avatarLabel(title: String, shape: BotShape = BotShape.DEFAULT) =
-        "$title avatar, ${shape.label}"
+    /** Chat header & agent avatar: `"<name> avatar"`. */
+    private fun avatarLabel(title: String) = "$title avatar"
 
-    /** Chat message bubbles: `"<name>, Blob"`. */
-    private fun bubbleLabel(title: String, shape: BotShape = BotShape.DEFAULT) =
-        "$title, ${shape.label}"
+    /** Chat message bubbles: `"<name> bubble"`. */
+    private fun bubbleLabel(title: String) = "$title bubble"
 
     /**
      * The composer hint a thread shows: `ChatScreen` passes

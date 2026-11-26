@@ -23,6 +23,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.duagenai.design.R
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 /* ============================================================================
  *  DuaGenAITheme — the ONE theme the whole kit reads.
@@ -391,4 +397,22 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
+}
+
+/**
+ * The app's bot mark: Fareed's panda, already cropped to a circle with
+ * transparent corners. Decorative unless [contentDescription] is set.
+ */
+@Composable
+fun PandaMark(
+    size: Dp,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
+    Image(
+        painter = painterResource(R.drawable.panda_mark),
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Fit,
+        modifier = modifier.size(size),
+    )
 }

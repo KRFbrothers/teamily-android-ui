@@ -17,6 +17,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
@@ -28,8 +29,6 @@ import ai.duagenai.design.theme.TeamilyShapes
 import ai.duagenai.design.theme.teamilyPalette
 import ai.duagenai.design.theme.teamilyRestingShadow
 import androidx.compose.foundation.lazy.LazyColumn
-import ai.duagenai.design.bot.BabyGrokMark
-import ai.duagenai.design.bot.LocalBotAppearance
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.IconButton
@@ -188,10 +187,7 @@ fun AgentsScreen(
                                 subtitle = agent.description.ifBlank { "Mode: ${agent.mode}" },
                                 onClick = { onOpenChat(agent.id, agent.name) },
                                 avatar = {
-                                    val look = LocalBotAppearance.current
-                                    BabyGrokMark(
-                                        shape = look.shape,
-                                        color = look.color,
+                                    PandaMark(
                                         size = 40.dp,
                                         contentDescription = agent.name,
                                     )

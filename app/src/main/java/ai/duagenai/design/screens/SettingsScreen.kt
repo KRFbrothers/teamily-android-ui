@@ -52,7 +52,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import ai.duagenai.design.bot.LocalBotAppearance
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.LocalDuaGenAISpacing
@@ -130,11 +129,10 @@ fun SettingsScreen(
 
     val headerName = displayName.ifBlank { stringResource(R.string.profile_not_signed_in) }
     val openProfileLabel = stringResource(R.string.profile_open)
-    val look = LocalBotAppearance.current
     val avatarCd = if (photoPath != null) {
         stringResource(R.string.profile_photo_cd)
     } else {
-        stringResource(R.string.profile_avatar_cd, "${look.shape.label}, ${look.color.label}")
+        stringResource(R.string.profile_avatar_cd)
     }
 
     Scaffold(
