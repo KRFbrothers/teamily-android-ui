@@ -1056,6 +1056,10 @@ fun DuaGenAINavHost(
                 CreateKindScreen(
                     kind = entry.arguments?.getString("kind").orEmpty(),
                     onBack = { navController.popBackStack() },
+                    signedIn = sessionToken != null,
+                    onBanao = { prompt -> artifactsRepository.createDocument(prompt) },
+                    onOpenLibrary = { navController.navigateToTab(HomeTab.Artifacts) },
+                    onSignIn = { navController.navigate(DuaGenAIRoutes.SETTINGS) },
                 )
             }
             composable(DuaGenAIRoutes.VOICE_LIVE) {

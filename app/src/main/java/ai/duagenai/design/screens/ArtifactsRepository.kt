@@ -1,5 +1,6 @@
 package ai.duagenai.design.screens
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -517,5 +518,54 @@ class ArtifactsRepository(
         val result = (source as? ArtifactsDataSource)?.reviseArtifact(artifactId, instruction) ?: return null
         load()
         return result
+    }
+
+    /**
+     * Saves a Document card, then writes version 1 from [prompt].
+     *
+     * The Document screen calls this. The card is the same row the Artifacts
+     * grid already shows (`type` is exactly `"Document"`). The page text is
+     * version 1, through the existing revise call. A failed write removes the
+     * card so the library does not keep an empty page.
+     */
+    suspend fun createDocument(prompt: String): WriteResult {
+        val instruction = prompt.trim()
+        if (instruction.isEmpty()) return WriteResult.Failure("Topic likho.")
+        if (instruction.length > 5000) return WriteResult.Failure("Topic 5000 characters se chhota rakho.")
+        if (itemsOf(_state.value) == null) load(showLoading = false)
+        if (itemsOf(_state.value) == null) {
+            val message = (state.value as? ArtifactsUiState.Error)?.message ?: errorFallback
+            return WriteResult.Failure(message)
+        }
+        val title = instruction
+            .lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?.take(200)
+            ?: "Document"
+        val id = "doc" + java.util.UUID.randomUUID().toString().replace("-", "")
+        val added = add(ArtifactItem(
+            id = id,
+            title = title,
+            type = "Document",
+            timestamp = "Today",
+            sizeBytes = 0L,
+        ))
+        if (added is WriteResult.Failure) return added
+        val stored = itemsOf(_state.value)?.firstOrNull() ?: return WriteResult.Failure(addFailureFallback)
+        return try {
+            val revised = reviseArtifact(stored.id, instruction)
+            if (revised == null || revised.second.content.isBlank()) {
+                delete(stored.id)
+                WriteResult.Failure("Document likha nahi gaya.")
+            } else {
+                WriteResult.Success
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            delete(stored.id)
+            WriteResult.Failure(writeFailureMessage(e, deleting = false))
+        }
     }
 }
