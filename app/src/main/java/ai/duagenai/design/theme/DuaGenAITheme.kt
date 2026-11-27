@@ -112,11 +112,16 @@ data class DuaGenAIShapes(
 )
 
 /**
- * The 4dp-based spacing scale the screens use for every gap.
+ * The spacing scale the screens use for every gap.
  *
- * `gutter` is the screen's own horizontal inset (16dp); everything else is a
- * step on the 4dp ladder. Kept as a data class rather than a file of constants
- * so a screen reads `spacing.md` — one name, one value, no magic numbers.
+ * `gutter` is the screen's own horizontal inset (14dp). The steps are the
+ * design reference's own values, not a 4dp ladder: 2, 4, 6, 10, 16, 24. The
+ * comment here used to claim a 4dp ladder and a 16dp gutter while the code said
+ * 6dp / 10dp / 14dp, so the doc and the values disagreed. The values are the
+ * ones every screen is laid out against, so the doc now describes them.
+ *
+ * Kept as a data class rather than a file of constants so a screen reads
+ * `spacing.md` — one name, one value, no magic numbers.
  */
 data class DuaGenAISpacing(
     /** Screen edge inset. */
@@ -330,7 +335,7 @@ object DuaGenAITheme {
         outline = p.fieldEdge,
         outlineVariant = p.border,
         error = p.danger,
-        onError = Color.White,
+        onError = DuagenAIErrorOn,
         errorContainer = p.dangerSoft,
         onErrorContainer = p.dangerInk,
         inverseSurface = p.textPrimary,
