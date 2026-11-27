@@ -8,7 +8,7 @@ Rules for any agent or human in `teamily-android-ui`. Read before touching a fil
 
 Kotlin plus Jetpack Compose, one Gradle module `:app`, `rootProject.name = "DuaGenAI"` (`settings.gradle.kts`). The Gradle root is the repo root; there is no `android/` directory. `applicationId` and `namespace` are `ai.duagenai.design`. 42 Kotlin files sit under `app/src/main/java`, 33 in `screens/`, 6 in `theme/`. The app is a UI client for two backends, the Node API and the Python engine; both hosts arrive as generated `BuildConfig` fields resolved by `ApiConfig`, never as a literal in a screen. `README.md` is one line. `documents/M3-design_v01/` is a tracked design archive, not build input.
 
-**Not found in code:** no backend, no `CONTRIBUTING.md`, no `gradle/libs.versions.toml`, no Room, no `app/schemas/`, no KSP or KAPT, no `MigrationTest`, no `supabase/`, no `webpages/`, no Dependabot config. `FACT:` a `pull_request` CI trigger does exist, in `.github/workflows/pr-checks.yml` under `on: pull_request: branches: [main]`; it runs `:app:testDebugUnitTest` only, not `assembleDebug` and not `lintDebug`.
+**Not found in code:** no backend, no `gradle/libs.versions.toml`, no Room, no `app/schemas/`, no KSP or KAPT, no `MigrationTest`, no `supabase/`, no `webpages/`, no Dependabot config. `FACT:` a `pull_request` CI trigger does exist, in `.github/workflows/pr-checks.yml` under `on: pull_request: branches: [main]`; it runs `:app:testDebugUnitTest` only, not `assembleDebug` and not `lintDebug`. `FACT:` `CONTRIBUTING.md` exists at the repo root and covers branch, commit and PR conventions.
 
 ## 2. Toolchain
 
