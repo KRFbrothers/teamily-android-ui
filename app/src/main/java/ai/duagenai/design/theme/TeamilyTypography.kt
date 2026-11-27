@@ -70,16 +70,21 @@ fun teamilyTypography(sans: FontFamily = TeamilySansFontFamily): Typography = Ty
     displayMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 45.sp, lineHeight = 52.sp),
     displaySmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 36.sp, lineHeight = 44.sp),
     headlineLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 40.sp),
-    // --nv-type-display + --nv-tracking-tight
+    // --nv-type-display + --nv-tracking-tight. 24/32 is the documented scale.
     headlineMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp, letterSpacing = TrackingTight),
-    headlineSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 32.sp),
-    // --nv-type-title + --nv-tracking-tight
-    titleLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 23.sp, letterSpacing = TrackingTight),
+    // 22/28 keeps headlineSmall one step below headlineMedium; both were 24/32,
+    // so the two roles rendered identically.
+    headlineSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 28.sp),
+    // --nv-type-title + --nv-tracking-tight. 20/28 is the scale in the header
+    // comment; 17/23 made titleLarge smaller than titleMedium (18/26).
+    titleLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = TrackingTight),
     // --nv-type-heading
     titleMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 26.sp),
     titleSmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
-    // --nv-type-body
-    bodyLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+    // --nv-type-body. 16/26 is the scale in the header comment; at 14/20 this
+    // role was the same size as bodyMedium (14/22), so "body" and "body-sm"
+    // rendered identically.
+    bodyLarge = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 26.sp),
     // --nv-type-body-sm
     bodyMedium = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 22.sp),
     bodySmall = TeamilyBaseTextStyle.copy(fontFamily = sans, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.4.sp),
