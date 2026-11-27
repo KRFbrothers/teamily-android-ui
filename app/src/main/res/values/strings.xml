@@ -106,6 +106,8 @@
     <string name="chat_starter_draft_reply">Draft a quick reply</string>
     <string name="chat_starter_brainstorm">Brainstorm ideas</string>
     <string name="chat_thinking">Thinking...</string>
+    <string name="chat_request_timeout">The reply took too long. Tap Retry.</string>
+    <string name="chat_retry">Retry</string>
     <!-- Voice Dictation & Voice Note Recording -->
     <string name="voice_dictate_prompt">Speak to type...</string>
     <string name="voice_dictate_unavailable">Speech recognition is not available on this device</string>

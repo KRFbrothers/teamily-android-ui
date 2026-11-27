@@ -177,12 +177,13 @@ interface ChatDataSource {
  * The live `POST /api/chat` source.
  *
  * @param client where the request goes. Defaults to a client that reads
- *   [TokenStore] and waits longer than the shared 10s read timeout, because an
- *   agent SSE stream often outlives that. A test injects a fake-transport client.
+ *   [TokenStore] and waits [CHAT_READ_TIMEOUT_MS] (3 minutes). A long document
+ *   or agent turn on Cloud Run outlives the old 2 minute read, and that
+ *   timeout looked like a dead connection. A test injects a fake-transport client.
  */
 class RemoteChatDataSource(
     private val client: JsonHttpClient = JsonHttpClient(
-        transport = UrlConnectionTransport(readTimeoutMs = 120_000),
+        transport = UrlConnectionTransport(readTimeoutMs = CHAT_READ_TIMEOUT_MS),
         label = "Chat request",
         tokenProvider = TokenStore.provider,
     ),

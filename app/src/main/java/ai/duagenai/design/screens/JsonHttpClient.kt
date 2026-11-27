@@ -2,6 +2,7 @@ package ai.duagenai.design.screens
 
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
@@ -104,11 +105,15 @@ class HttpStatusException(
  *   burns the user's battery.
  * @param userMessage a short, safe sentence for the UI. It never contains a
  *   stack trace, a URL or a token.
+ * @param timedOut true when the socket gave up waiting for the response. The
+ *   chat screen shows the timeout sentence from strings.xml for this case, and
+ *   keeps [forNetworkFailure] for a device that is actually offline.
  */
 data class ApiError(
     val status: Int?,
     val retryable: Boolean,
     val userMessage: String,
+    val timedOut: Boolean = false,
 ) : Exception(userMessage) {
 
     companion object {
@@ -139,6 +144,20 @@ data class ApiError(
             status = null,
             retryable = true,
             userMessage = "$label: no connection.",
+        )
+
+        /**
+         * A read that sat past the socket timeout.
+         *
+         * The phone can still be online: Cloud Run may simply still be writing
+         * a long document or agent turn. Retrying is reasonable. This is not
+         * [forNetworkFailure], whose sentence is the offline one.
+         */
+        fun forReadTimeout(label: String): ApiError = ApiError(
+            status = null,
+            retryable = true,
+            userMessage = "$label: the response took too long.",
+            timedOut = true,
         )
 
         /**
@@ -220,6 +239,14 @@ fun interface HttpTransport {
         result.lineSequence().forEach(onLine)
     }
 }
+
+/**
+ * How long a chat or agent read may sit before it is a timeout.
+ *
+ * Long document and agentic Cloud Run turns outlive two minutes. The chat
+ * client used to stop at 120s, and the thread looked like the connection died.
+ */
+const val CHAT_READ_TIMEOUT_MS = 180_000
 
 /**
  * The default transport: a plain [HttpURLConnection].
@@ -436,7 +463,7 @@ class JsonHttpClient(
                 // user's battery and delays the honest message.
                 if (!error.retryable || attempt == attempts) throw error
             } catch (e: IOException) {
-                val error = ApiError.forNetworkFailure(effectiveLabel)
+                val error = failureForIo(e, effectiveLabel)
                 lastError = error
                 if (attempt == attempts) throw error
             }
@@ -473,7 +500,7 @@ class JsonHttpClient(
                 lastError = error
                 if (!error.retryable || attempt == attempts) throw error
             } catch (e: IOException) {
-                val error = ApiError.forNetworkFailure(effectiveLabel)
+                val error = failureForIo(e, effectiveLabel)
                 lastError = error
                 if (attempt == attempts) throw error
             }
@@ -482,6 +509,17 @@ class JsonHttpClient(
 
         throw lastError ?: ApiError.forNetworkFailure(effectiveLabel)
     }
+
+    /**
+     * A [SocketTimeoutException] is a slow response, not an offline phone.
+     * Every other [IOException] stays the offline failure.
+     */
+    private fun failureForIo(error: IOException, label: String): ApiError =
+        if (error is SocketTimeoutException) {
+            ApiError.forReadTimeout(label)
+        } else {
+            ApiError.forNetworkFailure(label)
+        }
 
     /**
      * The bearer token for the next request, or null when anonymous.

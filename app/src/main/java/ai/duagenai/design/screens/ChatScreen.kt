@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +56,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -67,6 +69,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -76,8 +80,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -134,6 +143,8 @@ import ai.duagenai.design.theme.teamilyPalette
  *  The composer sits in `Scaffold`'s `bottomBar`, so the `inner` padding the
  *  LazyColumn consumes already includes its height — the last message can never
  *  hide underneath it, and the IME inset is handled by the Scaffold too.
+ *  The top bar uses the canvas colour, not a transparent fill, so a long
+ *  thread cannot scroll through the title.
  *
  *  PER-THREAD STATE
  *  ----------------
@@ -261,6 +272,51 @@ internal fun nowLabel(): String =
     java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(java.util.Date())
 
 /**
+ * Lightweight chat markdown so an agent reply does not show raw `* **Heading:**`.
+ *
+ * `**bold**` becomes bold, `` `code` `` becomes monospace, and a line that
+ * starts with `* ` or `- ` becomes a `• ` bullet. Anything else is left as text.
+ */
+internal fun formatChatMarkdown(raw: String): AnnotatedString {
+    val normalized = raw.lineSequence().joinToString("\n") { line ->
+        val lead = line.takeWhile { it == ' ' || it == '\t' }
+        val body = line.substring(lead.length)
+        when {
+            body.startsWith("* ") -> lead + "• " + body.removePrefix("* ")
+            body.startsWith("- ") -> lead + "• " + body.removePrefix("- ")
+            else -> line
+        }
+    }
+    return buildAnnotatedString {
+        var index = 0
+        while (index < normalized.length) {
+            if (normalized.startsWith("**", index)) {
+                val end = normalized.indexOf("**", startIndex = index + 2)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(normalized.substring(index + 2, end))
+                    }
+                    index = end + 2
+                    continue
+                }
+            }
+            if (normalized[index] == '`') {
+                val end = normalized.indexOf('`', startIndex = index + 1)
+                if (end != -1) {
+                    withStyle(SpanStyle(fontFamily = FontFamily.Monospace)) {
+                        append(normalized.substring(index + 1, end))
+                    }
+                    index = end + 1
+                    continue
+                }
+            }
+            append(normalized[index])
+            index++
+        }
+    }
+}
+
+/**
  * PREVIEW-ONLY fixture for Agent's thread — the conversation the pinned card
  * opens, written to Agent's role from the product model: the user asks for
  * work, Agent reports what it did across the agents it manages.
@@ -353,7 +409,6 @@ fun ChatScreen(
     seed: List<Message> = emptyList(),
     dynamicSkills: List<SkillItem>? = null,
 ) {
-    val agentHeader = onOpenAgentProfile != null
     // An incoming first message starts an EMPTY thread and is sent once — it
     // must never sit behind a scripted dialogue. Otherwise the thread shows
     // exactly the caller's [seed], which defaults to empty.
@@ -460,26 +515,38 @@ fun ChatScreen(
     }
     val isPersonal = chatId == PERSONAL_AGENT_CHAT_ID
     val isDuaAgent = chatId == AGENT_CHAT_ID
+    val timeoutMessage = stringResource(R.string.chat_request_timeout)
+    // A failed live turn stays out of the transcript. These two short strings
+    // are enough to redraw the error bubble after rotation.
+    var errorText by rememberSaveable(chatId) { mutableStateOf("") }
+    var retryText by rememberSaveable(chatId) { mutableStateOf("") }
 
     // The list is the conversation plus, while Agent is "typing", one extra row
     // (and, on the Personal Agent thread, the quick-action chips row).
-    val rows = messages.size + (if (agentTyping) 1 else 0) + (if (isPersonal) 1 else 0)
+    val showError = errorText.isNotEmpty() && !agentTyping
+    val rows = messages.size +
+        (if (agentTyping) 1 else 0) +
+        (if (isPersonal) 1 else 0) +
+        (if (showError) 1 else 0)
 
     // Keep the newest message in view. Keyed on the row count so it fires when a
-    // message is added (and when the typing row appears), not on every frame.
-    LaunchedEffect(rows) {
+    // message is added (and when the typing row or the error bubble appears).
+    LaunchedEffect(rows, errorText) {
         if (rows > 0) listState.animateScrollToItem(rows - 1)
     }
 
-    fun send() {
-        val text = draftState.text.toString().trim()
+    fun launchReply(text: String, recordUser: Boolean) {
         // Guarded twice over: blank text, or a reply still in flight.
         if (text.isEmpty() || agentTyping) return
-        // The store is the single writer: the screen never holds a mutable copy
-        // of the transcript, so a message cannot be lost by a stale local list.
-        transcriptStore.append(chatId, SavedMessage(SavedMessage.USER, text, nowLabel()))
-        draftState.edit { replace(0, length, "") }
-        contextChips = emptyList()
+        if (recordUser) {
+            // The store is the single writer: the screen never holds a mutable copy
+            // of the transcript, so a message cannot be lost by a stale local list.
+            transcriptStore.append(chatId, SavedMessage(SavedMessage.USER, text, nowLabel()))
+            draftState.edit { replace(0, length, "") }
+            contextChips = emptyList()
+        }
+        errorText = ""
+        retryText = ""
         agentTyping = true
         // Offline until there is a session or an injected source. This branch is
         // what the existing UI tests drive: a 900ms beat, then [AGENT_REPLY].
@@ -520,18 +587,31 @@ fun ChatScreen(
                     throw e
                 } catch (e: ApiError) {
                     if (!streamedAny) {
-                        transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, e.userMessage, nowLabel()))
+                        errorText = if (e.timedOut) timeoutMessage else e.userMessage
+                        if (e.retryable) retryText = text
                     }
                 } catch (e: Exception) {
                     if (!streamedAny) {
-                        val msg = e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
-                        transcriptStore.append(chatId, SavedMessage(SavedMessage.AGENT, msg, nowLabel()))
+                        errorText = e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
+                        retryText = text
                     }
                 } finally {
                     agentTyping = false
                 }
             }
         }
+    }
+
+    fun send() {
+        launchReply(draftState.text.toString().trim(), recordUser = true)
+    }
+
+    // One tap resends the failed user prompt. That bubble is already in the
+    // thread, so Retry does not add a second copy of it.
+    fun retry() {
+        val text = retryText
+        if (text.isEmpty() || agentTyping) return
+        launchReply(text, recordUser = false)
     }
 
     // A new thread opened with a first message sends it exactly once: only
@@ -563,22 +643,33 @@ fun ChatScreen(
         agentTyping = false
     }
 
-    // Teamily canvas behind the whole thread (the zip `--nv-atmosphere`, light
-    // and dark); the Scaffold and top bar are transparent so it shows through.
+    // Teamily canvas behind the thread. The top bar uses the same canvas colour
+    // so messages scroll behind an opaque header instead of through the title.
+    val palette = teamilyPalette()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
-        modifier = modifier.teamilyCanvas(teamilyPalette()),
+        modifier = modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .teamilyCanvas(palette),
         containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (onOpenAgentProfile != null) {
                 // Every agent's thread: back · avatar + badge · name · Invite.
-                AgentChatHeaderPill(
-                    agentId = chatId,
-                    name = chatTitle,
-                    onBack = onBack,
-                    onOpenProfile = onOpenAgentProfile,
-                    onInvite = onInvite,
-                )
+                // The band is opaque so the list cannot show through the pill.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(palette.topbarBg),
+                ) {
+                    AgentChatHeaderPill(
+                        agentId = chatId,
+                        name = chatTitle,
+                        onBack = onBack,
+                        onOpenProfile = onOpenAgentProfile,
+                        onInvite = onInvite,
+                    )
+                }
             } else TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -638,8 +729,11 @@ fun ChatScreen(
                         }
                     }
                 },
+                expandedHeight = 80.dp,
+                scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
+                    containerColor = palette.topbarBg,
+                    scrolledContainerColor = palette.topbarBg,
                 ),
             )
         },
@@ -667,13 +761,6 @@ fun ChatScreen(
                     state = draftState,
                     hasMessages = messages.isNotEmpty(),
                     onSend = { send() },
-                    // Agent threads read "Type a message..." (reference);
-                    // other threads name the conversation.
-                    placeholder = if (agentHeader) {
-                        stringResource(R.string.chat_agent_placeholder)
-                    } else {
-                        stringResource(R.string.chat_thread_placeholder, chatTitle)
-                    },
                     onAttachClick = { sheet = ComposerSheet.Plus },
                     onDictateClick = handleDictate,
                     onVoiceMessageClick = onOpenVoiceLive,
@@ -689,11 +776,15 @@ fun ChatScreen(
             }
         },
     ) { inner ->
+        // Padding is outside the list, then the list is clipped to that box.
+        // Avatars and bubbles therefore stop at the header and cannot draw
+        // behind the floating more button.
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(inner),
+                .padding(inner)
+                .clipToBounds()
+                .fillMaxSize(),
             contentPadding = PaddingValues(
                 horizontal = spacing.gutter,
                 vertical = spacing.md,
@@ -755,7 +846,20 @@ fun ChatScreen(
             items(messages) { msg ->
                 when (msg.who) {
                     SavedMessage.AGENT -> AgentBubble(msg, chatTitle)
-                    else -> UserBubble(msg, chatTitle)
+                    else -> UserBubble(msg)
+                }
+            }
+            if (showError) {
+                item {
+                    ChatErrorBubble(
+                        message = errorText,
+                        chatTitle = chatTitle,
+                        onRetry = if (retryText.isNotEmpty()) {
+                            { retry() }
+                        } else {
+                            null
+                        },
+                    )
                 }
             }
             if (agentTyping) {
@@ -888,6 +992,59 @@ private fun TypingBubble(chatTitle: String) {
     }
 }
 
+/**
+ * A failed live turn: a soft error bubble and, when the prompt can be sent
+ * again, one Retry control. The hit area stays at least 48dp.
+ */
+@Composable
+private fun ChatErrorBubble(
+    message: String,
+    chatTitle: String,
+    onRetry: (() -> Unit)?,
+) {
+    val spacing = LocalDuaGenAISpacing.current
+    Row(verticalAlignment = Alignment.Bottom) {
+        PandaMark(
+            size = 28.dp,
+            contentDescription = "$chatTitle bubble",
+        )
+        Spacer(Modifier.width(spacing.sm))
+        Surface(
+            shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f)),
+            modifier = Modifier.widthIn(max = 300.dp),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                if (onRetry != null) {
+                    TextButton(
+                        onClick = onRetry,
+                        modifier = Modifier
+                            .minTouchTarget()
+                            .heightIn(min = 48.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        ),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chat_retry),
+                            style = DuaGenAITextStyles.button,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
     val spacing = LocalDuaGenAISpacing.current
@@ -906,7 +1063,7 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
                 modifier = Modifier.widthIn(max = 300.dp),
             ) {
                 Text(
-                    text = msg.text,
+                    text = formatChatMarkdown(msg.text),
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 15.sp,
                         lineHeight = 22.sp,
@@ -945,8 +1102,7 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
 }
 
 @Composable
-private fun UserBubble(msg: SavedMessage, chatTitle: String) {
-    val spacing = LocalDuaGenAISpacing.current
+private fun UserBubble(msg: SavedMessage) {
     val palette = teamilyPalette()
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -981,11 +1137,6 @@ private fun UserBubble(msg: SavedMessage, chatTitle: String) {
                 modifier = Modifier.padding(end = 4.dp),
             )
         }
-        Spacer(Modifier.width(spacing.sm))
-        PandaMark(
-            size = 32.dp,
-            contentDescription = "$chatTitle bubble",
-        )
     }
 }
 
