@@ -53,7 +53,7 @@ Before any push read `git status --short` and `git diff --cached` line by line. 
 
 **6.3 One phase, then stop.** Report it, stop for review, state what you did not do. If a command fails, retry with a fix at most 3 times, then stop with the exact command, the error and what changed.
 
-**6.4 Never push to `main`.** Push a branch, open a PR, and get an explicit owner yes in the PR thread before merging or publishing a release, every time. `FACT:` two workflows exist. `.github/workflows/pr-checks.yml` runs on `pull_request` to `main` and runs `:app:testDebugUnitTest` with `contents: read`. `.github/workflows/debug-apk-release.yml` runs on `push` to `main` and on `workflow_dispatch`, and it publishes a GitHub Release and a `debug-apk-<run_number>` tag. So a PR is tested before merge, but the APK build and the release still happen only after a push to `main`, which is why a direct push publishes a release from unreviewed code.
+**6.4 Never push to `main`.** Push a branch, open a PR, and get an explicit owner yes in the PR thread before merging or publishing a release, every time. `FACT:` three workflows exist. `.github/workflows/pr-checks.yml` runs on `pull_request` to `main` and runs `:app:testDebugUnitTest` with `contents: read`. `.github/workflows/agents-md-check.yml` runs on `pull_request` to `main` and on `push` to `main`, and runs `scripts/check-agents-md.mjs` with `contents: read`. `.github/workflows/debug-apk-release.yml` runs on `push` to `main` and on `workflow_dispatch`, and it publishes a GitHub Release and a `debug-apk-<run_number>` tag. So a PR is tested before merge, but the APK build and the release still happen only after a push to `main`, which is why a direct push publishes a release from unreviewed code.
 
 **6.5 Every PR carries a short Hinglish summary.** 3 to 6 lines: what changed, why, what you ran, what you could not run, and the risk. The owner decides from that, not from the diff.
 
@@ -61,7 +61,7 @@ Before any push read `git status --short` and `git diff --cached` line by line. 
 
 **6.7 Every claim carries a file path** plus a function, class, constant or heading. Re-read the file at the commit you report on. No bare assertion, no inferred behaviour, no invented test result, no number carried over from the backend repo.
 
-**6.8 Nothing validates this file but a human.** `FACT:` no CI job reads it, unlike the backend repo where a unit test fails the PR on drift. A wrong edit here fails nothing and misleads every agent that reads it.
+**6.8 This file is validated by CI.** `FACT:` `scripts/check-agents-md.mjs` checks every machine-checkable claim in this file against the repo, and `.github/workflows/agents-md-check.yml` runs it on every pull request to `main` and on every push to `main`. A wrong edit fails the PR. Claims that cannot be checked mechanically are listed in the script as skipped with a reason, so they are visible, not silently ignored. If you add a checkable claim here, add its check in the same PR.
 
 **6.9 In-place edits only, no duplicates.** Update the canonical file, never `*V2.kt`, `*New.kt`, `*Copy.kt` or an unrequested helper. Search for an existing equivalent first.
 
@@ -73,13 +73,13 @@ Before any push read `git status --short` and `git diff --cached` line by line. 
 
 **6.13 48dp touch targets.** Every interactive element keeps at least 48dp by 48dp. `TouchTargets.kt` exists to enforce it.
 
-**6.14 Strings in `strings.xml`.** `app/src/main/res/values/strings.xml` is the one copy source. `FACT:` the rule is not followed everywhere: 74 `text = "..."` literals remain in `screens/`. Do not add more, and do not mass-rewrite them inside an unrelated PR.
+**6.14 Strings in `strings.xml`.** `app/src/main/res/values/strings.xml` is the one copy source. `FACT:` the rule is not followed everywhere: 83 `text = "..."` literals remain in `screens/`. Do not add more, and do not mass-rewrite them inside an unrelated PR.
 
 **6.15 UI design freeze.** On a data or API task, do not change colors, typography, spacing, shapes or navigation unless the task asks.
 
 **6.16 No database here, so no migration rules apply.** `FACT:` no Room, no schema directory, no migration file, no SQL. The staging-only, never-edit-a-migration and mandatory-rollback rules live in the backend repo's `AGENTS.md`. If a future change adds a local database, add those rules to this file in the same PR, and ship a migration plus a rollback, never a schema by hand.
 
-**6.17 One official agent, `Dua Work`; `personal-agent` is removed.** Never re-add it, never call it official, never add a second pinned agent without an owner decision recorded in the backend repo, and do not invent a skill list. `FACT:` the code lags. `DuaAgentSkills` in `ComposerSheets.kt` still hardcodes five starter skills. `BaseRemoteRepository.kt` still maps `personal-agent` to "Personal Agent" and still blocks delete for both `personal-agent` and `dua-agent`. `InMemorySkillsDataSource` seeds every skill with `isStarter = true` and refuses to delete a starter. `HomeScreen.kt` keeps `PERSONAL_AGENT_TITLE` as the pinned hero card. 66 matches for `personal-agent` across `app/src`. Work to do, not truth to copy.
+**6.17 One official agent, `Dua Work`; `personal-agent` is removed.** Never re-add it, never call it official, never add a second pinned agent without an owner decision recorded in the backend repo, and do not invent a skill list. `FACT:` the code lags. `DuaAgentSkills` in `ComposerSheets.kt` still hardcodes five starter skills. `BaseRemoteRepository.kt` still maps `personal-agent` to "Personal Agent" and still blocks delete for both `personal-agent` and `dua-agent`. `InMemorySkillsDataSource` seeds every skill with `isStarter = true` and refuses to delete a starter. `HomeScreen.kt` keeps `PERSONAL_AGENT_TITLE` as the pinned hero card. 3 matches for the literal `personal-agent` id across `app/src`, and 66 for the display-name forms (`Personal Agent`, `PERSONAL_AGENT`). Work to do, not truth to copy.
 
 ## 7. Cross-repo
 

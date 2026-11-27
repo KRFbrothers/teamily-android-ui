@@ -1,0 +1,58 @@
+# Checks the machine-checkable claims in AGENTS.md against the repo.
+#
+# Why this exists: AGENTS.md section 6.8 used to say "Nothing validates this
+# file but a human", and that is exactly how it drifted twice (a stale
+# "no CONTRIBUTING.md" claim, and two counts that no longer matched the code).
+# A wrong edit here fails nothing and misleads every agent that reads it, so
+# this job turns those claims into assertions.
+#
+# Why a separate file and not a step in pr-checks.yml: pr-checks.yml sets up
+# the Android SDK and runs Gradle, which takes minutes. This check is a single
+# Node script that reads files, so it runs in seconds and fails fast, before
+# the expensive job even starts.
+#
+# Why `push` to main as well as `pull_request`: a direct push to main skips the
+# PR gate, and AGENTS.md 6.4 says a direct push is how unreviewed code lands.
+# Running on main catches drift that arrived that way.
+#
+# No `npm install` step: the script uses only Node built-ins (fs, path,
+# child_process), so there is no package.json and no lockfile to install.
+
+name: AGENTS.md check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Read-only: this job only checks out code and reads files.
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the previous run.
+concurrency:
+  group: agents-md-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  claims:
+    name: AGENTS.md claims
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Node 20 is the LTS the script is written against. It uses no syntax
+      # newer than that, so a bump here is safe but not required.
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # --verbose prints every passing claim too, so the log shows what was
+      # actually checked, not only what failed.
+      - name: Check AGENTS.md claims
+        run: node scripts/check-agents-md.mjs --verbose
