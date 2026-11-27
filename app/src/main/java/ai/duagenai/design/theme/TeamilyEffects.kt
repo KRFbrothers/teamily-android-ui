@@ -94,8 +94,8 @@ fun Modifier.teamilyPrimaryGlow(palette: TeamilyPalette): Modifier {
  * Press/tap lift: scale 1f -> 0.98f (zip `active:scale-[0.98]`) while [interactionSource] is pressed,
  * on the zip's standard UI spring,
  * (Compose equivalent of the web hover lift). When [reduceMotion] is true the
- * element stays at 1f. This kit has no reduce-motion setting of its own, so
- * callers pass `false` until one exists.
+ * element stays at 1f. Pass [rememberReduceMotion] here so the platform's
+ * "Remove animations" setting is honoured.
  */
 @Composable
 fun Modifier.teamilyPressScale(
@@ -139,4 +139,28 @@ fun DemoBadge(modifier: Modifier = Modifier) {
             )
             .padding(horizontal = 6.dp, vertical = 1.dp),
     )
+}
+
+/**
+ * True when the user has asked the system to reduce motion.
+ *
+ * Reads the platform's animator duration scale, which is what "Remove
+ * animations" in Developer options and the accessibility settings both set to
+ * 0. Compose's own `LocalMotionDurationScale` is not public API, so the scale
+ * is read from the settings provider instead.
+ *
+ * Callers use it to skip a looping animation entirely rather than to shorten
+ * it: a 1.2s loop that runs forever is the thing WCAG 2.2.2 is about, and a
+ * faster loop is no better.
+ */
+@Composable
+fun rememberReduceMotion(): Boolean {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return androidx.compose.runtime.remember(context) {
+        android.provider.Settings.Global.getFloat(
+            context.contentResolver,
+            android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        ) == 0f
+    }
 }
