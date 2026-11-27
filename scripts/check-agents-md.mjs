@@ -18,9 +18,9 @@
 // reason, never silently dropped. If you add a checkable claim to AGENTS.md,
 // add it here in the same PR.
 
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { execSync } from "node:child_process";
-import { join, dirname, relative } from "node:path";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -38,30 +38,82 @@ function exists(rel) {
   return existsSync(join(ROOT, rel));
 }
 
-// Runs a shell command from the repo root. Returns stdout, or "" on a non-zero
-// exit (grep exits 1 when it finds nothing, which is a normal answer here).
-function sh(cmd) {
+// Runs a program with an argument array. Never a shell string.
+//
+// Why: execSync(cmd) hands the string to a shell, and the shell differs per
+// platform. On Windows that is cmd.exe, where single quotes are not quoting
+// characters at all, so `grep -rnE 'a|b' .` reaches cmd.exe with a bare `|`
+// and gets split into two commands. The same string under /bin/sh or bash
+// works, which is why this check passed on Linux CI and failed on Windows.
+// execFileSync spawns the program directly with no shell in between, so
+// quoting and metacharacters behave identically on Windows, macOS and Linux.
+function run(file, args) {
   try {
-    return execSync(cmd, {
+    return execFileSync(file, args, {
       cwd: ROOT,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       maxBuffer: 32 * 1024 * 1024,
     });
   } catch (err) {
+    // A non-zero exit is a normal answer here (grep exits 1 when it finds
+    // nothing), so return whatever was written to stdout instead of throwing.
     return (err && err.stdout ? err.stdout.toString() : "") || "";
   }
 }
 
-// One line per matching line.
-function grepLines(cmd) {
-  const out = sh(cmd).trim();
-  return out ? out.split("\n") : [];
+// Every file under `dir` (relative to ROOT), recursively. Symlinks are not
+// followed and .git is skipped, matching `grep -r`.
+function walkFiles(dir, { exts = null } = {}) {
+  const out = [];
+  if (!existsSync(join(ROOT, dir))) return out;
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(ROOT, rel), { withFileTypes: true })) {
+      if (entry.name === ".git") continue;
+      const p = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walk(p);
+      else if (entry.isFile() && (!exts || exts.some((e) => entry.name.endsWith(e)))) out.push(p);
+    }
+  };
+  walk(dir);
+  return out;
 }
 
-// One line per occurrence (grep -o).
-function grepOccurrences(cmd) {
-  return grepLines(cmd).length;
+// Counts lines matching `re` across every file under `dirs`.
+// Equivalent to `grep -rnE <pattern> <dirs> | wc -l`.
+// `re` must not carry the /g flag: .test() is stateful with it.
+function grepLineCount(re, dirs, { exts = null } = {}) {
+  let n = 0;
+  for (const dir of dirs) {
+    for (const f of walkFiles(dir, { exts })) {
+      for (const line of readFileSync(join(ROOT, f), "utf8").split("\n")) {
+        if (re.test(line)) n += 1;
+      }
+    }
+  }
+  return n;
+}
+
+// Counts every occurrence of a literal string across every file under `dirs`.
+// Equivalent to `grep -roF <literal> <dirs> | wc -l`.
+function grepOccurrences(literal, dirs) {
+  let n = 0;
+  for (const dir of dirs) {
+    for (const f of walkFiles(dir)) {
+      const src = readFileSync(join(ROOT, f), "utf8");
+      let i = 0;
+      while ((i = src.indexOf(literal, i)) !== -1) {
+        n += 1;
+        i += literal.length;
+      }
+    }
+  }
+  return n;
+}
+
+// Files under `dir` whose content matches `re`. Equivalent to `grep -rlE`.
+function grepFiles(re, dir) {
+  return walkFiles(dir).filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
 }
 
 function countFiles(dir, ext) {
@@ -198,7 +250,9 @@ claim("1", "README.md is one line", () => {
 });
 
 claim("1", "documents/M3-design_v01/ is tracked in git", () => {
-  const n = grepLines("git ls-files documents/M3-design_v01").length;
+  const n = run("git", ["ls-files", "documents/M3-design_v01"])
+    .split("\n")
+    .filter((l) => l.trim()).length;
   return { ok: n > 0, expected: "at least 1 tracked file", actual: `${n} tracked files` };
 });
 
@@ -213,10 +267,12 @@ claim("1", "no Dependabot config", () => {
 });
 
 claim("1", "no Room, no KSP, no KAPT, no MigrationTest", () => {
-  const hits = grepLines(
-    "grep -rnE 'androidx\\.room|\\bksp\\b|\\bkapt\\b|MigrationTest' --include='*.kts' --include='*.kt' --include='*.properties' .",
+  const hits = grepLineCount(
+    /androidx\.room|\bksp\b|\bkapt\b|MigrationTest/,
+    ["."],
+    { exts: [".kts", ".kt", ".properties"] },
   );
-  return { ok: hits.length === 0, expected: "0 matches", actual: `${hits.length} matches` };
+  return { ok: hits === 0, expected: "0 matches", actual: `${hits} matches` };
 });
 
 claim("1", "pr-checks.yml has a pull_request trigger on main", () => {
@@ -348,10 +404,21 @@ claim("4", ".gitignore blocks the listed build and secret paths", () => {
 });
 
 claim("4", "no keystore, .env or signing file anywhere in git history", () => {
-  const n = grepLines(
-    "git log --all --pretty=format: --name-only --diff-filter=A | sort -u | grep -icE 'keystore|\\.jks|\\.keystore|\\.env$|\\.env\\.|signing|\\.p12|\\.pem'",
-  );
-  const count = n.length ? Number(n[0].trim()) : 0;
+  // Every path ever added anywhere in history, deduplicated, then counted
+  // against the secret-file pattern. This replaces
+  // `git log ... | sort -u | grep -icE ...`, whose real pipes were the other
+  // half of the Windows problem: cmd.exe would have run them, but the quoted
+  // alternation inside the pattern would still have been mangled.
+  const added = run("git", [
+    "log",
+    "--all",
+    "--pretty=format:",
+    "--name-only",
+    "--diff-filter=A",
+  ]);
+  const unique = [...new Set(added.split("\n").map((l) => l.trim()).filter(Boolean))];
+  const secret = /keystore|\.jks|\.keystore|\.env$|\.env\.|signing|\.p12|\.pem/i;
+  const count = unique.filter((p) => secret.test(p)).length;
   return { ok: count === 0, expected: "0", actual: String(count) };
 });
 
@@ -366,9 +433,10 @@ claim("6.4", "the workflow count matches AGENTS.md", () =>
 );
 
 claim("6.12", "0 hardcoded colors under screens/", () => {
-  const n = grepLines(
-    "grep -rnE 'Color\\(0x|Color\\.White|Color\\.Black|Color\\.Gray' app/src/main/java/ai/duagenai/design/screens/",
-  ).length;
+  const n = grepLineCount(
+    /Color\(0x|Color\.White|Color\.Black|Color\.Gray/,
+    ["app/src/main/java/ai/duagenai/design/screens"],
+  );
   return eq(0, n);
 });
 
@@ -382,13 +450,13 @@ claim("6.14", "strings.xml is the one copy source", () =>
 
 claim("6.14", "text literal count in screens/ matches AGENTS.md", () =>
   numberClaim("the text literal count", /(\d+) `text = "\.\.\."` literals remain in `screens\/`/, () =>
-    grepOccurrences('grep -roF \'text = "\' app/src/main/java/ai/duagenai/design/screens/'),
+    grepOccurrences('text = "', ["app/src/main/java/ai/duagenai/design/screens"]),
   ),
 );
 
 claim("6.16", "no Room, no schema directory, no migration file, no SQL", () => {
   const sql = countFiles("app/src", ".sql");
-  const room = grepLines("grep -rnE 'androidx\\.room' --include='*.kt' --include='*.kts' app/").length;
+  const room = grepLineCount(/androidx\.room/, ["app"], { exts: [".kt", ".kts"] });
   return {
     ok: sql === 0 && room === 0 && !exists("app/schemas"),
     expected: "0 SQL files, 0 Room refs, no app/schemas",
@@ -432,10 +500,10 @@ claim("6.17", "personal-agent id and display-name counts match AGENTS.md", () =>
   }
   const claimedId = Number(m[1]);
   const claimedName = Number(m[2]);
-  const actualId = grepOccurrences("grep -roF 'personal-agent' app/src");
+  const actualId = grepOccurrences("personal-agent", ["app/src"]);
   const actualName =
-    grepOccurrences("grep -roF 'Personal Agent' app/src") +
-    grepOccurrences("grep -roF 'PERSONAL_AGENT' app/src");
+    grepOccurrences("Personal Agent", ["app/src"]) +
+    grepOccurrences("PERSONAL_AGENT", ["app/src"]);
   return {
     ok: claimedId === actualId && claimedName === actualName,
     expected: `AGENTS.md says id=${claimedId}, display-name=${claimedName}`,
@@ -483,12 +551,14 @@ claim("9", "the oversized test class line count matches AGENTS.md", () => {
   }
   // The claim is about a test class, so only app/src/test counts. The nav
   // package also holds a 1148-line production file, which is not the claim.
-  const out = sh("find app/src/test -name '*.kt' -path '*nav*' -exec wc -l {} +").trim();
-  const lines = out.split("\n").filter((l) => /^\s*\d+\s+\S+\.kt$/.test(l));
-  const big = lines
-    .map((l) => l.trim().split(/\s+/))
+  // Replaces `find app/src/test -name '*.kt' -path '*nav*' -exec wc -l {} +`.
+  // wc -l counts newline characters, so count those rather than split()
+  // length, which would add one for a file with no trailing newline.
+  const big = walkFiles("app/src/test", { exts: [".kt"] })
+    .filter((p) => p.includes("nav"))
+    .map((p) => [String((readFileSync(join(ROOT, p), "utf8").match(/\n/g) || []).length), p])
     .filter(([n]) => Number(n) > 1000)
-    .map(([n, p]) => `${n} ${relative(ROOT, join(ROOT, p))}`);
+    .map(([n, p]) => `${n} ${p}`);
   const ok = big.length === 1 && big[0].startsWith(`${claimed} `);
   return {
     ok,
@@ -497,10 +567,10 @@ claim("9", "the oversized test class line count matches AGENTS.md", () => {
   };
 });
 claim("9", "Robolectric @Config(sdk = [34]) in every test file that uses @Config", () => {
-  const files = grepLines("grep -rl '@Config' app/src/test");
+  const files = grepFiles(/@Config/, "app/src/test");
   // One file also passes qualifiers, so match the sdk argument, not the
   // whole annotation.
-  const pinned = grepLines("grep -rlE '@Config\\(sdk = \\[34\\]' app/src/test");
+  const pinned = grepFiles(/@Config\(sdk = \[34\]/, "app/src/test");
   return {
     ok: files.length > 0 && files.length === pinned.length,
     expected: "every test file with @Config pins sdk 34",
@@ -509,7 +579,7 @@ claim("9", "Robolectric @Config(sdk = [34]) in every test file that uses @Config
 });
 claim("9", "RECORD_AUDIO is declared but never requested from Kotlin", () => {
   const declared = read("app/src/main/AndroidManifest.xml").includes("android.permission.RECORD_AUDIO");
-  const used = grepLines("grep -rn 'RECORD_AUDIO' app/src/main/java").length;
+  const used = grepLineCount(/RECORD_AUDIO/, ["app/src/main/java"]);
   return {
     ok: declared && used === 0,
     expected: "declared in manifest, 0 Kotlin references",
