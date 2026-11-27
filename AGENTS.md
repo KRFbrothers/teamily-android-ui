@@ -8,7 +8,7 @@ Rules for any agent or human in `teamily-android-ui`. Read before touching a fil
 
 Kotlin plus Jetpack Compose, one Gradle module `:app`, `rootProject.name = "DuaGenAI"` (`settings.gradle.kts`). The Gradle root is the repo root; there is no `android/` directory. `applicationId` and `namespace` are `ai.duagenai.design`. 42 Kotlin files sit under `app/src/main/java`, 33 in `screens/`, 6 in `theme/`. The app is a UI client for two backends, the Node API and the Python engine; both hosts arrive as generated `BuildConfig` fields resolved by `ApiConfig`, never as a literal in a screen. `README.md` is one line. `documents/M3-design_v01/` is a tracked design archive, not build input.
 
-**Not found in code:** no backend, no `CONTRIBUTING.md`, no `gradle/libs.versions.toml`, no Room, no `app/schemas/`, no KSP or KAPT, no `MigrationTest`, no `supabase/`, no `webpages/`, no Dependabot config, no `pull_request` CI trigger.
+**Not found in code:** no backend, no `CONTRIBUTING.md`, no `gradle/libs.versions.toml`, no Room, no `app/schemas/`, no KSP or KAPT, no `MigrationTest`, no `supabase/`, no `webpages/`, no Dependabot config. `FACT:` a `pull_request` CI trigger does exist, in `.github/workflows/pr-checks.yml` under `on: pull_request: branches: [main]`; it runs `:app:testDebugUnitTest` only, not `assembleDebug` and not `lintDebug`.
 
 ## 2. Toolchain
 
@@ -53,7 +53,7 @@ Before any push read `git status --short` and `git diff --cached` line by line. 
 
 **6.3 One phase, then stop.** Report it, stop for review, state what you did not do. If a command fails, retry with a fix at most 3 times, then stop with the exact command, the error and what changed.
 
-**6.4 Never push to `main`.** Push a branch, open a PR, and get an explicit owner yes in the PR thread before merging or publishing a release, every time. `FACT:` the only workflow runs on `push` to `main` and on `workflow_dispatch`, never on `pull_request`, so a direct push is both the only thing that runs a build and a release published from unreviewed code.
+**6.4 Never push to `main`.** Push a branch, open a PR, and get an explicit owner yes in the PR thread before merging or publishing a release, every time. `FACT:` two workflows exist. `.github/workflows/pr-checks.yml` runs on `pull_request` to `main` and runs `:app:testDebugUnitTest` with `contents: read`. `.github/workflows/debug-apk-release.yml` runs on `push` to `main` and on `workflow_dispatch`, and it publishes a GitHub Release and a `debug-apk-<run_number>` tag. So a PR is tested before merge, but the APK build and the release still happen only after a push to `main`, which is why a direct push publishes a release from unreviewed code.
 
 **6.5 Every PR carries a short Hinglish summary.** 3 to 6 lines: what changed, why, what you ran, what you could not run, and the risk. The owner decides from that, not from the diff.
 
@@ -101,4 +101,4 @@ The first revision made eight false claims: Room, ViewModel, `app/schemas/`, `gr
 
 ## 11. Open items
 
-`personal-agent` and the five-skill starter set are still in the UI against 6.17. No PR-triggered CI, so nothing validates a branch before merge. No Kotlin linter or formatter. `core-ktx` and `activity-compose` two years behind the rest of the stack. No release signing. `documents/M3-design_v01/` duplicates Kotlin sources already under `app/src/main/java` and will drift.
+`personal-agent` and the five-skill starter set are still in the UI against 6.17. No Kotlin linter or formatter. `core-ktx` and `activity-compose` two years behind the rest of the stack. No release signing. `documents/M3-design_v01/` duplicates Kotlin sources already under `app/src/main/java` and will drift.
