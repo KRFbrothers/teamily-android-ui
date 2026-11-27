@@ -1,0 +1,72 @@
+# Runs the JVM unit tests on every pull request that targets `main`.
+#
+# Why a separate file and not a `pull_request` trigger on
+# debug-apk-release.yml: that workflow publishes a GitHub Release and a new
+# `debug-apk-<run_number>` tag on every run. Running it on a pull request would
+# publish a release for unmerged code, and its `contents: write` permission
+# would be handed to PR runs. Release publishing stays push-only.
+#
+# Why only `testDebugUnitTest` and not `assembleDebug`: the APK build is the
+# expensive half of the release job (SDK platform download plus a full
+# assemble). A pull request only needs to know whether the code compiles and
+# the unit tests pass, so this job stops at the test task. The APK is still
+# built and published by debug-apk-release.yml after merge.
+#
+# No `lintDebug` here on purpose: the repo has no lint baseline, so adding it
+# would fail this check on pre-existing warnings and block every PR. Add it
+# once a baseline is committed.
+
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+# Read-only: this job only checks out code and runs tests.
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the previous run.
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # JDK 21 matches debug-apk-release.yml: Gradle 9.6.0 + AGP 9.2.0 want 21,
+      # while the Kotlin compiler targets Java 17 bytecode (jvmTarget = JVM_17).
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+
+      # Same SDK packages as the release job, so a PR cannot pass here and then
+      # fail on `main` because of a missing platform.
+      - name: Accept Android SDK licenses & install SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-37.1" "build-tools;37.0.0" || \
+          sdkmanager "platforms;android-37" "build-tools;37.0.0" || true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # No upload-artifact step: this account's Actions artifact storage quota is
+      # exhausted (see the header of debug-apk-release.yml), so it would fail the
+      # job. The failing test names are printed in the log instead.
+      - name: Run JVM unit tests
+        run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
