@@ -9,6 +9,7 @@ import ai.duagenai.design.theme.TeamilyLightPalette
 import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.TeamilyMotion
 import ai.duagenai.design.theme.TeamilyPalette
+import ai.duagenai.design.theme.rememberReduceMotion
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -614,7 +615,8 @@ private fun SilhouetteAvatar(
         fill
     }
 
-    val blink = if (showEyes) {
+    val reduceMotion = rememberReduceMotion()
+    val blink = if (showEyes && !reduceMotion) {
         rememberInfiniteTransition(label = "agentBlink").animateFloat(
             initialValue = 1f,
             targetValue = 1f,
