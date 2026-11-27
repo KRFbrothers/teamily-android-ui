@@ -167,8 +167,9 @@ import org.robolectric.annotation.Config
  *  ------------------------
  *  ChatScreen draws a composer under the conversation again, so Agent can be
  *  talked to. It is the SAME `ChatBar` pill Dua's home draws \u2014 one
- *  implementation, two call sites \u2014 and only its placeholder differs
- *  (`"Message <title>..."`). [assertComposer] therefore checks the placeholder
+ *  implementation, two call sites. An empty thread shows ChatBar's own
+ *  `"Ask Dua..."`, and a thread with messages shows `"What's next?"`.
+ *  [assertComposer] therefore checks the placeholder
  *  text plus the composer's own controls, and [assertNoComposer] is kept for the
  *  one surface a composer must still be absent from: Agent's HOME, which is the
  *  agent surface, not a conversation.
@@ -215,7 +216,7 @@ import org.robolectric.annotation.Config
 private data class ChatCase(
     val chatId: String,
     val title: String,
-    /** Agent threads get the agent header pill and "Type a message...". */
+    /** Agent threads get the agent header pill. The composer hint is ChatBar's. */
     val agent: Boolean,
 )
 
@@ -239,22 +240,18 @@ private val CHATS = listOf(
 private const val CHAT_MARKER = "Agent \u00b7 always on"
 
 /**
- * The generic composer placeholder a thread must NOT show.
+ * The old composer override a thread must NOT show.
  *
- * `ChatBar` is shared, so a thread's placeholder is `"Message <title>..."`.
- * This is the OLD generic string: if it ever reappeared on a thread it would mean
- * the placeholder stopped being thread-specific. Kept as a named constant so the
- * assertion reads as intent rather than as a magic string.
+ * ChatScreen used to pass `"Type a message..."` into ChatBar and hide the
+ * dynamic hint. If it reappears, that override is back.
  */
-private const val COMPOSER_PLACEHOLDER = "Type a message"
+private const val COMPOSER_PLACEHOLDER = "Type a message..."
 
 /**
- * The placeholder Agent's own thread must show.
- *
- * `ChatScreen` passes `"Message $chatTitle..."`, and the pinned row opens
- * [DUA_AGENT_TITLE], so this is the exact string the pill renders.
+ * The hint an empty thread shows. ChatBar owns it: `"Ask Dua..."` until the
+ * thread has a message, then `"What's next?"`.
  */
-private const val AGENT_COMPOSER_HINT = "Type a message..."
+private const val AGENT_COMPOSER_HINT = "Ask Dua..."
 
 /**
  * The Agent-home hero card's title (the user's personal agent).
@@ -529,11 +526,11 @@ private val MANAGED_AGENTS = listOf("Code Reviewer", "Backend Architect", "DevOp
  *
  * A thread now starts EMPTY — no seeded dialogue. Each test that counts
  * bubble cubes sends one message first and waits for the canned offline
- * reply, so the thread holds exactly one user bubble and one agent bubble:
- * two cubes, beside the one in the header. If a bubble ever stopped using
- * the thread's cube, this count would drop and the test would say so.
+ * reply, so the thread holds one user bubble and one agent bubble. The
+ * user bubble has no avatar. Only the agent reply draws the bot mark,
+ * beside the one in the header.
  */
-private const val THREAD_BUBBLE_CUBES = 2
+private const val THREAD_BUBBLE_CUBES = 1
 private const val THREAD_HEADER_CUBES = 1
 
 /**
@@ -991,8 +988,8 @@ class DuaGenAINavHostTest {
 
     /**
      * Sends one message in the open thread and waits for the canned offline
-     * reply, leaving exactly one user bubble and one agent bubble — the state
-     * the bubble-cube count assertions expect.
+     * reply, leaving exactly one user bubble and one agent bubble. Only the
+     * agent bubble carries the bot mark.
      */
     private fun startConversation() {
         compose.onNode(hasSetTextAction()).performTextInput("Test message")
@@ -2842,13 +2839,13 @@ class DuaGenAINavHostTest {
             // ChatScreen is open…
             assertOnChat()
 
-            // …with the shared composer under the (honest empty) conversation:
-            // an agent's hint is "Type a message...", any other thread's names it.
+            // …with the shared composer under the (honest empty) conversation.
+            // Every thread uses ChatBar's empty hint, not a per-title override.
             assertComposer(threadComposerHint(chat))
 
             // An empty thread draws the header avatar only. Say something, wait
-            // for the canned reply, and the bot shape appears beside both
-            // bubbles.
+            // for the canned reply, and the bot shape appears beside the
+            // agent bubble. The user bubble stays plain.
             assertVisibleDescCount(avatarLabel(chat.title), THREAD_HEADER_CUBES)
             startConversation()
             assertVisibleDescCount(bubbleLabel(chat.title), THREAD_BUBBLE_CUBES)
@@ -2861,7 +2858,7 @@ class DuaGenAINavHostTest {
     }
 
     @Test
-    fun theThreadDrawsTheChatsCubeInEveryBubble() {
+    fun theThreadDrawsTheChatsCubeBesideTheAgentBubble() {
         launch()
 
         openChatFromDrawer(CHATS.first { it.chatId == "chat_market_research" })
@@ -3525,7 +3522,7 @@ class DuaGenAINavHostTest {
         // dialogue. Saying something fills it — that flow has its own test.
         assertVisible("No messages yet")
 
-        // The composer is there, and its hint names Agent.
+        // The composer is there, with ChatBar's empty-thread hint.
         assertComposer(AGENT_COMPOSER_HINT)
     }
 
@@ -3556,8 +3553,10 @@ class DuaGenAINavHostTest {
         // The user's message is in the thread\u2026
         assertVisibleSubstring("Book the venue for the launch")
 
-        // \u2026the field is cleared, so the hint is showing again\u2026
-        assertVisible(AGENT_COMPOSER_HINT)
+        // The field is cleared. The thread now has a message, so the hint
+        // moves off the empty-thread line and onto the active one.
+        assertVisible("What's next?")
+        assertNotVisible(AGENT_COMPOSER_HINT)
 
         // \u2026and Agent replies after the typing beat. The reply is a canned
         // string, so this waits for it rather than asserting it instantly.
@@ -5249,14 +5248,12 @@ class DuaGenAINavHostTest {
     private fun bubbleLabel(title: String) = "$title bubble"
 
     /**
-     * The composer hint a thread shows: `ChatScreen` passes
-     * `"Message $chatTitle\u2026"`, so this mirrors that expression.
-     *
-     * Duplicated on purpose, like the two label helpers above: if the screen
-     * changes its hint, the test must fail rather than silently keep matching.
+     * The composer hint an empty thread shows. ChatBar picks `"Ask Dua..."`
+     * for every conversation; [chat] is unused and kept so call sites stay
+     * obvious if a thread ever needs its own hint again.
      */
-    private fun threadComposerHint(chat: ChatCase) =
-        if (chat.agent) AGENT_COMPOSER_HINT else "Message ${chat.title}\u2026"
+    private fun threadComposerHint(@Suppress("UNUSED_PARAMETER") chat: ChatCase) =
+        AGENT_COMPOSER_HINT
 }
 
 /** Create Agent strings, as in res/values/strings.xml. */
