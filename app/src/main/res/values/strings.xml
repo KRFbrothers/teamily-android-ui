@@ -107,6 +107,7 @@
     <string name="chat_starter_brainstorm">Brainstorm ideas</string>
     <string name="chat_thinking">Thinking...</string>
     <string name="chat_request_timeout">The reply took too long. Tap Retry.</string>
+    <string name="chat_request_offline">Chat request: no connection.</string>
     <string name="chat_retry">Retry</string>
     <!-- Voice Dictation & Voice Note Recording -->
     <string name="voice_dictate_prompt">Speak to type...</string>

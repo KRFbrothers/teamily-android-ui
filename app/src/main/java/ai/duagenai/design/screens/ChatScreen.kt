@@ -516,6 +516,7 @@ fun ChatScreen(
     val isPersonal = chatId == PERSONAL_AGENT_CHAT_ID
     val isDuaAgent = chatId == AGENT_CHAT_ID
     val timeoutMessage = stringResource(R.string.chat_request_timeout)
+    val offlineMessage = stringResource(R.string.chat_request_offline)
     // A failed live turn stays out of the transcript. These two short strings
     // are enough to redraw the error bubble after rotation.
     var errorText by rememberSaveable(chatId) { mutableStateOf("") }
@@ -592,7 +593,7 @@ fun ChatScreen(
                     }
                 } catch (e: Exception) {
                     if (!streamedAny) {
-                        errorText = e.message?.takeIf { it.isNotBlank() } ?: "Chat request: no connection."
+                        errorText = e.message?.takeIf { it.isNotBlank() } ?: offlineMessage
                         retryText = text
                     }
                 } finally {
