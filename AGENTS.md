@@ -179,8 +179,9 @@ here. Do not claim a build passed.
 **FACT:** `local.properties` is gitignored. Source: `.gitignore:15`.
 
 **FACT:** No keystore, `.env` or signing file is tracked in git history.
-`ASSUMPTION`: verified by the absence of these paths in the working tree; a
-full history scan was not run.
+Source: `git log --all --pretty=format: --name-only --diff-filter=A | sort -u |
+grep -iE "keystore|\.jks|\.keystore|\.env$|\.env\.|signing|\.p12|\.pem"`
+returns 0 matches across all 301 commits.
 
 **FACT:** The debug APK is signed with the throwaway debug keystore AGP
 generates on the runner. No signing secret is needed. Source:
@@ -321,11 +322,19 @@ spacing, shapes or navigation unless explicitly requested. Source:
 
 ## 7. Cross-repo rules
 
-**FACT:** `API_CONTRACT.md` in the `dua-backend` repo is the single source of
-truth for every request and response shape this app depends on. Source: the
-app cites it at
+**FACT:** `API_CONTRACT.md` lives in the `dua-backend` repo, not in this one.
+`find . -name API_CONTRACT.md` returns nothing here, and
+`grep -rn "API_CONTRACT" app/src` returns 0 matches. The app does not cite it.
+
+**FACT:** What the app actually cites is the backend's SSE wire format. Source:
 `app/src/main/java/ai/duagenai/design/screens/ChatTranscriptStore.kt:317-319`
 ("see the backend's `apps/api/src/core/sse.mjs` wire-format comment").
+`grep -rn "sse.mjs" app/src` returns 2 matches, both comments
+(`ChatTranscriptStore.kt:318`, `ChatTranscriptStoreTest.kt:18`).
+
+**ASSUMPTION:** `API_CONTRACT.md` is still the intended contract of record for
+request and response shapes. The app never names it, so this is a convention,
+not something the code proves.
 
 **Rule:** Any endpoint change must update `API_CONTRACT.md` in the backend repo
 in the same coordinated change. Never change a shape on one side only.
@@ -385,7 +394,7 @@ These are recorded so an agent does not copy the pattern.
 | `versionCode` never incremented | `app/build.gradle.kts:77` |
 | Personal demo data in a reachable screen | `DuaAgentScreens.kt:1332,1340,1348` |
 | 5265-line single test class | `app/src/test/java/ai/duagenai/design/nav/DuaGenAINavHostTest.kt` |
-| Robolectric pinned to SDK 34 while `compileSdk` is 37.1 | `app/build.gradle.kts:162` |
+| Robolectric pinned to SDK 34 while `compileSdk` is 37.1 | `app/src/test/java/ai/duagenai/design/nav/DuaGenAINavHostTest.kt:699` (`@Config(sdk = [34])`); same pin at `ChatBarTest.kt:30`, `ChatTranscriptStoreTest.kt:26`, `CreateDocumentWiringTest.kt:23`. `app/build.gradle.kts:162` only declares the dependency, it does not pin the SDK |
 | `RECORD_AUDIO` declared but never requested | `app/src/main/AndroidManifest.xml:11`; `grep -rn "RECORD_AUDIO" --include=*.kt app/src/main` returns 0 |
 
 ---
