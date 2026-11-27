@@ -4,6 +4,7 @@ import ai.duagenai.design.R
 import ai.duagenai.design.theme.PandaMark
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.TeamilySansFontFamily
+import ai.duagenai.design.theme.rememberReduceMotion
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -97,25 +98,33 @@ fun VoiceLiveScreen(
         1.0f to MaterialTheme.colorScheme.primaryContainer.copy(alpha = glowAlpha),
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "VoiceLivePulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.88f,
-        targetValue = 1.12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "PulseScale",
-    )
-    val auraAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.65f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "AuraAlpha",
-    )
+    val reduceMotion = rememberReduceMotion()
+    val pulseScale: Float
+    val auraAlpha: Float
+    if (reduceMotion) {
+        pulseScale = 1f
+        auraAlpha = 0.45f
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "VoiceLivePulse")
+        pulseScale = infiniteTransition.animateFloat(
+            initialValue = 0.88f,
+            targetValue = 1.12f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "PulseScale",
+        ).value
+        auraAlpha = infiniteTransition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 0.65f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "AuraAlpha",
+        ).value
+    }
 
     Box(
         modifier = modifier
@@ -137,9 +146,12 @@ fun VoiceLiveScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Minimize handle (=) matching Gemini Live layout
+                val backCd = stringResource(R.string.back)
                 IconButton(
                     onClick = onBack,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .semantics { contentDescription = backCd },
                 ) {
                     Column(
                         modifier = Modifier.size(24.dp),

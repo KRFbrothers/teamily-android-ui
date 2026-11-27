@@ -98,7 +98,15 @@ data class TeamilyPalette(
     val tileViolet: Color,
     val tileMint: Color,
     val tileInk: Color,
-    /** Create Agent swatch: brown. Same value in light and dark, like the other tiles. */
+    /**
+     * Create Agent swatch: brown. Same value in light and dark, like the other
+     * tiles.
+     *
+     * `#926343`, not the original `#8B5E3C`: the swatch is a filled dot on the
+     * screen canvas, and the old value measured 2.92:1 against the dark canvas
+     * (`#1D2120`), under the 3:1 WCAG 1.4.11 floor for a UI component. This one
+     * is 3.17:1 on dark and 4.55:1 on the light canvas (`#EEF2EF`).
+     */
     val tileBrown: Color,
     /** Create Agent swatch: red. */
     val tileRed: Color,
@@ -223,7 +231,7 @@ val TeamilyDarkPalette = TeamilyPalette(
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
-    tileBrown = Color(0xFF8B5E3C),
+    tileBrown = Color(0xFF926343),
     tileRed = Color(0xFFE5484D),
     tileBlue = Color(0xFF2F7FED),
     tilePink = Color(0xFFE84A9B),
@@ -321,7 +329,7 @@ val TeamilyLightPalette = TeamilyPalette(
     tileViolet = Color(0xFF9A7BFF),
     tileMint = Color(0xFF9BE3B8),
     tileInk = Color(0xFF17201B),
-    tileBrown = Color(0xFF8B5E3C),
+    tileBrown = Color(0xFF926343),
     tileRed = Color(0xFFE5484D),
     tileBlue = Color(0xFF2F7FED),
     tilePink = Color(0xFFE84A9B),

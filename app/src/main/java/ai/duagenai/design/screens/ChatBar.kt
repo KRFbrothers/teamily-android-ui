@@ -4,6 +4,7 @@ import ai.duagenai.design.R
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
 import ai.duagenai.design.theme.TeamilySansFontFamily
+import ai.duagenai.design.theme.rememberReduceMotion
 import ai.duagenai.design.theme.teamilyPalette
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -73,6 +74,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.computedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -206,16 +208,21 @@ fun ChatBar(
             outerRounding = CornerRounding.fraction(0.5f),
         )
     }
-    val infiniteTransition = rememberInfiniteTransition(label = "StopMorphTransition")
-    val morphProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "StopMorphProgress",
-    )
+    val reduceMotion = rememberReduceMotion()
+    val morphProgress by if (reduceMotion) {
+        remember { mutableFloatStateOf(0f) }
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "StopMorphTransition")
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "StopMorphProgress",
+        )
+    }
     val morphShape = remember(circlePolygon, starPolygon) {
         MorphPolygonShape(circlePolygon, starPolygon) { morphProgress }
     }

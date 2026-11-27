@@ -35,7 +35,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -77,8 +77,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -844,10 +846,11 @@ fun ChatScreen(
                     }
                 }
             }
-            items(messages) { msg ->
+            itemsIndexed(messages) { index, msg ->
+                val isLatest = index == messages.lastIndex
                 when (msg.who) {
-                    SavedMessage.AGENT -> AgentBubble(msg, chatTitle)
-                    else -> UserBubble(msg)
+                    SavedMessage.AGENT -> AgentBubble(msg, chatTitle, isLatest = isLatest)
+                    else -> UserBubble(msg, isLatest = isLatest)
                 }
             }
             if (showError) {
@@ -967,7 +970,10 @@ private fun TypingBubble(chatTitle: String) {
             shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-            modifier = Modifier.semantics { contentDescription = "Agent is typing" },
+            modifier = Modifier.semantics {
+                contentDescription = "Agent is typing"
+                liveRegion = LiveRegionMode.Polite
+            },
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -1014,7 +1020,9 @@ private fun ChatErrorBubble(
             shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
             color = MaterialTheme.colorScheme.errorContainer,
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.35f)),
-            modifier = Modifier.widthIn(max = 300.dp),
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
@@ -1047,7 +1055,7 @@ private fun ChatErrorBubble(
 }
 
 @Composable
-private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
+private fun AgentBubble(msg: SavedMessage, chatTitle: String, isLatest: Boolean = false) {
     val spacing = LocalDuaGenAISpacing.current
     val effectiveTitle = msg.agentName?.takeIf { it.isNotBlank() } ?: chatTitle
     Row(verticalAlignment = Alignment.Bottom) {
@@ -1061,7 +1069,12 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
                 shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 8.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-                modifier = Modifier.widthIn(max = 300.dp),
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .then(
+                        if (isLatest) Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        else Modifier,
+                    ),
             ) {
                 Text(
                     text = formatChatMarkdown(msg.text),
@@ -1103,7 +1116,7 @@ private fun AgentBubble(msg: SavedMessage, chatTitle: String) {
 }
 
 @Composable
-private fun UserBubble(msg: SavedMessage) {
+private fun UserBubble(msg: SavedMessage, isLatest: Boolean = false) {
     val palette = teamilyPalette()
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1114,7 +1127,12 @@ private fun UserBubble(msg: SavedMessage) {
             Surface(
                 shape = RoundedCornerShape(24.dp, 24.dp, 8.dp, 24.dp),
                 color = palette.bubbleUser,
-                modifier = Modifier.widthIn(max = 300.dp),
+                modifier = Modifier
+                    .widthIn(max = 300.dp)
+                    .then(
+                        if (isLatest) Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        else Modifier,
+                    ),
             ) {
                 Text(
                     text = msg.text,
