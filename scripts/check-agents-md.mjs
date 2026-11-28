@@ -550,11 +550,19 @@ claim("7", "instanceFollowRedirects is false on authenticated requests", () =>
 // Section 9: Known defects
 // ---------------------------------------------------------------------------
 
-claim("9", "ApiConfig declares sheetSecretKey", () =>
-  has("app/src/main/java/ai/duagenai/design/screens/ApiConfig.kt", "sheetSecretKey"),
-);
-claim("9", "SheetBackendClient still ships that secret", () =>
-  has("app/src/main/java/ai/duagenai/design/screens/SheetBackendClient.kt", "ApiConfig.sheetSecretKey"),
+// Fixed: the Apps Script secret and its client are gone. The check is kept and
+// inverted rather than deleted, so a reintroduction fails here.
+claim("9", "ApiConfig no longer declares sheetSecretKey", () => {
+  const src = read("app/src/main/java/ai/duagenai/design/screens/ApiConfig.kt");
+  const there = src.includes("sheetSecretKey") || src.includes("SHEET_WEB_APP_URL");
+  return {
+    ok: !there,
+    expected: "no sheetSecretKey / SHEET_WEB_APP_URL in ApiConfig.kt",
+    actual: there ? "present" : "absent",
+  };
+});
+claim("9", "SheetBackendClient is deleted", () =>
+  absent("app/src/main/java/ai/duagenai/design/screens/SheetBackendClient.kt"),
 );
 claim("9", "allowBackup is enabled in AndroidManifest.xml", () =>
   has("app/src/main/AndroidManifest.xml", 'android:allowBackup="true"'),

@@ -77,11 +77,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -1350,10 +1352,22 @@ private fun ArtifactRevisionSheet(
     var isLoading by remember { mutableStateOf(true) }
     var instructionText by remember { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
+    // A failed fetch or revise used to escape the coroutine and take the app
+    // down. Both now land here and are shown in the sheet instead.
+    var errorText by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(artifact.id) {
         isLoading = true
-        versions = onFetchVersions()
+        errorText = null
+        versions = try {
+            onFetchVersions()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            errorText = e.message?.takeIf { it.isNotBlank() }
+                ?: "Revisions load nahi ho paye."
+            emptyList()
+        }
         isLoading = false
     }
 
@@ -1400,12 +1414,21 @@ private fun ArtifactRevisionSheet(
                     if (prompt.isNotBlank()) {
                         scope.launch {
                             isSubmitting = true
-                            val result = onRevise(prompt)
-                            if (result != null) {
-                                instructionText = ""
-                                versions = onFetchVersions()
+                            errorText = null
+                            try {
+                                val result = onRevise(prompt)
+                                if (result != null) {
+                                    instructionText = ""
+                                    versions = onFetchVersions()
+                                }
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                errorText = e.message?.takeIf { it.isNotBlank() }
+                                    ?: "Revision fail ho gayi."
+                            } finally {
+                                isSubmitting = false
                             }
-                            isSubmitting = false
                         }
                     }
                 },
@@ -1432,6 +1455,18 @@ private fun ArtifactRevisionSheet(
             Spacer(modifier = Modifier.height(spacing.md))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(spacing.sm))
+
+            errorText?.let { message ->
+                Text(
+                    text = message,
+                    style = DuaGenAITextStyles.meta,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = spacing.xs)
+                        .testTag("artifact_revision_error"),
+                )
+            }
 
             Text(
                 text = "Version History (${versions.size})",
