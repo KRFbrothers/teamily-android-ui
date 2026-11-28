@@ -347,7 +347,8 @@ const val MADE_AGENT_PREFIX = "made_agent_"
  */
 internal val BUILT_IN_AGENT_IDS: Set<String> = setOf(
     AGENT_CHAT_ID,
-    PERSONAL_AGENT_CHAT_ID,
+    OFFICIAL_AGENT_ID,
+    LEGACY_OFFICIAL_AGENT_ID,
     "chat_webpage_developer",
     "chat_slides_assistant",
     "chat_market_research",
@@ -404,7 +405,7 @@ fun AgentChatHeaderPill(
     onOpenProfile: () -> Unit,
     onInvite: () -> Unit,
     modifier: Modifier = Modifier,
-    verified: Boolean = agentId == AGENT_CHAT_ID,
+    verified: Boolean = isOfficialAgentThread(agentId),
 ) {
     val c = rememberAgentColors()
     val backLabel = stringResource(R.string.back)
@@ -754,7 +755,7 @@ fun DuaAgentProfileScreen(
     onOpenNewGroup: () -> Unit = {},
     onOpenConnectApp: () -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = DUA_AGENT_TITLE,
+    agentName: String = DUA_WORK_TITLE,
     agentId: String = AGENT_CHAT_ID,
     onOpenOverview: () -> Unit = {},
     skillsList: List<SkillItem> = emptyList(),
@@ -1265,7 +1266,7 @@ fun DuaAgentWorkspaceScreen(
     onBack: () -> Unit = {},
     onOpen: (AgentWorkspaceDestination) -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = DUA_AGENT_TITLE,
+    agentName: String = DUA_WORK_TITLE,
     agentId: String = AGENT_CHAT_ID,
     onAgentHome: () -> Unit = onBack,
     userAvatar: (@Composable () -> Unit)? = null,
@@ -1364,11 +1365,11 @@ fun DuaAgentWorkspaceScreen(
 fun DuaAgentOverviewScreen(
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier,
-    agentName: String = DUA_AGENT_TITLE,
+    agentName: String = DUA_WORK_TITLE,
     agentId: String = AGENT_CHAT_ID,
 ) {
-    val description = if (agentId == AGENT_CHAT_ID) {
-        DUA_AGENT_SUBTITLE
+    val description = if (isOfficialAgentThread(agentId)) {
+        stringResource(R.string.dua_work_pinned_subtitle)
     } else {
         stringResource(R.string.agent_overview_description, agentName)
     }
@@ -1527,7 +1528,7 @@ private fun ApiCard(c: AgentColors, icon: String, title: String, body: String, c
 
 /** SVG 10 — Agent API, Setup tab. */
 @Composable
-fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_AGENT_TITLE) {
+fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_WORK_TITLE) {
     val c = rememberAgentColors()
     val toggles = remember { mutableStateMapOf<String, Boolean>() }
     Column(modifier.fillMaxSize().background(c.body)) {
@@ -1584,7 +1585,7 @@ fun DuaAgentApiScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, ag
 
 /** SVG 11 — Live Sites empty state. */
 @Composable
-fun DuaAgentLiveSitesScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_AGENT_TITLE) {
+fun DuaAgentLiveSitesScreen(onBack: () -> Unit = {}, modifier: Modifier = Modifier, agentName: String = DUA_WORK_TITLE) {
     val c = rememberAgentColors()
     Column(modifier.fillMaxSize().background(c.body)) {
         AgentTop(c, subtitle = "Built, connected, and operated by $agentName's Agent Team") {
@@ -1662,7 +1663,7 @@ fun DuaAgentNewGroupScreen(
     modifier: Modifier = Modifier,
     /** The agent the group starts with ("Selected 1"). */
     agentId: String = AGENT_CHAT_ID,
-    agentName: String = DUA_AGENT_TITLE,
+    agentName: String = DUA_WORK_TITLE,
 ) {
     val c = rememberAgentColors()
     val selectedInk = if (c.isDark) c.ink else c.navSelectedInk

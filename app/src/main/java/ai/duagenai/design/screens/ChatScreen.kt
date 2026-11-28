@@ -171,27 +171,25 @@ import ai.duagenai.design.theme.teamilyPalette
 const val SAMPLE_CHAT_ID = "chat_webpage_developer"
 
 /**
- * The Personal Agent's conversation id.
+ * Dua Work's local conversation id.
  *
- * Agent home's hero card opens this thread through the same `chat/{chatId}`
- * route as every other conversation. It is a normal thread: a signed-in send
- * posts `mode: "auto"` and `stream: false` to the Node API. It is deliberately
- * not [AGENT_CHAT_ID].
- */
-const val PERSONAL_AGENT_CHAT_ID = "chat_personal"
-
-/**
- * Dua Agent's conversation id.
- *
- * The pinned "Dua Agent" row on Agent home opens this thread. A signed-in send
- * posts `mode: "agent"` and `stream: true` to the engine, with the enabled
- * skill ids. It is a stable id, so `CubeCatalog.forEntity` gives the thread a
- * cube the same way it gives every other thread one.
+ * The hero card and the pinned "Dua Work" row on Agent home open this thread. A
+ * signed-in send posts `mode: "agent"` and `stream: true` to the engine, with
+ * the enabled skill ids. It is a stable id, so `CubeCatalog.forEntity` gives
+ * the thread a cube the same way it gives every other thread one.
  */
 const val AGENT_CHAT_ID = "chat_agent"
 
-/** The title Agent's thread shows in its top bar. */
-const val AGENT_CHAT_TITLE = "Agent"
+/**
+ * True for the single official Dua Work agent thread — whether opened from
+ * Home's local route ([AGENT_CHAT_ID]) or from backend agent id `"dua-work"` /
+ * legacy fallback `"dua-agent"`.
+ */
+fun isOfficialAgentThread(chatId: String): Boolean =
+    chatId == AGENT_CHAT_ID || isOfficialAgentId(chatId)
+
+/** The title Agent's thread shows in its preview top bar. */
+const val AGENT_CHAT_TITLE = DUA_WORK_TITLE
 
 sealed interface Message {
     val text: String
@@ -465,7 +463,7 @@ fun ChatScreen(
         if (TokenStore.token != null) {
             scope.launch(Dispatchers.IO) {
                 try {
-                    remoteSkills = RemoteSkillsDataSource().fetch(if (chatId == AGENT_CHAT_ID) "dua-agent" else null)
+                    remoteSkills = RemoteSkillsDataSource().fetch(if (isOfficialAgentThread(chatId)) OFFICIAL_AGENT_ID else null)
                 } catch (_: Exception) {}
             }
         }
@@ -515,8 +513,7 @@ fun ChatScreen(
             }
         }
     }
-    val isPersonal = chatId == PERSONAL_AGENT_CHAT_ID
-    val isDuaAgent = chatId == AGENT_CHAT_ID
+    val isOfficialAgent = isOfficialAgentThread(chatId)
     val timeoutMessage = stringResource(R.string.chat_request_timeout)
     val offlineMessage = stringResource(R.string.chat_request_offline)
     // A failed live turn stays out of the transcript. These two short strings
@@ -524,12 +521,10 @@ fun ChatScreen(
     var errorText by rememberSaveable(chatId) { mutableStateOf("") }
     var retryText by rememberSaveable(chatId) { mutableStateOf("") }
 
-    // The list is the conversation plus, while Agent is "typing", one extra row
-    // (and, on the Personal Agent thread, the quick-action chips row).
+    // The list is the conversation plus, while Agent is "typing", one extra row.
     val showError = errorText.isNotEmpty() && !agentTyping
     val rows = messages.size +
         (if (agentTyping) 1 else 0) +
-        (if (isPersonal) 1 else 0) +
         (if (showError) 1 else 0)
 
     // Keep the newest message in view. Keyed on the row count so it fires when a
@@ -625,7 +620,7 @@ fun ChatScreen(
         if (first.isNotEmpty() && transcriptStore.threads.value[chatId].isNullOrEmpty()) {
             draftState.edit { replace(0, length, first) }
             send()
-        } else if (TokenStore.token != null && !isPersonal && !isDuaAgent && !chatId.startsWith("chat_")) {
+        } else if (TokenStore.token != null && !isOfficialAgent && !chatId.startsWith("chat_")) {
             // Load persistent conversation history from GET /api/conversations/:id/messages
             scope.launch(Dispatchers.IO) {
                 try {
@@ -676,12 +671,8 @@ fun ChatScreen(
             } else TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // The two pinned agents carry their own badge in front of
-                        // the title (Personal: BotBadge, Dua Agent: SignalBotBadge).
-                        if (isPersonal) {
-                            BotBadge(32.dp)
-                            Spacer(Modifier.width(spacing.sm))
-                        } else if (isDuaAgent) {
+                        // The official agent carries its SignalBotBadge in front of the title.
+                        if (isOfficialAgent) {
                             SignalBotBadge(32.dp)
                             Spacer(Modifier.width(spacing.sm))
                         }
@@ -692,7 +683,7 @@ fun ChatScreen(
                                     style = DuaGenAITextStyles.rowTitle,
                                     color = MaterialTheme.colorScheme.onBackground,
                                 )
-                                if (isDuaAgent) {
+                                if (isOfficialAgent) {
                                     Spacer(Modifier.width(4.dp))
                                     VerifiedCheck()
                                 }
@@ -721,8 +712,8 @@ fun ChatScreen(
                 },
                 actions = {
                     when {
-                        // Personal Agent: its badge is already in the title.
-                        isPersonal || isDuaAgent -> Unit
+                        // Official agent: its badge is already in the title.
+                        isOfficialAgent -> Unit
                         else -> {
                             PandaMark(
                                 size = 32.dp,
@@ -796,9 +787,7 @@ fun ChatScreen(
         ) {
             if (messages.isEmpty() && !agentTyping) {
                 // An honest empty thread: no scripted opener, just a hint that
-                // points at the composer. Centered in the pain area. The
-                // Personal Agent's quick-action chips live here too, so they
-                // stay on screen instead of being pushed out by this filler.
+                // points at the composer. Centered in the main area.
                 item {
                     Column(
                         modifier = Modifier
@@ -818,31 +807,15 @@ fun ChatScreen(
                             style = DuaGenAITextStyles.snippet,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        if (isPersonal) {
-                            Spacer(Modifier.height(spacing.lg))
-                            QuickActionChips(
-                                label = stringResource(R.string.chat_empty_try_asking),
-                                actions = PERSONAL_AGENT_QUICK_ACTIONS,
-                                onPick = { prompt ->
-                                    if (!agentTyping) {
-                                        draftState.edit { replace(0, length, prompt) }
-                                        send()
-                                    }
-                                },
-                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            )
-                        } else {
-                            Spacer(Modifier.height(24.dp))
-                            ChatStarterChips(
-                                onPick = { prompt ->
-                                    if (!agentTyping) {
-                                        draftState.edit { replace(0, length, prompt) }
-                                        send()
-                                    }
-                                },
-                            )
-                        }
+                        Spacer(Modifier.height(24.dp))
+                        ChatStarterChips(
+                            onPick = { prompt ->
+                                if (!agentTyping) {
+                                    draftState.edit { replace(0, length, prompt) }
+                                    send()
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -868,24 +841,6 @@ fun ChatScreen(
             }
             if (agentTyping) {
                 item { TypingBubble(chatTitle) }
-            }
-            // Personal Agent, conversation underway: the same quick-action
-            // chips as its demo screen, under the messages. A chip sends its
-            // text like a typed message. (In an EMPTY thread the chips render
-            // inside the empty state above — this item would sit off screen.)
-            if (isPersonal && messages.isNotEmpty()) {
-                item {
-                    QuickActionChips(
-                        label = stringResource(R.string.chat_empty_try_asking),
-                        actions = PERSONAL_AGENT_QUICK_ACTIONS,
-                        onPick = { prompt ->
-                            if (!agentTyping) {
-                                draftState.edit { replace(0, length, prompt) }
-                                send()
-                            }
-                        },
-                    )
-                }
             }
         }
     }

@@ -8,10 +8,11 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.isNotEnabled
@@ -97,9 +98,18 @@ import ai.duagenai.design.screens.RemoteDataSource
 import ai.duagenai.design.screens.RemoteMemoryDataSource
 import ai.duagenai.design.screens.demoArtifacts
 import ai.duagenai.design.screens.AGENT_CHAT_ID
-import ai.duagenai.design.screens.DUA_AGENT_TITLE
-import ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID
-import ai.duagenai.design.screens.PERSONAL_AGENT_TITLE
+import ai.duagenai.design.screens.AgentItem
+import ai.duagenai.design.screens.ConversationItem
+import ai.duagenai.design.screens.DUA_WORK_HERO_SUBTITLE
+import ai.duagenai.design.screens.DUA_WORK_PINNED_SUBTITLE
+import ai.duagenai.design.screens.DUA_WORK_TITLE
+import ai.duagenai.design.screens.HomeScreen
+import ai.duagenai.design.screens.InMemoryAgentsDataSource
+import ai.duagenai.design.screens.LEGACY_OFFICIAL_AGENT_ID
+import ai.duagenai.design.screens.OFFICIAL_AGENT_ID
+import ai.duagenai.design.screens.isOfficialAgentId
+import ai.duagenai.design.screens.isOfficialAgentThread
+import ai.duagenai.design.screens.parseMessages
 import ai.duagenai.design.theme.DuaGenAITheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch as coroutineLaunch
@@ -177,11 +187,11 @@ import org.robolectric.annotation.Config
  *
  *  AGENT'S OWN THREAD
  *  ------------------
- *  Dua Agent has a conversation of its own. The pinned "Dua Agent" row opens
- *  it through the SAME `chat/{chatId}` route every other thread uses, with
- *  [AGENT_CHAT_ID]. The hero card opens the Personal Agent on
- *  [PERSONAL_AGENT_CHAT_ID]. No new route was invented. Dua Agent's pain area
- *  holds Agent's and the user's messages, and it carries the composer.
+ *  Dua Work has a conversation of its own (single official pinned agent).
+ *  Both the hero card and the pinned "Dua Work" row open it through the SAME
+ *  `chat/{chatId}` route every other thread uses, with [AGENT_CHAT_ID]. No
+ *  new route was invented. Dua Work's pain area holds Agent's and the user's
+ *  messages, and it carries the composer.
  *
  *  THE MEMORY TAB, THE FILTER AND THE INERT GUARD
  *  ----------------------------------------------
@@ -255,12 +265,11 @@ private const val COMPOSER_PLACEHOLDER = "Type a message..."
 private const val AGENT_COMPOSER_HINT = "Ask Dua..."
 
 /**
- * The Agent-home hero card's title (the user's personal agent).
- *
- * Used to FIND the card: it is the one filled card on Agent home and tapping
- * it opens the Personal Agent thread. The title is unique to the card.
+ * The Agent-home hero card's title and subtitle (Dua Work — the single
+ * official pinned agent).
  */
-private const val AGENT_ROLE_LINE = PERSONAL_AGENT_TITLE
+private const val AGENT_ROLE_LINE = DUA_WORK_TITLE
+private const val HERO_SUBTITLE = DUA_WORK_HERO_SUBTITLE
 
 /** Agent home's section headers and header brand. */
 private const val PINNED_HEADER = "Pinned \u00b7 1"
@@ -276,7 +285,7 @@ private const val GUTTER_DP = 14f
 /** res/values/strings.xml demo_label. */
 private const val DEMO_LABEL = "Demo"
 private const val APP_NAME_TEXT = "Dua Gen AI"
-private const val DUA_AGENT_ROW = "Dua Agent"
+private const val DUA_WORK_PINNED_ROW_SUBTITLE = DUA_WORK_PINNED_SUBTITLE
 
 /* The composer's controls, by their TalkBack descriptions. */
 private const val ATTACH_LABEL = "Attach"
@@ -907,11 +916,11 @@ class DuaGenAINavHostTest {
         assertVisibleDescCount(MCP_LABEL, 0)
     }
 
-    /** Opens Dua Agent's thread the way a user does: Agent mode -> pinned row. */
+    /** Opens Dua Work's thread the way a user does: Agent mode -> pinned row. */
     private fun openAgentThread() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
     }
 
@@ -1226,11 +1235,19 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
 
         // The reference's chat-list home: search row, hero card, Pinned · 1
-        // with Dua Agent, the (empty) Chats section, and the floating dock.
+        // with Dua Work, the (empty) Chats section, and the floating dock.
         assertVisible("Search")
         assertVisible(AGENT_ROLE_LINE)
+        assertVisible(HERO_SUBTITLE)
         assertVisible(PINNED_HEADER)
-        assertVisible(DUA_AGENT_ROW)
+        assertVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
+        assertEquals(
+            "Both hero card and pinned official row must show Dua Work",
+            2,
+            compose.onAllNodesWithText(DUA_WORK_TITLE).fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        compose.onNodeWithTag("home_hero_card").assertExists()
+        compose.onNodeWithTag("home_pinned_official_row").assertExists()
         assertVisibleDescCount("Verified", 1)
         assertVisible(CHATS_HEADER)
         compose.onNodeWithTag("home_pull_to_refresh").assertExists()
@@ -1404,14 +1421,15 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Agent mode").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.HOME, currentRoute())
-        // Agent home: avatar, brand, +, search, Personal Agent, Pinned, Chats, dock.
+        // Agent home: avatar, brand, +, search, Dua Work hero, Pinned, Chats, dock.
         assertVisibleDescCount("Open menu", 1)
         assertVisible(APP_NAME_TEXT)
         assertVisibleDescCount("New chat", 1)
         assertVisible("Search")
         assertVisible(AGENT_ROLE_LINE)
+        assertVisible(HERO_SUBTITLE)
         assertVisible(PINNED_HEADER)
-        assertVisible(DUA_AGENT_ROW)
+        assertVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
         assertVisible(CHATS_HEADER)
         for (tab in HomeTab.entries) assertVisible(tab.label)
         // Option D: no Dua | Agent pill on Agent home.
@@ -1445,10 +1463,20 @@ class DuaGenAINavHostTest {
 
         compose.onNodeWithText(PINNED_HEADER).performClick()
         compose.waitForIdle()
-        assertNotVisible(DUA_AGENT_ROW)
+        assertNotVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
+        assertEquals(
+            0,
+            compose.onAllNodesWithTag("home_pinned_official_row")
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
         compose.onNodeWithText(PINNED_HEADER).performClick()
         compose.waitForIdle()
-        assertVisible(DUA_AGENT_ROW)
+        assertVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
+        assertEquals(
+            1,
+            compose.onAllNodesWithTag("home_pinned_official_row")
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
 
         compose.onNodeWithText(CHATS_HEADER).performClick()
         compose.waitForIdle()
@@ -1518,7 +1546,7 @@ class DuaGenAINavHostTest {
         compose.waitForIdle()
 
         // Offline canned reply in a thread.
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
         val before = demoCount()
         compose.onNode(hasSetTextAction()).performTextInput("Hi")
@@ -1717,7 +1745,7 @@ class DuaGenAINavHostTest {
         val tolerance = 1f * density
 
         val heroLeft = compose
-            .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
+            .onNode(hasTestTag("home_hero_card") and hasClickAction())
             .fetchSemanticsNode().boundsInRoot.left
         val pinnedLeft = compose.onNode(hasText(PINNED_HEADER) and hasClickAction())
             .fetchSemanticsNode().boundsInRoot.left
@@ -1854,7 +1882,7 @@ class DuaGenAINavHostTest {
 
         val density = compose.density.density
         val card = compose
-            .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
+            .onNode(hasTestTag("home_hero_card") and hasClickAction())
             .fetchSemanticsNode().boundsInRoot
 
         // The old trailing-label slot must be gone entirely.
@@ -1866,7 +1894,7 @@ class DuaGenAINavHostTest {
         )
 
         val title = compose
-            .onNodeWithText(PERSONAL_AGENT_TITLE, useUnmergedTree = true)
+            .onNodeWithTag("home_hero_title", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
         assertTrue(
             "hero title must sit inside the card, title ${title.left / density}.." +
@@ -1881,7 +1909,7 @@ class DuaGenAINavHostTest {
         //
         // Note we deliberately do NOT assert on the title's measured width. A
         // Compose Text reports its intrinsic (text) width, not the width it was
-        // offered, so a short title like "fareed's Personal Agent" never fills
+        // offered, so a short title like "Dua Work" never fills
         // the card even when nothing competes with it. Asserting a width
         // fraction tests the string, not the layout.
         val textNodesInCard = compose
@@ -3709,11 +3737,11 @@ class DuaGenAINavHostTest {
     // ------------------------------------------------- Agent's own thread
 
     /**
-     * The hero card opens the Personal Agent thread.
+     * The hero card opens Dua Work's official thread.
      *
-     * That thread is a normal chat ([PERSONAL_AGENT_CHAT_ID]), so a signed-in
-     * send posts `mode: "auto"` to the API. It uses the same `chat/{chatId}`
-     * route as every other conversation.
+     * That thread is [AGENT_CHAT_ID], so a signed-in send posts `mode: "agent"`
+     * and the skill ids to the engine. It uses the same `chat/{chatId}` route
+     * as every other conversation.
      */
     @Test
     fun tappingThePinnedAgentCardOpensAgentsOwnThread() {
@@ -3721,8 +3749,9 @@ class DuaGenAINavHostTest {
         switchTo(HomeMode.Agent)
 
         assertVisible(AGENT_ROLE_LINE)
+        assertVisible(HERO_SUBTITLE)
 
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithTag("home_hero_card").performClick()
         compose.waitForIdle()
 
         assertEquals(
@@ -3731,12 +3760,12 @@ class DuaGenAINavHostTest {
             currentRoute(),
         )
         val args = navController.currentBackStackEntry?.arguments
-        assertEquals(PERSONAL_AGENT_CHAT_ID, args?.getString("chatId"))
-        assertEquals(PERSONAL_AGENT_TITLE, args?.getString("title"))
+        assertEquals(AGENT_CHAT_ID, args?.getString("chatId"))
+        assertEquals(DUA_WORK_TITLE, args?.getString("title"))
     }
 
     /**
-     * The pinned Dua Agent row opens Dua Agent's thread.
+     * The pinned Dua Work row opens Dua Work's thread.
      *
      * The id is [AGENT_CHAT_ID], which is what sends `mode: "agent"` and the
      * skill ids to the engine. The row stays the same visual; it is now a button.
@@ -3746,14 +3775,14 @@ class DuaGenAINavHostTest {
         launch()
         switchTo(HomeMode.Agent)
 
-        assertVisible(DUA_AGENT_ROW)
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        assertVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
 
         assertEquals(DuaGenAIRoutes.CHAT, currentRoute())
         val args = navController.currentBackStackEntry?.arguments
         assertEquals(AGENT_CHAT_ID, args?.getString("chatId"))
-        assertEquals(DUA_AGENT_TITLE, args?.getString("title"))
+        assertEquals(DUA_WORK_TITLE, args?.getString("title"))
     }
 
     /** One of the listed chats opens its own existing thread id. */
@@ -3785,14 +3814,14 @@ class DuaGenAINavHostTest {
     fun agentsThreadShowsTheConversationAndTheComposer() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
 
         // The thread is open…
         assertOnChat()
 
-        // …it is Dua Agent's, so its top bar carries that name…
-        assertVisible(DUA_AGENT_TITLE)
+        // …it is Dua Work's, so its top bar carries that name…
+        assertVisible(DUA_WORK_TITLE)
 
         // …and the pain area is the honest empty thread, not a scripted
         // dialogue. Saying something fills it — that flow has its own test.
@@ -3814,7 +3843,7 @@ class DuaGenAINavHostTest {
     fun sendingAMessageAddsItToTheThreadAndAgentReplies() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
 
         // Type into the composer's field: the trailing control turns from the
@@ -3987,7 +4016,7 @@ class DuaGenAINavHostTest {
     fun backFromAgentsThreadReturnsToAgentsHome() {
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(DUA_AGENT_ROW).performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
         compose.waitForIdle()
         assertOnChat()
 
@@ -4803,7 +4832,7 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * A normal thread posts `mode: "auto"` to the API. Dua Agent posts
+     * A normal thread posts `mode: "auto"` to the API. Dua Work posts
      * `mode: "agent"` plus the skill ids to the engine, and SSE text chunks
      * are joined. A non-SSE agent body falls back to `{"text":"..."}`.
      */
@@ -4827,7 +4856,7 @@ class DuaGenAINavHostTest {
         val skills = DuaAgentSkills.ids.toSet()
 
         val auto = kotlinx.coroutines.runBlocking {
-            source.sendMessage(PERSONAL_AGENT_CHAT_ID, "Hi there", skills)
+            source.sendMessage("chat_david_park", "Hi there", skills)
         }
         val agent = kotlinx.coroutines.runBlocking {
             source.sendMessage(AGENT_CHAT_ID, "Build it", skills)
@@ -4973,21 +5002,26 @@ class DuaGenAINavHostTest {
 
     // ------------------------------------------- genuine Teamily UI wiring
 
-    /** Personal Agent's thread: its quick-action chips are live and send like typing. */
+    /** The hero card opens Dua Work's official thread, where sending yields an agent reply. */
     @Test
-    fun personalAgentThreadShowsTheQuickActionChips() {
+    fun heroCardOpensDuaWorkOfficialThreadAndSendsMessage() {
         TokenStore.token = null
         launch()
         switchTo(HomeMode.Agent)
-        compose.onNodeWithText(AGENT_ROLE_LINE).performClick()
+        compose.onNodeWithTag("home_hero_card").performClick()
         compose.waitForIdle()
         assertEquals(
-            ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID,
+            AGENT_CHAT_ID,
             navController.currentBackStackEntry?.arguments?.getString("chatId"),
         )
-        assertVisible("Try asking:")
-        val chip = ai.duagenai.design.screens.PERSONAL_AGENT_QUICK_ACTIONS.first()
-        compose.onNodeWithText(chip).performClick()
+        assertEquals(
+            DUA_WORK_TITLE,
+            navController.currentBackStackEntry?.arguments?.getString("title"),
+        )
+        assertVisible(DUA_WORK_TITLE)
+        assertVisible("No messages yet")
+        compose.onNode(hasSetTextAction()).performTextInput("Plan our sprint")
+        compose.onNodeWithContentDescription(SEND_LABEL).performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasText("I've picked that up", substring = true))
                 .fetchSemanticsNodes().count { isOnScreen(it) } >= 1
@@ -4995,22 +5029,22 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * Dua Agent's thread header pill: verified check; avatar/name open Dua
-     * Agent's profile, whose robot action opens the workspace.
+     * Dua Work's thread header pill: verified check; avatar/name open Dua
+     * Work's profile, whose robot action opens the workspace.
      */
     @Test
     fun duaAgentThreadHeaderWorkspaceOpensTheWorkspace() {
         openAgentThread()
         assertVisibleDescCount("Verified", 1)
         assertVisible("Invite")
-        clickVisibleText(DUA_AGENT_TITLE)
+        clickVisibleText(DUA_WORK_TITLE)
         assertEquals(DuaGenAIRoutes.AGENT_PROFILE, currentRoute())
         assertEquals(AGENT_CHAT_ID, navController.currentBackStackEntry?.arguments?.getString("agentId"))
         compose.onNodeWithContentDescription("Open agent workspace").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.AGENT_WORKSPACE, currentRoute())
         assertVisible("Agent workspace")
-        assertVisible(DUA_AGENT_TITLE)
+        assertVisible(DUA_WORK_TITLE)
     }
 
     // ------------------------------------- every agent: profile & workspace
@@ -5031,7 +5065,7 @@ class DuaGenAINavHostTest {
         clickVisibleText("Webpage Developer")
     }
 
-    /** A regular agent's header pill opens THAT agent's profile, not Dua Agent's. */
+    /** A regular agent's header pill opens THAT agent's profile, not Dua Work's. */
     @Test
     fun aRegularAgentsHeaderOpensItsOwnProfile() {
         launch()
@@ -5045,7 +5079,7 @@ class DuaGenAINavHostTest {
         assertEquals("chat_webpage_developer", args?.getString("agentId"))
         assertEquals("Webpage Developer", args?.getString("name"))
         assertTrue(compose.onAllNodesWithText("Webpage Developer").fetchSemanticsNodes().count { isOnScreen(it) } >= 2)
-        assertNotVisible(DUA_AGENT_TITLE)
+        assertNotVisible(DUA_WORK_TITLE)
         assertVisible("AI")
     }
 
@@ -5128,7 +5162,7 @@ class DuaGenAINavHostTest {
         compose.onNodeWithContentDescription("Pin to Top").assertIsOn()
     }
 
-    /** The agent's workspace and Overview carry its name, not "Dua Agent". */
+    /** The agent's workspace and Overview carry its name, not "Dua Work". */
     @Test
     fun workspaceAndOverviewShowTheAgentsName() {
         openWebpageDeveloperProfile()
@@ -5137,14 +5171,14 @@ class DuaGenAINavHostTest {
         assertEquals(DuaGenAIRoutes.AGENT_WORKSPACE, currentRoute())
         assertVisible("Agent workspace")
         assertVisible("Webpage Developer")
-        assertNotVisible(DUA_AGENT_TITLE)
+        assertNotVisible(DUA_WORK_TITLE)
 
         compose.onNodeWithText("Overview").performClick()
         compose.waitForIdle()
         assertEquals(DuaGenAIRoutes.AGENT_OVERVIEW, currentRoute())
         assertVisible("Pick up where Webpage Developer left off")
         assertVisible("Webpage Developer")
-        assertNotVisible("Pick up where Dua Agent left off")
+        assertNotVisible("Pick up where Dua Work left off")
     }
 
     /** Waits for the switch labelled [label] to read On (Mute / Pin persist asynchronously). */
@@ -5506,6 +5540,155 @@ class DuaGenAINavHostTest {
         } finally {
             scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
             TokenStore.token = null
+        }
+    }
+
+    /**
+     * HomeScreen renders Dua Work on both hero card and Pinned official row,
+     * includes additional pinned conversations in `Pinned · <count>`, renders
+     * non-pinned conversations in `Chats · <count>`, preserves collapse/expand,
+     * and wires hero/official/regular clicks.
+     */
+    @Test
+    fun homeScreenRendersDuaWorkHeroPinnedAndRegularChatsAndCollapse() {
+        var duaWorkClicks = 0
+        val listedClicks = mutableListOf<Pair<String, String>>()
+        val items = listOf(
+            ConversationItem(id = "chat_pin_1", title = "Launch Checklist", pinned = true),
+            ConversationItem(id = "chat_reg_1", title = "Research Notes", pinned = false),
+            ConversationItem(id = "chat_reg_2", title = "Design Review", pinned = false),
+        )
+        compose.setContent {
+            DuaGenAITheme(darkTheme = false) {
+                HomeScreen(
+                    mode = HomeMode.Agent,
+                    conversations = items,
+                    onOpenDuaWorkChat = { duaWorkClicks++ },
+                    onOpenListedChat = { chatId, title -> listedClicks += chatId to title },
+                )
+            }
+        }
+        compose.waitForIdle()
+
+        assertVisible(DUA_WORK_TITLE)
+        assertVisible(HERO_SUBTITLE)
+        assertVisible(DUA_WORK_PINNED_ROW_SUBTITLE)
+        assertEquals(
+            2,
+            compose.onAllNodesWithText(DUA_WORK_TITLE).fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        assertVisible("Pinned \u00b7 2")
+        assertVisible("Launch Checklist")
+        assertVisible("Chats \u00b7 2")
+        assertVisible("Research Notes")
+        assertVisible("Design Review")
+        assertNotVisible("No conversations yet")
+        assertEquals(
+            "Agent home must render Dua Work as the only pinned official card and row",
+            2,
+            compose.onAllNodesWithText(DUA_WORK_TITLE).fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+
+        compose.onNodeWithTag("home_hero_card").performClick()
+        compose.onNodeWithTag("home_pinned_official_row").performClick()
+        compose.onNodeWithText("Research Notes").performClick()
+        compose.waitForIdle()
+        assertEquals(2, duaWorkClicks)
+        assertEquals(listOf("chat_reg_1" to "Research Notes"), listedClicks)
+
+        compose.onNodeWithText("Pinned \u00b7 2").performClick()
+        compose.waitForIdle()
+        assertEquals(
+            0,
+            compose.onAllNodesWithTag("home_pinned_official_row")
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        assertNotVisible("Launch Checklist")
+        assertVisible("Research Notes")
+
+        compose.onNodeWithText("Pinned \u00b7 2").performClick()
+        compose.waitForIdle()
+        assertEquals(
+            1,
+            compose.onAllNodesWithTag("home_pinned_official_row")
+                .fetchSemanticsNodes().count { isOnScreen(it) },
+        )
+        assertVisible("Launch Checklist")
+    }
+
+    /**
+     * Official agent helpers recognize `"dua-work"` and fallback `"dua-agent"`
+     * while rejecting non-official agent ids, map backend agentIds cleanly,
+     * route official chats to the engine, and protect official agents from
+     * deletion.
+     */
+    @Test
+    fun officialAgentMappingSupportsDuaWorkAndLegacyFallback() {
+        val customAgentId = "custom-agent"
+        assertTrue(isOfficialAgentId(OFFICIAL_AGENT_ID))
+        assertTrue(isOfficialAgentId(LEGACY_OFFICIAL_AGENT_ID))
+        assertFalse(isOfficialAgentId(customAgentId))
+
+        assertTrue(isOfficialAgentThread(AGENT_CHAT_ID))
+        assertTrue(isOfficialAgentThread(OFFICIAL_AGENT_ID))
+        assertTrue(isOfficialAgentThread(LEGACY_OFFICIAL_AGENT_ID))
+        assertFalse(isOfficialAgentThread(customAgentId))
+
+        val body = """
+            {"messages":[
+              {"role":"assistant","content":"hi","agentId":"dua-work","createdAt":"1"},
+              {"role":"assistant","content":"legacy","agentId":"dua-agent","createdAt":"2"},
+              {"role":"assistant","content":"custom","agentId":"$customAgentId","createdAt":"3"}
+            ]}
+        """.trimIndent()
+        val parsed = parseMessages(body)
+        assertEquals(3, parsed.size)
+        assertEquals(DUA_WORK_TITLE, parsed[0].agentName)
+        assertEquals(DUA_WORK_TITLE, parsed[1].agentName)
+        assertEquals(customAgentId, parsed[2].agentName)
+
+        val prevApi = ApiConfig.overrideBaseUrl
+        val prevEngine = ApiConfig.overrideEngineBaseUrl
+        try {
+            ApiConfig.overrideBaseUrl = "https://api.example"
+            ApiConfig.overrideEngineBaseUrl = "https://engine.example"
+            val transport = RecordingTransport { url ->
+                if (url.startsWith("https://engine.example")) {
+                    "data: {\"type\":\"text\",\"text\":\"ok\"}\n\n"
+                } else {
+                    """{"text":"auto"}"""
+                }
+            }
+            val source = RemoteChatDataSource(
+                client = JsonHttpClient(transport = transport, label = "Chat request"),
+            )
+            runBlocking {
+                source.sendMessage(OFFICIAL_AGENT_ID, "a", emptySet())
+                source.sendMessage(LEGACY_OFFICIAL_AGENT_ID, "b", emptySet())
+                source.sendMessage(customAgentId, "c", emptySet())
+            }
+            assertEquals("https://engine.example/api/chat", transport.calls[0].second)
+            assertEquals("https://engine.example/api/chat", transport.calls[1].second)
+            assertEquals("https://api.example/api/chat", transport.calls[2].second)
+        } finally {
+            ApiConfig.overrideBaseUrl = prevApi
+            ApiConfig.overrideEngineBaseUrl = prevEngine
+        }
+
+        val ds = InMemoryAgentsDataSource(
+            seed = listOf(
+                AgentItem(id = OFFICIAL_AGENT_ID, name = DUA_WORK_TITLE),
+                AgentItem(id = LEGACY_OFFICIAL_AGENT_ID, name = DUA_WORK_TITLE),
+                AgentItem(id = customAgentId, name = "Custom"),
+            ),
+        )
+        runBlocking {
+            val duaWorkBlocked = runCatching { ds.delete(OFFICIAL_AGENT_ID) }.isFailure
+            val legacyBlocked = runCatching { ds.delete(LEGACY_OFFICIAL_AGENT_ID) }.isFailure
+            assertTrue(duaWorkBlocked)
+            assertTrue(legacyBlocked)
+            ds.delete(customAgentId)
+            assertEquals(listOf(OFFICIAL_AGENT_ID, LEGACY_OFFICIAL_AGENT_ID), ds.fetch().map { it.id })
         }
     }
 

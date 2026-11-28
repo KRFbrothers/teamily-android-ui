@@ -51,7 +51,7 @@ data class TeamilyPalette(
     val cardGradient: Brush,
     val borderGradient: Brush,
     val cardHeroColor: Color,
-    /** Soft rim on the personal-agent hero: 0.5dp Color(0x18AEBBB1). */
+    /** Soft rim on the official agent hero card: 0.5dp Color(0x18AEBBB1). */
     val heroCardBorder: Color,
     val surfaceRecessed: Color,
     val statusbarBg: Color,

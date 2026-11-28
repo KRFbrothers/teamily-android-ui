@@ -6,7 +6,7 @@ Rules for any agent or human in `teamily-android-ui`. Read before touching a fil
 
 ## 1. Shape
 
-Kotlin plus Jetpack Compose, one Gradle module `:app`, `rootProject.name = "DuaGenAI"` (`settings.gradle.kts`). The Gradle root is the repo root; there is no `android/` directory. `applicationId` and `namespace` are `ai.duagenai.design`. 42 Kotlin files sit under `app/src/main/java`, 33 in `screens/`, 6 in `theme/`. The app is a UI client for two backends, the Node API and the Python engine; both hosts arrive as generated `BuildConfig` fields resolved by `ApiConfig`, never as a literal in a screen. `README.md` is one line. `documents/M3-design_v01/` is a tracked design archive, not build input.
+Kotlin plus Jetpack Compose, one Gradle module `:app`, `rootProject.name = "DuaGenAI"` (`settings.gradle.kts`). The Gradle root is the repo root; there is no `android/` directory. `applicationId` and `namespace` are `ai.duagenai.design`. 41 Kotlin files sit under `app/src/main/java`, 32 in `screens/`, 6 in `theme/`. The app is a UI client for two backends, the Node API and the Python engine; both hosts arrive as generated `BuildConfig` fields resolved by `ApiConfig`, never as a literal in a screen. `README.md` is one line. `documents/M3-design_v01/` is a tracked design archive, not build input.
 
 **Not found in code:** no backend, no `gradle/libs.versions.toml`, no Room, no `app/schemas/`, no KSP or KAPT, no `MigrationTest`, no `supabase/`, no `webpages/`, no Dependabot config. `FACT:` a `pull_request` CI trigger does exist, in `.github/workflows/pr-checks.yml` under `on: pull_request: branches: [main]`; it runs `:app:testDebugUnitTest` only, not `assembleDebug` and not `lintDebug`. `FACT:` `CONTRIBUTING.md` exists at the repo root and covers branch, commit and PR conventions.
 
@@ -73,13 +73,13 @@ Before any push read `git status --short` and `git diff --cached` line by line. 
 
 **6.13 48dp touch targets.** Every interactive element keeps at least 48dp by 48dp. `TouchTargets.kt` exists to enforce it.
 
-**6.14 Strings in `strings.xml`.** `app/src/main/res/values/strings.xml` is the one copy source. `FACT:` the rule is not followed everywhere: 83 `text = "..."` literals remain in `screens/`. Do not add more, and do not mass-rewrite them inside an unrelated PR.
+**6.14 Strings in `strings.xml`.** `app/src/main/res/values/strings.xml` is the one copy source. `FACT:` the rule is not followed everywhere: 77 `text = "..."` literals remain in `screens/`. Do not add more, and do not mass-rewrite them inside an unrelated PR.
 
 **6.15 UI design freeze.** On a data or API task, do not change colors, typography, spacing, shapes or navigation unless the task asks.
 
 **6.16 No database here, so no migration rules apply.** `FACT:` no Room, no schema directory, no migration file, no SQL. The staging-only, never-edit-a-migration and mandatory-rollback rules live in the backend repo's `AGENTS.md`. If a future change adds a local database, add those rules to this file in the same PR, and ship a migration plus a rollback, never a schema by hand.
 
-**6.17 One official agent, `Dua Work`; `personal-agent` is removed.** Never re-add it, never call it official, never add a second pinned agent without an owner decision recorded in the backend repo, and do not invent a skill list. `FACT:` the code lags. `DuaAgentSkills` in `ComposerSheets.kt` still hardcodes five starter skills. `BaseRemoteRepository.kt` still maps `personal-agent` to "Personal Agent" and still blocks delete for both `personal-agent` and `dua-agent`. `InMemorySkillsDataSource` seeds every skill with `isStarter = true` and refuses to delete a starter. `HomeScreen.kt` keeps `PERSONAL_AGENT_TITLE` as the pinned hero card. 3 matches for the literal `personal-agent` id across `app/src`, and 66 for the display-name forms (`Personal Agent`, `PERSONAL_AGENT`). Work to do, not truth to copy.
+**6.17 One official agent, `Dua Work`; `personal-agent` is removed.** Never re-add it, never call it official, never add a second pinned agent without an owner decision recorded in the backend repo, and do not invent a skill list. `FACT:` `HomeScreen.kt` renders `DuaWorkHeroCard` and the single official pinned row for `Dua Work` using `strings.xml` (`dua_work_title`), and `BaseRemoteRepository.kt` maps `isOfficialAgentId` (`dua-work`, fallback `dua-agent`) to `Dua Work` while blocking delete via `isOfficialAgentId`. `FACT:` skill state partially lags: `DuaAgentSkills` in `ComposerSheets.kt` still hardcodes five starter skills, and `InMemorySkillsDataSource` still seeds every skill with `isStarter = true` and refuses to delete a starter. 0 matches for the literal `personal-agent` id across `app/src`, and 0 for the display-name forms (`Personal Agent`, `PERSONAL_AGENT`).
 
 ## 7. Cross-repo
 
@@ -93,7 +93,7 @@ Behaviour implemented. Existing file edited in place, nothing duplicated, no unr
 
 ## 9. Known defects, do not repeat them
 
-A hardcoded shared secret `sheetSecretKey` and a hardcoded Apps Script URL with a key, both in `ApiConfig`; `SheetBackendClient` still ships that secret. `allowBackup` enabled in `AndroidManifest.xml`. The session token stored in `noBackupFilesDir`, app-private but not encrypted and with no client expiry, per the comment in `SessionStore`. CI swallowing the SDK install failure. Release unsigned, minify off. `versionCode` never incremented. Demo conversation data with a real-looking handle reachable in `DuaAgentScreens`. One 5541-line test class in `nav/`. Robolectric pinned to `@Config(sdk = [34])` in all four test files while `compileSdk` is 37.1. `RECORD_AUDIO` declared but never requested from Kotlin.
+A hardcoded shared secret `sheetSecretKey` and a hardcoded Apps Script URL with a key, both in `ApiConfig`; `SheetBackendClient` still ships that secret. `allowBackup` enabled in `AndroidManifest.xml`. The session token stored in `noBackupFilesDir`, app-private but not encrypted and with no client expiry, per the comment in `SessionStore`. CI swallowing the SDK install failure. Release unsigned, minify off. `versionCode` never incremented. Demo conversation data with a real-looking handle reachable in `DuaAgentScreens`. One 5724-line test class in `nav/`. Robolectric pinned to `@Config(sdk = [34])` in all four test files while `compileSdk` is 37.1. `RECORD_AUDIO` declared but never requested from Kotlin.
 
 ## 10. Why this file replaced the last two
 
@@ -101,4 +101,4 @@ The first revision made eight false claims: Room, ViewModel, `app/schemas/`, `gr
 
 ## 11. Open items
 
-`personal-agent` and the five-skill starter set are still in the UI against 6.17. No Kotlin linter or formatter. `core-ktx` and `activity-compose` two years behind the rest of the stack. No release signing. `documents/M3-design_v01/` duplicates Kotlin sources already under `app/src/main/java` and will drift.
+The five-skill starter set in `ComposerSheets.kt` remains against 6.17. No Kotlin linter or formatter. `core-ktx` and `activity-compose` two years behind the rest of the stack. No release signing. `documents/M3-design_v01/` duplicates Kotlin sources already under `app/src/main/java` and will drift.

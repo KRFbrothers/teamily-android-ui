@@ -125,13 +125,12 @@ internal data class ProfileListRow(
 internal fun profileChatRows(): List<ProfileListRow> = emptyList()
 
 /**
- * The Profile "Agents" list: the two pinned built-in assistants plus the
- * agents the user really made in Create Agent. The sample guild chats that
- * used to fill this list are gone — they were not the user's agents.
+ * The Profile "Agents" list: the single official pinned agent ([DUA_WORK_TITLE])
+ * plus the agents the user really made in Create Agent. The sample guild chats
+ * that used to fill this list are gone — they were not the user's agents.
  */
 internal fun profileAgentRows(created: List<String>): List<ProfileListRow> = buildList {
-    add(ProfileListRow(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE, PERSONAL_AGENT_PREVIEW))
-    add(ProfileListRow(AGENT_CHAT_ID, DUA_AGENT_TITLE, DUA_AGENT_SUBTITLE, DUA_AGENT_TIME))
+    add(ProfileListRow(AGENT_CHAT_ID, DUA_WORK_TITLE, DUA_WORK_PINNED_SUBTITLE, DUA_WORK_TIME))
     created.forEachIndexed { index, line ->
         add(ProfileListRow(madeAgentId(line, index), madeAgentName(line), "Your agent"))
     }
@@ -274,7 +273,7 @@ internal data class ChannelRow(
 )
 
 internal fun defaultChannels(): List<ChannelRow> = listOf(
-    ChannelRow("whatsapp", "WhatsApp", "Personal number pe Dua Agent", true, "2m", 3, true),
+    ChannelRow("whatsapp", "WhatsApp", "Personal number pe Dua Work", true, "2m", 3, true),
     ChannelRow("telegram", "Telegram", "Bot handle se messages", true, "18m", 1, false),
     ChannelRow("slack", "Slack", "Workspace channels me mention", false, "1h", 0, false),
     ChannelRow("email", "Email", "Agent ka apna inbox address", false, "3h", 2, false),
@@ -654,7 +653,7 @@ internal fun SettingsDirectory(
         DirRow("AI & Agent Setup", "Runtimes", "Python 3.11, Node 20, Chromium", icon = Icons.Outlined.Computer, onClick = onOpenRuntimes),
         DirRow("AI & Agent Setup", "Skill Configuration", icon = Icons.Outlined.Build, onClick = onOpenSkills),
         DirRow("AI & Agent Setup", "Language", trailing = languageLabel, icon = Icons.Outlined.Language, onClick = onOpenLanguage),
-        DirRow("AI & Agent Setup", "Channels for Dua Agent", "Where Dua Agent can be reached", icon = Icons.AutoMirrored.Outlined.Chat, onClick = onOpenChannels),
+        DirRow("AI & Agent Setup", "Channels for Dua Work", "Where Dua Work can be reached", icon = Icons.AutoMirrored.Outlined.Chat, onClick = onOpenChannels),
         DirRow("AI & Agent Setup", "Agent API", "Who can reach your agents from outside Dua Gen AI", icon = Icons.Outlined.Api, onClick = onOpenAgentApi),
         DirRow("Preferences & Security", "Show Link Previews", checked = linkPreviews, onClick = { linkPreviews = !linkPreviews }),
         DirRow("Preferences & Security", "Task completion alerts", checked = taskAlerts, onClick = { taskAlerts = !taskAlerts }),
@@ -1034,13 +1033,13 @@ internal fun ChannelsScreen(
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val unreadTotal = rows.sumOf { it.unread }
-    FlowPage(title = "Channels for Dua Agent", onBack = onBack) {
+    FlowPage(title = "Channels for Dua Work", onBack = onBack) {
         Column(
             Modifier
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = spacing.xxl),
         ) {
-            Note("Woh jagah jahan se Dua Agent tak baat pahunchti hai.")
+            Note("Woh jagah jahan se Dua Work tak baat pahunchti hai.")
             for (row in rows) {
                 Row(
                     modifier = Modifier
@@ -1233,7 +1232,7 @@ internal fun SkillConfigScreen(
                         }
                     }
                     Text(
-                        text = "Configure personas, native ADK execution tools, and Model Context Protocol (MCP) servers connected to Dua Agent.",
+                        text = "Configure personas, native ADK execution tools, and Model Context Protocol (MCP) servers connected to Dua Work.",
                         style = DuaGenAITextStyles.snippet,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -1575,7 +1574,7 @@ internal fun SkillConfigScreen(
                 }
             }
 
-            Note("Configured tools & MCP servers are automatically exposed to Dua Agent in Agent Engine mode.")
+            Note("Configured tools & MCP servers are automatically exposed to Dua Work in Agent Engine mode.")
         }
     }
 

@@ -473,14 +473,23 @@ claim("6.17", "DuaAgentSkills hardcodes the number of starter skills AGENTS.md c
   }),
 );
 
-claim("6.17", "BaseRemoteRepository maps personal-agent to a display name", () =>
-  has("app/src/main/java/ai/duagenai/design/screens/BaseRemoteRepository.kt", '"personal-agent" -> "Personal Agent"'),
-);
+claim("6.17", "BaseRemoteRepository maps official agent ids (dua-work / legacy dua-agent) to Dua Work", () => {
+  const src = read("app/src/main/java/ai/duagenai/design/screens/BaseRemoteRepository.kt");
+  const ok =
+    src.includes('OFFICIAL_AGENT_ID = "dua-work"') &&
+    src.includes('LEGACY_OFFICIAL_AGENT_ID = "dua-agent"') &&
+    src.includes("isOfficialAgentId(agentId) -> DUA_WORK_TITLE");
+  return {
+    ok,
+    expected: "BaseRemoteRepository maps isOfficialAgentId (dua-work / dua-agent) to DUA_WORK_TITLE",
+    actual: ok ? "found" : "mapping not found",
+  };
+});
 
-claim("6.17", "BaseRemoteRepository blocks delete for personal-agent and dua-agent", () =>
+claim("6.17", "BaseRemoteRepository blocks delete via isOfficialAgentId", () =>
   has(
     "app/src/main/java/ai/duagenai/design/screens/BaseRemoteRepository.kt",
-    'if (id == "personal-agent" || id == "dua-agent")',
+    "if (isOfficialAgentId(id))",
   ),
 );
 
@@ -488,9 +497,18 @@ claim("6.17", "InMemorySkillsDataSource seeds every skill with isStarter = true"
   has("app/src/main/java/ai/duagenai/design/screens/BaseRemoteRepository.kt", "isStarter = true"),
 );
 
-claim("6.17", "HomeScreen keeps PERSONAL_AGENT_TITLE as the pinned hero card", () =>
-  has("app/src/main/java/ai/duagenai/design/screens/HomeScreen.kt", "PERSONAL_AGENT_TITLE"),
-);
+claim("6.17", "HomeScreen uses DuaWorkHeroCard and R.string.dua_work_title without PERSONAL_AGENT_TITLE", () => {
+  const src = read("app/src/main/java/ai/duagenai/design/screens/HomeScreen.kt");
+  const ok =
+    src.includes("fun DuaWorkHeroCard(") &&
+    src.includes("R.string.dua_work_title") &&
+    !src.includes("PERSONAL_AGENT_TITLE");
+  return {
+    ok,
+    expected: "HomeScreen uses DuaWorkHeroCard + R.string.dua_work_title without PERSONAL_AGENT_TITLE",
+    actual: ok ? "found" : "hero card check failed",
+  };
+});
 
 claim("6.17", "personal-agent id and display-name counts match AGENTS.md", () => {
   const src = read("AGENTS.md");

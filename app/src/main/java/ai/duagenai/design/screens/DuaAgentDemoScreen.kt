@@ -58,13 +58,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.duagenai.design.R
 import ai.duagenai.design.theme.DuaGenAITextStyles
 import ai.duagenai.design.theme.TeamilyMarks
 import ai.duagenai.design.theme.DuaGenAITheme
@@ -75,7 +80,7 @@ import ai.duagenai.design.theme.teamilyPalette
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** One orchestration message in Dua Agent demo. */
+/** One orchestration message in Dua Work demo. */
 private data class DuaAgentMessage(
     val isUser: Boolean,
     val text: String,
@@ -84,7 +89,7 @@ private data class DuaAgentMessage(
 )
 
 /**
- * Dedicated Demo screen for Dua Agent (Official Permanent Agent).
+ * Dedicated Demo screen for Dua Work (Official Permanent Agent).
  *
  * Demonstrates:
  * - Official verified status & multi-agent orchestration
@@ -108,7 +113,7 @@ fun DuaAgentDemoScreen(
         mutableStateListOf(
             DuaAgentMessage(
                 isUser = false,
-                text = "I'm Dua Agent — the official agent of Dua Gen AI. I coordinate complex multi-agent workflows, supervise specialized agents, and interface with MCP tools.",
+                text = "I'm Dua Work — the official agent of Dua Gen AI. I coordinate complex multi-agent workflows, supervise specialized agents, and interface with MCP tools.",
                 time = "10:15 AM",
             ),
             DuaAgentMessage(
@@ -144,13 +149,13 @@ fun DuaAgentDemoScreen(
                 cmd.contains("Multi-Agent", ignoreCase = true) || cmd.contains("Workflow", ignoreCase = true) ->
                     "Orchestrating workflow across 3 agents:\n• Slides Assistant: Building presentation draft\n• Market Research: Extracting citations\n• API Tester: Running automated test suite\nProgress: 100% synchronized."
                 cmd.contains("Skills", ignoreCase = true) ->
-                    "Active Dua Agent Skills (5/5):\n1. Web Search & Verification\n2. Python 3.11 Code Execution\n3. File System & Artifact Storage\n4. Data Extraction Engine\n5. RESTful API Interface"
+                    "Active Dua Work Skills (5/5):\n1. Web Search & Verification\n2. Python 3.11 Code Execution\n3. File System & Artifact Storage\n4. Data Extraction Engine\n5. RESTful API Interface"
                 cmd.contains("MCP", ignoreCase = true) ->
                     "MCP Status: Connected to local host via stdio. Exposing 14 agent tools to external clients (Claude Code, Codex)."
                 cmd.contains("Deploy", ignoreCase = true) || cmd.contains("Site", ignoreCase = true) ->
                     "Live site deployed to web workspace: https://dua.run/q3-preview. SSL active, CDN cached."
                 else ->
-                    "Dua Agent Engine received command: '$cmd'. Dispatched to multi-agent orchestrator queue."
+                    "Dua Work Engine received command: '$cmd'. Dispatched to multi-agent orchestrator queue."
             }
             messages.add(
                 DuaAgentMessage(
@@ -206,7 +211,7 @@ fun DuaAgentDemoScreen(
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Teamily Agent",
+                                text = stringResource(R.string.dua_work_title),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.5.sp,
@@ -444,13 +449,86 @@ private fun DuaAgentBubble(
     }
 }
 
-@Preview(name = "Dua Agent Demo — Light", showBackground = true)
+/**
+ * A caption plus prompt chips in rows of two. Shared by [DuaAgentDemoScreen]
+ * and Dua home's quick starters.
+ */
+@Composable
+internal fun QuickActionChips(
+    label: String?,
+    actions: List<String>,
+    onPick: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+) {
+    val palette = teamilyPalette()
+    Column(
+        modifier = modifier.fillMaxWidth().padding(top = 6.dp),
+        horizontalAlignment = horizontalAlignment,
+    ) {
+        if (label != null) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = if (horizontalAlignment == Alignment.CenterHorizontally) TextAlign.Center else TextAlign.Start,
+            )
+            Spacer(Modifier.height(2.dp))
+        }
+        actions.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = horizontalArrangement,
+            ) {
+                row.forEach { action ->
+                    ActionChip(label = action, onClick = { onPick(action) }, palette = palette)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One prompt chip. Drawn as a compact capsule; the touch box is raised to the
+ * 48dp minimum ([minTouchTarget]) and it is announced as a button.
+ */
+@Composable
+internal fun ActionChip(
+    label: String,
+    onClick: () -> Unit,
+    palette: ai.duagenai.design.theme.TeamilyPalette,
+) {
+    val isDark = DuaGenAITheme.isDark
+    val chipColor = if (isDark) MaterialTheme.colorScheme.surfaceContainer else palette.surfaceRecessed
+    val chipBorder = if (isDark) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                     else BorderStroke(1.dp, palette.border)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .minTouchTarget()
+            .semantics { role = Role.Button },
+        shape = TeamilyShapes.capsule,
+        color = chipColor,
+        border = chipBorder,
+    ) {
+        Text(
+            text = label,
+            // Lato ships 400 / 700 only; Medium (500) already resolved to 400.
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Normal, fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Preview(name = "Dua Work Demo — Light", showBackground = true)
 @Composable
 private fun DuaAgentDemoLightPreview() = DuaGenAITheme(darkTheme = false) {
     DuaAgentDemoScreen()
 }
 
-@Preview(name = "Dua Agent Demo — Dark", showBackground = true)
+@Preview(name = "Dua Work Demo — Dark", showBackground = true)
 @Composable
 private fun DuaAgentDemoDarkPreview() = DuaGenAITheme(darkTheme = true) {
     DuaAgentDemoScreen()

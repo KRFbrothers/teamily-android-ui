@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dua Gen AI</string>
+    <!-- Official agent (Dua Work) -->
+    <string name="dua_work_title">Dua Work</string>
+    <string name="dua_work_hero_subtitle">Your official agent — tap to chat</string>
+    <string name="dua_work_pinned_subtitle">I\'m Dua Work — the official agent of Dua Gen AI</string>
     <!-- Small label on sample (non-live) data -->
     <string name="demo_label">Demo</string>
     <!-- Create Agent (Agent home plus menu) -->

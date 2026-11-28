@@ -96,7 +96,7 @@ object ApiConfig {
     /**
      * The last-resort engine host, used only when the generated field is blank.
      *
-     * Dua Agent chat (`mode: "agent"`) goes here. Personal chat stays on
+     * Dua Work chat (`mode: "agent"`) goes here. Standard Dua chat stays on
      * [BASE_URL]. It matches the build file's default so an empty
      * `ENGINE_BASE_URL` still reaches the real engine.
      */
@@ -113,7 +113,7 @@ object ApiConfig {
     var overrideEngineBaseUrl: String? = null
 
     /**
-     * The engine host, used by Dua Agent chat.
+     * The engine host, used by Dua Work chat.
      *
      * Resolved per access, like [BASE_URL], and normalised the same way so
      * `engineUrl("/api/chat")` cannot produce a double slash.

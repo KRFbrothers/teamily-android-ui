@@ -418,10 +418,20 @@ abstract class BaseRemoteRepository<T : Identifiable, S>(
  *  Conversations & Chat Messages
  * ==========================================================================*/
 
+/** Canonical id of the single official pinned agent, Dua Work. */
+const val OFFICIAL_AGENT_ID = "dua-work"
+
+/** Legacy backend agent id still accepted as a fallback for Dua Work. */
+const val LEGACY_OFFICIAL_AGENT_ID = "dua-agent"
+
+/** True when [id] identifies the official Dua Work agent (canonical or legacy backend alias). */
+fun isOfficialAgentId(id: String?): Boolean =
+    id == OFFICIAL_AGENT_ID || id == LEGACY_OFFICIAL_AGENT_ID
+
 data class ConversationItem(
     override val id: String,
     val title: String,
-    val agentId: String = "dua-agent",
+    val agentId: String = OFFICIAL_AGENT_ID,
     val pinned: Boolean = false,
     val isGroup: Boolean = false,
     val lastMessagePreview: String = "",
@@ -575,7 +585,7 @@ fun parseConversations(body: String): List<ConversationItem> {
         list += ConversationItem(
             id = obj.optString("id"),
             title = obj.optString("title", "New chat"),
-            agentId = obj.optString("agentId", "dua-agent"),
+            agentId = obj.optString("agentId", OFFICIAL_AGENT_ID),
             pinned = obj.optBoolean("pinned", false),
             lastMessagePreview = obj.optString("lastMessagePreview", ""),
             lastMessageAt = obj.optString("lastMessageAt", ""),
@@ -591,7 +601,7 @@ fun parseSingleConversation(body: String): ConversationItem? = runCatching {
     ConversationItem(
         id = obj.optString("id"),
         title = obj.optString("title", "New chat"),
-        agentId = obj.optString("agentId", "dua-agent"),
+        agentId = obj.optString("agentId", OFFICIAL_AGENT_ID),
         pinned = obj.optBoolean("pinned", false),
         lastMessagePreview = obj.optString("lastMessagePreview", ""),
         lastMessageAt = obj.optString("lastMessageAt", ""),
@@ -608,9 +618,8 @@ fun parseMessages(body: String): List<SavedMessage> {
         val content = obj.optString("content", "")
         val createdAt = obj.optString("createdAt", "")
         val agentId = obj.optString("agentId").takeIf { it.isNotBlank() && it != "null" }
-        val agentName = when (agentId) {
-            "dua-agent" -> "Dua Agent"
-            "personal-agent" -> "Personal Agent"
+        val agentName = when {
+            isOfficialAgentId(agentId) -> DUA_WORK_TITLE
             else -> agentId
         }
         val who = if (role.equals("user", ignoreCase = true)) SavedMessage.USER else SavedMessage.AGENT
@@ -680,7 +689,7 @@ class ConversationsRepository(
         return conversationsSource.fetch(query)
     }
 
-    suspend fun createConversation(title: String, agentId: String = "dua-agent", id: String? = null): ConversationItem {
+    suspend fun createConversation(title: String, agentId: String = OFFICIAL_AGENT_ID, id: String? = null): ConversationItem {
         val conv = ConversationItem(
             id = id ?: java.util.UUID.randomUUID().toString(),
             title = title,
@@ -791,8 +800,8 @@ class InMemoryAgentsDataSource(
         return item
     }
     override suspend fun delete(id: String) {
-        if (id == "personal-agent" || id == "dua-agent") {
-            throw IllegalStateException("Official agents cannot be deleted.")
+        if (isOfficialAgentId(id)) {
+            throw IllegalStateException("Official agent cannot be deleted.")
         }
         items.removeAll { it.id == id }
     }
@@ -1104,7 +1113,7 @@ class AgentsRepository(
 
 data class SkillItem(
     override val id: String,
-    val agentId: String = "dua-agent",
+    val agentId: String = OFFICIAL_AGENT_ID,
     val title: String,
     val summary: String = "",
     val body: String = "",
@@ -1228,7 +1237,7 @@ fun parseSkills(body: String): List<SkillItem> {
         val obj = arr.optJSONObject(i) ?: continue
         list += SkillItem(
             id = obj.optString("id"),
-            agentId = obj.optString("agentId", "dua-agent"),
+            agentId = obj.optString("agentId", OFFICIAL_AGENT_ID),
             title = obj.optString("title"),
             summary = obj.optString("summary", ""),
             body = obj.optString("body", ""),
@@ -1246,7 +1255,7 @@ fun parseSingleSkill(body: String): SkillItem? = runCatching {
     val obj = root.optJSONObject("skill") ?: root
     SkillItem(
         id = obj.optString("id"),
-        agentId = obj.optString("agentId", "dua-agent"),
+        agentId = obj.optString("agentId", OFFICIAL_AGENT_ID),
         title = obj.optString("title"),
         summary = obj.optString("summary", ""),
         body = obj.optString("body", ""),

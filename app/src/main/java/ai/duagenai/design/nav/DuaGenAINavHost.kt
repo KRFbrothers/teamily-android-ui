@@ -40,7 +40,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CreateAgentScreen
-import ai.duagenai.design.screens.PersonalAgentDemoScreen
 import ai.duagenai.design.screens.DuaAgentDemoScreen
 import ai.duagenai.design.screens.AgentsScreen
 import ai.duagenai.design.screens.AppearanceScreen
@@ -50,9 +49,7 @@ import ai.duagenai.design.screens.MemoryItem
 import ai.duagenai.design.screens.ArtifactsScreen
 import ai.duagenai.design.screens.ChatScreen
 import ai.duagenai.design.screens.AGENT_CHAT_ID
-import ai.duagenai.design.screens.DUA_AGENT_TITLE
-import ai.duagenai.design.screens.PERSONAL_AGENT_CHAT_ID
-import ai.duagenai.design.screens.PERSONAL_AGENT_TITLE
+import ai.duagenai.design.screens.DUA_WORK_TITLE
 import ai.duagenai.design.screens.DiscoverScreen
 import ai.duagenai.design.screens.DrawerDestination
 import ai.duagenai.design.screens.AgentWorkspaceDestination
@@ -213,7 +210,7 @@ object DuaGenAIRoutes {
 
     // Agent profile & workspace (approved SVG set dua-agent-01..13), reused
     // for EVERY agent: each route carries the agent's chat id and display
-    // name. Both default to Dua Agent, so Dua Agent behaves exactly as before.
+    // name. Both default to Dua Work, so Dua Work behaves consistently across tabs.
     private const val AGENT_ARGS = "?agentId={agentId}&name={name}"
     const val AGENT_PROFILE = "agent/profile$AGENT_ARGS"
     const val AGENT_CONNECT_APP = "agent/connect_app$AGENT_ARGS"
@@ -229,15 +226,14 @@ object DuaGenAIRoutes {
      * Builds one of the AGENT_* routes for [agentId] / [name]. Both are
      * URL-encoded, like [chat], because a name can hold `/`, `?` or `&`.
      */
-    fun agent(route: String): String = agent(route, AGENT_CHAT_ID, DUA_AGENT_TITLE)
-    fun agent(route: String, agentId: String): String = agent(route, agentId, DUA_AGENT_TITLE)
+    fun agent(route: String): String = agent(route, AGENT_CHAT_ID, DUA_WORK_TITLE)
+    fun agent(route: String, agentId: String): String = agent(route, agentId, DUA_WORK_TITLE)
     fun agent(route: String, agentId: String, name: String): String {
         val base = route.substringBefore('?')
         return "$base?agentId=${Uri.encode(agentId)}&name=${Uri.encode(name)}"
     }
     /** Create Agent: opened only from Agent home's plus menu. */
     const val CREATE_AGENT = "agent/create"
-    const val PERSONAL_AGENT_DEMO = "agent/personal_demo"
     const val DUA_AGENT_DEMO = "agent/dua_demo"
 
     /**
@@ -266,7 +262,7 @@ object DuaGenAIRoutes {
     fun newDuaChatId(): String = "dua-${java.util.UUID.randomUUID()}"
 }
 
-/** The `agentId` / `name` arguments every AGENT_* route declares (Dua Agent by default). */
+/** The `agentId` / `name` arguments every AGENT_* route declares (Dua Work by default). */
 private val agentArguments = listOf(
     navArgument("agentId") {
         type = NavType.StringType
@@ -274,7 +270,7 @@ private val agentArguments = listOf(
     },
     navArgument("name") {
         type = NavType.StringType
-        defaultValue = DUA_AGENT_TITLE
+        defaultValue = DUA_WORK_TITLE
     },
 )
 
@@ -282,7 +278,7 @@ private fun NavBackStackEntry.agentId(): String =
     arguments?.getString("agentId").orEmpty().ifBlank { AGENT_CHAT_ID }
 
 private fun NavBackStackEntry.agentName(): String =
-    arguments?.getString("name").orEmpty().ifBlank { DUA_AGENT_TITLE }
+    arguments?.getString("name").orEmpty().ifBlank { DUA_WORK_TITLE }
 
 /**
  * The dock tab a route belongs to, or null when the route is not one of the
@@ -587,17 +583,12 @@ fun DuaGenAINavHost(
                     // agents route. Home is the Chats tab.
                     onSelectTab = { tab -> navController.navigateToTab(tab) },
                     selectedTab = selectedTab,
-                    // Personal Agent (the hero) is a normal thread: auto mode on
-                    // the API. Dua Agent (the pinned row) is the engine thread.
+                    // Both the hero card and the pinned "Dua Work" row open the
+                    // single official Dua Work engine thread ([AGENT_CHAT_ID]).
                     // The listed chats below use the same chat route as the drawer.
-                    onOpenPersonalAgentChat = {
+                    onOpenDuaWorkChat = {
                         navController.navigate(
-                            DuaGenAIRoutes.chat(PERSONAL_AGENT_CHAT_ID, PERSONAL_AGENT_TITLE),
-                        )
-                    },
-                    onOpenDuaAgentChat = {
-                        navController.navigate(
-                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, DUA_AGENT_TITLE),
+                            DuaGenAIRoutes.chat(AGENT_CHAT_ID, DUA_WORK_TITLE),
                         )
                     },
                     onOpenListedChat = { chatId, title ->
@@ -792,12 +783,6 @@ fun DuaGenAINavHost(
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
                     onOpenVoiceLive = { navController.navigate(DuaGenAIRoutes.VOICE_LIVE) },
-                )
-            }
-
-            composable(DuaGenAIRoutes.PERSONAL_AGENT_DEMO) {
-                PersonalAgentDemoScreen(
-                    onBack = { navController.popBackStack() },
                 )
             }
 
