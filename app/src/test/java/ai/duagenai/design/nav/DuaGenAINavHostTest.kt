@@ -1865,9 +1865,6 @@ class DuaGenAINavHostTest {
                 .fetchSemanticsNodes().size,
         )
 
-        // The title must be the only text on the card's title line, and it must
-        // now be free to use the card's full content width: its right edge should
-        // reach past where the old 20dp-ish label slot began.
         val title = compose
             .onNodeWithText(PERSONAL_AGENT_TITLE, useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
@@ -1877,13 +1874,53 @@ class DuaGenAINavHostTest {
                 "${card.right / density}dp",
             title.left >= card.left - 1f * density && title.right <= card.right + 1f * density,
         )
-        // With no label competing for width the title is no longer squeezed into
-        // the left portion of the card.
-        val cardContentWidth = card.width - 20f * density // 10dp inner padding each side
+
+        // The real check: on the title's own line, inside the card, the title is
+        // the ONLY text. A trailing label would be a second text node sitting to
+        // the right of the title on that same line.
+        //
+        // Note we deliberately do NOT assert on the title's measured width. A
+        // Compose Text reports its intrinsic (text) width, not the width it was
+        // offered, so a short title like "fareed's Personal Agent" never fills
+        // the card even when nothing competes with it. Asserting a width
+        // fraction tests the string, not the layout.
+        val textNodesInCard = compose
+            .onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNodes()
+            .map { it.boundsInRoot }
+            .filter { it.left >= card.left - 1f * density && it.right <= card.right + 1f * density }
+            // The card's own node can carry a merged Text key; it is the card,
+            // not a label, so drop anything that spans the whole card.
+            .filter { it.width < card.width - 1f * density }
+
+        val titleLine = textNodesInCard.filter { node ->
+            val centreY = (node.top + node.bottom) / 2f
+            centreY >= title.top && centreY <= title.bottom
+        }
+        assertEquals(
+            "hero card title line must carry exactly one text node (the title), " +
+                "found ${titleLine.size}: " +
+                titleLine.joinToString { "${it.left / density}..${it.right / density}dp" },
+            1,
+            titleLine.size,
+        )
+        // …and that one node is the title itself, not something else.
         assertTrue(
-            "hero title must be allowed the card's full content width, was " +
-                "${title.width / density}dp of ${cardContentWidth / density}dp",
-            title.width >= cardContentWidth * 0.5f,
+            "the only text on the hero title line must be the title, was at " +
+                "${titleLine.first().left / density}dp vs title at ${title.left / density}dp",
+            kotlin.math.abs(titleLine.first().left - title.left) <= 1f * density,
+        )
+        // Nothing may sit to the right of the title on its line — that is exactly
+        // where the removed trailing label used to be.
+        val rightOfTitle = titleLine.filter { it.left >= title.right - 1f * density }
+        assertEquals(
+            "nothing may render to the right of the hero title any more, found " +
+                "${rightOfTitle.size} node(s)",
+            0,
+            rightOfTitle.size,
         )
     }
 
