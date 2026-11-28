@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.isNotSelected
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
@@ -1774,6 +1775,152 @@ class DuaGenAINavHostTest {
             "empty state must be vertically centred, its centre was at " +
                 "${(centre - viewport.top) / density}dp of ${viewport.height / density}dp",
             centre in lower..upper,
+        )
+    }
+
+    /**
+     * The section divider is inset to the content, not full-bleed.
+     *
+     * It used to be a bare `HorizontalDivider` with only vertical padding, so it
+     * ran the whole 390dp screen width while every other element on Agent home is
+     * inset. It read as a rule from a different layout system.
+     *
+     * It is now inset symmetrically on both sides to the section header's TEXT
+     * left edge:
+     *
+     *   inset = gutter (14) + header inner padding (6) + icon (13) + xs (4) = 37dp
+     *
+     * Both sides use the same value. An earlier revision used 37dp on the left
+     * and 20dp on the right, which lined the rule up with two different edges and
+     * made it look off-centre. The inset is derived from the same constants the
+     * composables use, so this test fails if either side drifts.
+     */
+    @Test
+    fun sectionDividerIsInsetToTheContentNotFullBleed() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val rootWidth = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first().boundsInRoot.width
+        val divider = compose
+            .onNodeWithTag("home_section_divider", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+
+        // 37dp: the "Pinned"/"Chats" label's left edge, used on BOTH sides.
+        val inset = (GUTTER_DP + 6f + 13f + 4f) * density
+        val expectedStart = inset
+        val expectedEnd = rootWidth - inset
+        val tolerance = 1.5f * density
+
+        assertTrue(
+            "divider must start on the header text edge (${expectedStart / density}dp), " +
+                "was ${divider.left / density}dp",
+            kotlin.math.abs(divider.left - expectedStart) <= tolerance,
+        )
+        assertTrue(
+            "divider must end symmetrically at ${expectedEnd / density}dp, " +
+                "was ${divider.right / density}dp",
+            kotlin.math.abs(divider.right - expectedEnd) <= tolerance,
+        )
+        // Symmetry is the point: both insets must be equal, not merely close to
+        // their own expected values.
+        val leftInset = divider.left
+        val rightInset = rootWidth - divider.right
+        assertTrue(
+            "divider insets must be symmetric, left ${leftInset / density}dp vs " +
+                "right ${rightInset / density}dp",
+            kotlin.math.abs(leftInset - rightInset) <= tolerance,
+        )
+        // And it must NOT be full-bleed any more.
+        assertTrue(
+            "divider must not span the full screen width, was " +
+                "${divider.width / density}dp of ${rootWidth / density}dp",
+            divider.width < rootWidth - 2f * GUTTER_DP * density,
+        )
+    }
+
+    /**
+     * The hero card carries its title only — no trailing label.
+     *
+     * The card used to render a right-aligned trailing label. That slot held a
+     * hardcoded fake timestamp ("Mon") with no real source behind it, and it
+     * competed with the title for width. It has been removed, so the title now
+     * owns the full content width and nothing sits on the card's right edge.
+     */
+    @Test
+    fun heroCardHasNoTrailingLabel() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val card = compose
+            .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot
+
+        // The old trailing-label slot must be gone entirely.
+        assertEquals(
+            "hero card must not render a trailing label any more",
+            0,
+            compose.onAllNodesWithTag("home_hero_trailing_label", useUnmergedTree = true)
+                .fetchSemanticsNodes().size,
+        )
+
+        val title = compose
+            .onNodeWithText(PERSONAL_AGENT_TITLE, useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "hero title must sit inside the card, title ${title.left / density}.." +
+                "${title.right / density}dp vs card ${card.left / density}.." +
+                "${card.right / density}dp",
+            title.left >= card.left - 1f * density && title.right <= card.right + 1f * density,
+        )
+
+        // The real check: on the title's own line, inside the card, the title is
+        // the ONLY text. A trailing label would be a second text node sitting to
+        // the right of the title on that same line.
+        //
+        // Note we deliberately do NOT assert on the title's measured width. A
+        // Compose Text reports its intrinsic (text) width, not the width it was
+        // offered, so a short title like "fareed's Personal Agent" never fills
+        // the card even when nothing competes with it. Asserting a width
+        // fraction tests the string, not the layout.
+        val textNodesInCard = compose
+            .onAllNodes(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Text),
+                useUnmergedTree = true,
+            )
+            .fetchSemanticsNodes()
+            .map { it.boundsInRoot }
+            .filter { it.left >= card.left - 1f * density && it.right <= card.right + 1f * density }
+            // The card's own node can carry a merged Text key; it is the card,
+            // not a label, so drop anything that spans the whole card.
+            .filter { it.width < card.width - 1f * density }
+
+        val titleLine = textNodesInCard.filter { node ->
+            val centreY = (node.top + node.bottom) / 2f
+            centreY >= title.top && centreY <= title.bottom
+        }
+        assertEquals(
+            "hero card title line must carry exactly one text node (the title), " +
+                "found ${titleLine.size}: " +
+                titleLine.joinToString { "${it.left / density}..${it.right / density}dp" },
+            1,
+            titleLine.size,
+        )
+        // …and that one node is the title itself, not something else.
+        assertTrue(
+            "the only text on the hero title line must be the title, was at " +
+                "${titleLine.first().left / density}dp vs title at ${title.left / density}dp",
+            kotlin.math.abs(titleLine.first().left - title.left) <= 1f * density,
+        )
+        // Nothing may sit to the right of the title on its line — that is exactly
+        // where the removed trailing label used to be.
+        val rightOfTitle = titleLine.filter { it.left >= title.right - 1f * density }
+        assertEquals(
+            "nothing may render to the right of the hero title any more, found " +
+                "${rightOfTitle.size} node(s)",
+            0,
+            rightOfTitle.size,
         )
     }
 
