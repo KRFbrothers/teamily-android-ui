@@ -1319,10 +1319,19 @@ private fun SectionHeader(
     val ink = MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
+            // The whole row is the tap target, not just the ~100dp of content.
+            // `fillMaxWidth` comes BEFORE the outer padding so the row spans the
+            // list's full width and the padding insets the capsule inside it.
+            .fillMaxWidth()
             .padding(horizontal = spacing.sm)
             .clip(TeamilyShapes.capsule)
             .clickable(role = Role.Button, onClick = onToggle)
-            .sizeIn(minHeight = 34.dp)
+            // 48dp is the Material 3 / WCAG 2.5.8 minimum touch target. The
+            // content is only ~16dp tall, so the extra height is absorbed by
+            // `verticalAlignment = CenterVertically` and the text stays centred.
+            // The vertical padding is 0 so the 48dp is the row's real height and
+            // the gap to the rows below does not grow.
+            .sizeIn(minHeight = 48.dp)
             .padding(horizontal = spacing.sm)
             .semantics(mergeDescendants = true) {
                 stateDescription = if (expanded) "Expanded" else "Collapsed"

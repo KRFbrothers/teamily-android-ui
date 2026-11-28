@@ -1648,6 +1648,46 @@ class DuaGenAINavHostTest {
         )
     }
 
+    /**
+     * Both section headers ("Pinned · 1", "Chats · 0") must be a 48dp-tall,
+     * full-width tap target.
+     *
+     * They used to be `sizeIn(minHeight = 34.dp)` with no `fillMaxWidth`, so the
+     * clickable box was 34dp tall and only as wide as its content (~100dp). Two
+     * consequences, both pinned here:
+     *
+     *   1. 34dp is below the Material 3 / WCAG 2.5.8 48dp minimum touch target.
+     *   2. The empty space to the right of the label looked like part of the
+     *      header row but did nothing when tapped, because the Row wrapped its
+     *      content instead of filling the list width.
+     */
+    @Test
+    fun sectionHeadersAre48dpTallAndFullWidth() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val minHeight = 48f * density - 1f
+        val rootWidth = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first().boundsInRoot.width
+        // The row is inset by `spacing.sm` (6dp) on each side, so a full-width
+        // header is the root width minus 12dp. 1dp of tolerance for rounding.
+        val minWidth = rootWidth - 12f * density - 1f
+
+        for (label in listOf(PINNED_HEADER, CHATS_HEADER)) {
+            val b = compose.onNode(hasText(label) and hasClickAction())
+                .fetchSemanticsNode().boundsInRoot
+            assertTrue(
+                "section header \"$label\" must be >= 48dp tall, was ${b.height / density}dp",
+                b.height >= minHeight,
+            )
+            assertTrue(
+                "section header \"$label\" must span the full row width, was " +
+                    "${b.width / density}dp of ${rootWidth / density}dp",
+                b.width >= minWidth,
+            )
+        }
+    }
+
     @Test
     fun homeTabForMapsTheFiveTabRoutesOnly() {
         assertEquals(HomeTab.Chats, homeTabFor(DuaGenAIRoutes.HOME))
