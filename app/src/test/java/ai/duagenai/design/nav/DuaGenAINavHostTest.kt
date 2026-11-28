@@ -1722,7 +1722,7 @@ class DuaGenAINavHostTest {
             .fetchSemanticsNode().boundsInRoot.left
         val chatsLeft = compose.onNode(hasText(CHATS_HEADER) and hasClickAction())
             .fetchSemanticsNode().boundsInRoot.left
-        val emptyLeft = compose.onNodeWithText("No conversations yet")
+        val emptyLeft = compose.onNodeWithTag("home_empty_chats_state")
             .fetchSemanticsNode().boundsInRoot.left
 
         for ((name, left) in listOf(
@@ -1756,7 +1756,7 @@ class DuaGenAINavHostTest {
             .fetchSemanticsNode().boundsInRoot
         val headerBottom = compose.onNode(hasText(CHATS_HEADER) and hasClickAction())
             .fetchSemanticsNode().boundsInRoot.bottom
-        val empty = compose.onNodeWithText("No conversations yet")
+        val empty = compose.onNodeWithTag("home_empty_chats_state")
             .fetchSemanticsNode().boundsInRoot
 
         // Not hugging the header: a real gap, not the old 12dp.

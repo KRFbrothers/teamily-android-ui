@@ -1442,7 +1442,13 @@ private fun AgentHomeList(
                         .padding(bottom = 112.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(Modifier.fillMaxWidth()) {
+                    // Tagged because the drawer renders the same "No conversations
+                    // yet" string while closed, so a text lookup matches two nodes.
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .testTag("home_empty_chats_state"),
+                    ) {
                         Text(
                             text = "No conversations yet",
                             style = MaterialTheme.typography.bodyMedium.copy(
