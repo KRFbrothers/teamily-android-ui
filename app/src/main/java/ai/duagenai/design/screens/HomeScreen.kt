@@ -760,6 +760,20 @@ internal const val DUA_AGENT_TIME = "Mon"
 internal const val APP_NAME = "Dua Gen AI"
 
 /**
+ * The section header's leading glyph. Named because the divider's start inset is
+ * derived from it: the divider must begin on the header's TEXT edge, which is
+ * `gutter + header inner padding + this + xs`. Keeping it a constant means the
+ * two cannot drift apart.
+ */
+internal val SECTION_ICON_SIZE: Dp = 13.dp
+
+/**
+ * `CanvasChatRow`'s horizontal padding. The divider's end inset uses it so the
+ * rule stops where the row content stops instead of running to the screen edge.
+ */
+internal val CHAT_ROW_SIDE_PADDING: Dp = 20.dp
+
+/**
  * Agent home's header: 48dp circular user avatar (opens the drawer) · 28dp
  * rounded-square app badge + 20sp "Dua Gen AI" · 44dp plus inside a 48dp target.
  * No Dua | Agent toggle here — the way back to Dua is the drawer's "Dua" row.
@@ -1115,6 +1129,13 @@ internal fun PersonalAgentHeroCard(
                     )
                     if (PERSONAL_AGENT_DATE.isNotEmpty()) {
                         Spacer(Modifier.width(spacing.sm))
+                        // The trailing label is a single-line slot pinned to the
+                        // card's content edge. Without `maxLines`/`softWrap` a
+                        // longer label wrapped to a second line, which pushed the
+                        // preview line past the card's 80dp `heightIn` max and got
+                        // clipped by `clip(heroShape)`. The title above carries
+                        // `weight(1f)`, so it ellipsizes and this label keeps its
+                        // intrinsic width instead of being squeezed.
                         Text(
                             text = PERSONAL_AGENT_DATE,
                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -1122,6 +1143,12 @@ internal fun PersonalAgentHeroCard(
                                 fontSize = 12.5.sp,
                             ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .testTag("home_hero_trailing_label"),
                         )
                     }
                 }
@@ -1221,7 +1248,7 @@ private fun CanvasChatRow(
                 onClick()
             },
         )
-        .padding(horizontal = 20.dp, vertical = 10.dp)
+        .padding(horizontal = CHAT_ROW_SIDE_PADDING, vertical = 10.dp)
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1343,7 +1370,7 @@ private fun SectionHeader(
             },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(Modifier.size(13.dp)) {
+        Canvas(Modifier.size(SECTION_ICON_SIZE)) {
             val w = size.width
             val h = size.height
             val stroke = Stroke(width = TeamilyStroke.icon.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -1528,6 +1555,7 @@ private fun AgentHomeHeaderBlock(
     onOpenDuaAgentChat: () -> Unit,
 ) {
     val palette = teamilyPalette()
+    val spacing = LocalDuaGenAISpacing.current
     // One root Column: a LazyColumn `item {}` places its content in a single
     // slot, so emitting three siblings here would stack them on top of each
     // other instead of one below the next.
@@ -1555,8 +1583,23 @@ private fun AgentHomeHeaderBlock(
                 }
             }
         }
+        // The divider used to be full-bleed: it ran the whole 390dp width while
+        // every other element on the screen is inset, so it read as a line from a
+        // different layout system. It now starts on the section header's TEXT
+        // left edge and ends on the chat rows' content edge.
+        //
+        //   start = gutter (14) + header inner padding (6) + icon (13) + xs (4)
+        //         = 37dp  -> the "Pinned"/"Chats" label's left edge
+        //   end   = the 20dp side padding CanvasChatRow uses for its content
         HorizontalDivider(
-            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
+            modifier = Modifier
+                .padding(
+                    start = spacing.gutter + spacing.sm + SECTION_ICON_SIZE + spacing.xs,
+                    end = CHAT_ROW_SIDE_PADDING,
+                    top = 6.dp,
+                    bottom = 2.dp,
+                )
+                .testTag("home_section_divider"),
             thickness = 0.5.dp,
             color = palette.border,
         )

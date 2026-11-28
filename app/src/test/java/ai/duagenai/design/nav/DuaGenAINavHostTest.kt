@@ -1777,6 +1777,101 @@ class DuaGenAINavHostTest {
         )
     }
 
+    /**
+     * The section divider is inset to the content, not full-bleed.
+     *
+     * It used to be a bare `HorizontalDivider` with only vertical padding, so it
+     * ran the whole 390dp screen width while every other element on Agent home is
+     * inset. It read as a rule from a different layout system.
+     *
+     * It now starts on the section header's TEXT left edge and ends on the chat
+     * rows' content edge:
+     *
+     *   start = gutter (14) + header inner padding (6) + icon (13) + xs (4) = 37dp
+     *   end   = CHAT_ROW_SIDE_PADDING (20dp) from the right screen edge
+     *
+     * Both are derived from the same constants the composables use, so this test
+     * fails if either side drifts.
+     */
+    @Test
+    fun sectionDividerIsInsetToTheContentNotFullBleed() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val rootWidth = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first().boundsInRoot.width
+        val divider = compose
+            .onNodeWithTag("home_section_divider", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+
+        // 37dp: the "Pinned"/"Chats" label's left edge.
+        val expectedStart = (GUTTER_DP + 6f + 13f + 4f) * density
+        val expectedEnd = rootWidth - 20f * density
+        val tolerance = 1.5f * density
+
+        assertTrue(
+            "divider must start on the header text edge (${expectedStart / density}dp), " +
+                "was ${divider.left / density}dp",
+            kotlin.math.abs(divider.left - expectedStart) <= tolerance,
+        )
+        assertTrue(
+            "divider must end on the row content edge (${expectedEnd / density}dp), " +
+                "was ${divider.right / density}dp",
+            kotlin.math.abs(divider.right - expectedEnd) <= tolerance,
+        )
+        // And it must NOT be full-bleed any more.
+        assertTrue(
+            "divider must not span the full screen width, was " +
+                "${divider.width / density}dp of ${rootWidth / density}dp",
+            divider.width < rootWidth - 2f * GUTTER_DP * density,
+        )
+    }
+
+    /**
+     * The hero card's trailing label stays on one line and inside the card.
+     *
+     * The label had no `maxLines`/`softWrap`, so a longer value wrapped to a
+     * second line. That pushed the preview line past the card's 80dp `heightIn`
+     * max, and `clip(heroShape)` cut it off. The label is now a single-line slot
+     * that ellipsizes instead of wrapping, and the title above it carries
+     * `weight(1f)` so it yields space rather than squeezing the label.
+     */
+    @Test
+    fun heroCardTrailingLabelStaysOnOneLineInsideTheCard() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val card = compose
+            .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot
+        val label = compose
+            .onNodeWithTag("home_hero_trailing_label", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
+
+        // One line of 12.5sp text is ~17dp tall. Two lines would be ~34dp, so a
+        // 24dp ceiling catches a wrap without being brittle about font metrics.
+        assertTrue(
+            "hero trailing label must be a single line, was ${label.height / density}dp tall",
+            label.height <= 24f * density,
+        )
+        // Inside the card's content box: the card has 10dp inner horizontal
+        // padding, so the label's right edge must not pass card.right - 10dp.
+        assertTrue(
+            "hero trailing label must not overflow the card's content edge, " +
+                "label right ${label.right / density}dp vs card right ${card.right / density}dp",
+            label.right <= card.right - 10f * density + 1f * density,
+        )
+        // And it must be fully inside the card vertically — not clipped by
+        // `clip(heroShape)`.
+        assertTrue(
+            "hero trailing label must sit inside the card vertically, " +
+                "label ${label.top / density}..${label.bottom / density}dp vs " +
+                "card ${card.top / density}..${card.bottom / density}dp",
+            label.top >= card.top - 1f * density && label.bottom <= card.bottom + 1f * density,
+        )
+    }
+
     @Test
     fun homeTabForMapsTheFiveTabRoutesOnly() {
         assertEquals(HomeTab.Chats, homeTabFor(DuaGenAIRoutes.HOME))
