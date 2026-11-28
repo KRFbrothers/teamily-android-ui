@@ -502,9 +502,11 @@ fun HomeScreen(
                 // Personal Agent is FIXED: remains pinned at top during scroll
                 PersonalAgentHeroCard(
                     onClick = onOpenPersonalAgentChat,
+                    // Same screen-edge inset as the top bar and the search row
+                    // above it, so the card's left edge lines up with them.
                     modifier = Modifier.padding(
-                        start = 10.dp,
-                        end = 10.dp,
+                        start = LocalDuaGenAISpacing.current.gutter,
+                        end = LocalDuaGenAISpacing.current.gutter,
                         top = 8.dp,
                         bottom = 6.dp,
                     ),
@@ -1322,8 +1324,11 @@ private fun SectionHeader(
             // The whole row is the tap target, not just the ~100dp of content.
             // `fillMaxWidth` comes BEFORE the outer padding so the row spans the
             // list's full width and the padding insets the capsule inside it.
+            // The outer inset is the screen gutter, not `spacing.sm`: the header
+            // label then starts on the same vertical line as the hero card, the
+            // top bar and the search row.
             .fillMaxWidth()
-            .padding(horizontal = spacing.sm)
+            .padding(horizontal = spacing.gutter)
             .clip(TeamilyShapes.capsule)
             .clickable(role = Role.Button, onClick = onToggle)
             // 48dp is the Material 3 / WCAG 2.5.8 minimum touch target. The
@@ -1411,63 +1416,33 @@ private fun AgentHomeList(
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
     var chatsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    LazyColumn(
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(top = 2.dp, bottom = 112.dp),
-    ) {
-        item {
-            Column {
-                SectionHeader(
-                    icon = SectionIcon.Pin,
-                    label = "Pinned \u00b7 1",
-                    expanded = pinnedExpanded,
-                    onToggle = { pinnedExpanded = !pinnedExpanded },
-                )
-            }
-        }
-        if (pinnedExpanded) {
-            item {
-                CanvasChatRow(
-                    title = DUA_AGENT_TITLE,
-                    subtitle = DUA_AGENT_SUBTITLE,
-                    time = DUA_AGENT_TIME,
-                    verified = true,
-                    onClick = onOpenDuaAgentChat,
+    if (conversations.isEmpty()) {
+        // Nothing to scroll, so a plain Column is the right container: the empty
+        // state can then take the space left under the Chats header and centre
+        // itself in it. A LazyColumn item cannot do that — `fillParentMaxHeight`
+        // measures the whole viewport, so the text would land below the fold.
+        Column(modifier = modifier.fillMaxWidth()) {
+            AgentHomeHeaderBlock(
+                pinnedExpanded = pinnedExpanded,
+                chatsExpanded = chatsExpanded,
+                conversationCount = 0,
+                onTogglePinned = { pinnedExpanded = !pinnedExpanded },
+                onToggleChats = { chatsExpanded = !chatsExpanded },
+                onOpenDuaAgentChat = onOpenDuaAgentChat,
+            )
+            if (chatsExpanded) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        // Same screen gutter as the headers and the hero card, so
+                        // all of them share one left edge.
+                        .padding(horizontal = spacing.gutter)
+                        // Clearance for the floating dock drawn over the list.
+                        .padding(bottom = 112.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    ChatAvatar(
-                        ring = if (palette.borderStrong == null) palette.bgCanvas else palette.bgSurface,
-                        miniBadge = false,
-                        size = 46.dp,
-                    ) {
-                        SignalBotBadge(46.dp)
-                    }
-                }
-            }
-        }
-        item {
-            Column {
-                HorizontalDivider(
-                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
-                    thickness = 0.5.dp,
-                    color = palette.border,
-                )
-                SectionHeader(
-                    icon = SectionIcon.Chat,
-                    label = "Chats \u00b7 ${conversations.size}",
-                    expanded = chatsExpanded,
-                    onToggle = { chatsExpanded = !chatsExpanded },
-                )
-            }
-        }
-        if (chatsExpanded) {
-            if (conversations.isEmpty()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = spacing.gutter)
-                            .padding(top = 12.dp, bottom = 16.dp),
-                    ) {
+                    Column(Modifier.fillMaxWidth()) {
                         Text(
                             text = "No conversations yet",
                             style = MaterialTheme.typography.bodyMedium.copy(
@@ -1489,7 +1464,24 @@ private fun AgentHomeList(
                         )
                     }
                 }
-            } else {
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(top = 2.dp, bottom = 112.dp),
+        ) {
+            item {
+                AgentHomeHeaderBlock(
+                    pinnedExpanded = pinnedExpanded,
+                    chatsExpanded = chatsExpanded,
+                    conversationCount = conversations.size,
+                    onTogglePinned = { pinnedExpanded = !pinnedExpanded },
+                    onToggleChats = { chatsExpanded = !chatsExpanded },
+                    onOpenDuaAgentChat = onOpenDuaAgentChat,
+                )
+            }
+            if (chatsExpanded) {
                 items(conversations.size, key = { conversations[it].id }) { index ->
                     val item = conversations[index]
                     CanvasChatRow(
@@ -1512,6 +1504,62 @@ private fun AgentHomeList(
                 }
             }
         }
+    }
+}
+
+/**
+ * The Pinned and Chats header block: "Pinned · 1" → the Dua Agent row → a thin
+ * divider → "Chats · N". Shared by the scrolling list and the empty layout so
+ * the two cannot drift apart.
+ */
+@Composable
+private fun AgentHomeHeaderBlock(
+    pinnedExpanded: Boolean,
+    chatsExpanded: Boolean,
+    conversationCount: Int,
+    onTogglePinned: () -> Unit,
+    onToggleChats: () -> Unit,
+    onOpenDuaAgentChat: () -> Unit,
+) {
+    val palette = teamilyPalette()
+    // One root Column: a LazyColumn `item {}` places its content in a single
+    // slot, so emitting three siblings here would stack them on top of each
+    // other instead of one below the next.
+    Column {
+        SectionHeader(
+            icon = SectionIcon.Pin,
+            label = "Pinned \u00b7 1",
+            expanded = pinnedExpanded,
+            onToggle = onTogglePinned,
+        )
+        if (pinnedExpanded) {
+            CanvasChatRow(
+                title = DUA_AGENT_TITLE,
+                subtitle = DUA_AGENT_SUBTITLE,
+                time = DUA_AGENT_TIME,
+                verified = true,
+                onClick = onOpenDuaAgentChat,
+            ) {
+                ChatAvatar(
+                    ring = if (palette.borderStrong == null) palette.bgCanvas else palette.bgSurface,
+                    miniBadge = false,
+                    size = 46.dp,
+                ) {
+                    SignalBotBadge(46.dp)
+                }
+            }
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
+            thickness = 0.5.dp,
+            color = palette.border,
+        )
+        SectionHeader(
+            icon = SectionIcon.Chat,
+            label = "Chats \u00b7 $conversationCount",
+            expanded = chatsExpanded,
+            onToggle = onToggleChats,
+        )
     }
 }
 

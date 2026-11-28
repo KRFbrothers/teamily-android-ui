@@ -265,6 +265,13 @@ private const val AGENT_ROLE_LINE = PERSONAL_AGENT_TITLE
 private const val PINNED_HEADER = "Pinned \u00b7 1"
 private const val CHATS_HEADER = "Chats \u00b7 0"
 
+/**
+ * The screen-edge inset every Agent-home element shares: `DuaGenAISpacing.gutter`
+ * (14dp). The top bar, the search row, the hero card, both section headers and
+ * the empty state all start on this one vertical line.
+ */
+private const val GUTTER_DP = 14f
+
 /** res/values/strings.xml demo_label. */
 private const val DEMO_LABEL = "Demo"
 private const val APP_NAME_TEXT = "Dua Gen AI"
@@ -1669,9 +1676,10 @@ class DuaGenAINavHostTest {
         val density = compose.density.density
         val minHeight = 48f * density - 1f
         val rootWidth = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first().boundsInRoot.width
-        // The row is inset by `spacing.sm` (6dp) on each side, so a full-width
-        // header is the root width minus 12dp. 1dp of tolerance for rounding.
-        val minWidth = rootWidth - 12f * density - 1f
+        // The row is inset by the screen gutter (14dp) on each side, so a
+        // full-width header is the root width minus 28dp. 1dp of tolerance for
+        // rounding.
+        val minWidth = rootWidth - 2f * GUTTER_DP * density - 1f
 
         for (label in listOf(PINNED_HEADER, CHATS_HEADER)) {
             val b = compose.onNode(hasText(label) and hasClickAction())
@@ -1686,6 +1694,87 @@ class DuaGenAINavHostTest {
                 b.width >= minWidth,
             )
         }
+    }
+
+    /**
+     * Every Agent-home element starts on ONE left edge: the screen gutter.
+     *
+     * The hero card used to be inset 10dp, the section headers 6dp and the empty
+     * state 14dp, so the screen had three different left edges and read ragged.
+     * All three now use `DuaGenAISpacing.gutter` (14dp), which is what the top bar
+     * and the search row already used.
+     */
+    @Test
+    fun agentHomeElementsShareOneLeftGutter() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val expected = GUTTER_DP * density
+        // 1dp of tolerance: the capsule clip and the avatar ring round by a
+        // fraction of a pixel, and the hero card carries a 0.5dp border.
+        val tolerance = 1f * density
+
+        val heroLeft = compose
+            .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot.left
+        val pinnedLeft = compose.onNode(hasText(PINNED_HEADER) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot.left
+        val chatsLeft = compose.onNode(hasText(CHATS_HEADER) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot.left
+        val emptyLeft = compose.onNodeWithText("No conversations yet")
+            .fetchSemanticsNode().boundsInRoot.left
+
+        for ((name, left) in listOf(
+            "hero card" to heroLeft,
+            "Pinned header" to pinnedLeft,
+            "Chats header" to chatsLeft,
+            "empty state" to emptyLeft,
+        )) {
+            assertTrue(
+                "$name must start at the ${GUTTER_DP}dp gutter, was ${left / density}dp",
+                kotlin.math.abs(left - expected) <= tolerance,
+            )
+        }
+    }
+
+    /**
+     * The empty Chats state is centred in the list, not pinned under the header.
+     *
+     * It used to be a top-aligned Column with `padding(top = 12.dp)`, which left
+     * roughly 80% of the screen empty below it and made the screen look broken
+     * rather than intentionally empty. It now sits in a `fillParentMaxHeight` Box
+     * with `contentAlignment = Center`.
+     */
+    @Test
+    fun emptyChatsStateIsCentredNotStuckUnderTheHeader() {
+        launch()
+        switchTo(HomeMode.Agent)
+
+        val density = compose.density.density
+        val viewport = compose.onNodeWithTag("home_pull_to_refresh")
+            .fetchSemanticsNode().boundsInRoot
+        val headerBottom = compose.onNode(hasText(CHATS_HEADER) and hasClickAction())
+            .fetchSemanticsNode().boundsInRoot.bottom
+        val empty = compose.onNodeWithText("No conversations yet")
+            .fetchSemanticsNode().boundsInRoot
+
+        // Not hugging the header: a real gap, not the old 12dp.
+        assertTrue(
+            "empty state must clear the Chats header, gap was " +
+                "${(empty.top - headerBottom) / density}dp",
+            empty.top - headerBottom >= 40f * density,
+        )
+
+        // And it sits in the middle third of the list viewport, not at its top.
+        val centre = (empty.top + empty.bottom) / 2f
+        val lower = viewport.top + viewport.height * 0.30f
+        val upper = viewport.top + viewport.height * 0.70f
+        assertTrue(
+            "empty state must be vertically centred, its centre was at " +
+                "${(centre - viewport.top) / density}dp of ${viewport.height / density}dp",
+            centre in lower..upper,
+        )
     }
 
     @Test
