@@ -4,6 +4,7 @@ import androidx.compose.runtime.saveable.SaverScope
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,16 +37,16 @@ class McpServerListSaverTest {
 
     /** The saver's save half, narrowed to the flat string list it really writes. */
     @Suppress("UNCHECKED_CAST")
-    private fun save(value: List<McpServerItem>): List<String> =
-        with(McpServerListSaver) { scope.save(value) } as List<String>
+    private fun save(value: List<McpServerItem>): List<String>? =
+        with(McpServerListSaver) { scope.save(value) } as List<String>?
 
     @Test
     fun `saves only primitives so the bundle can hold it`() {
-        val saved = save(servers)
+        val saved = save(servers)!!
 
         assertTrue(
             "every saved element must be a Bundle-safe primitive, got $saved",
-            saved.all { it is String },
+            saved.all { it::class == String::class },
         )
         assertEquals("6 fields per server", servers.size * 6, saved.size)
     }
@@ -70,14 +71,22 @@ class McpServerListSaverTest {
 
     @Test
     fun `an empty list round trips to an empty list`() {
-        assertEquals(emptyList<McpServerItem>(), McpServerListSaver.restore(save(emptyList())))
+        // Compose's `listSaver` returns null for an empty list — that is the
+        // framework's own encoding, not a bug here. The registry then keeps no
+        // entry and the screen falls back to DEFAULT_MCP_SERVERS, which is the
+        // right outcome for "nothing was saved". What must NOT happen is a
+        // throw, so this pins the null and the restore of it.
+        val saved = save(emptyList())
+
+        assertNull("listSaver encodes an empty list as null", saved)
+        assertEquals(emptyList<McpServerItem>(), McpServerListSaver.restore(emptyList()))
     }
 
     @Test
     fun `a truncated payload drops the partial server instead of crashing`() {
         // A saved list cut short (older build, interrupted write) must not throw
         // on restore — the complete servers come back and the partial one goes.
-        val truncated = save(servers).dropLast(3)
+        val truncated = save(servers)!!.dropLast(3)
 
         val restored = McpServerListSaver.restore(truncated)
 
