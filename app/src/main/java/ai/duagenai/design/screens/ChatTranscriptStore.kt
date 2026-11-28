@@ -146,15 +146,16 @@ class ChatTranscriptStore : ViewModel() {
  *  Live chat — one turn against dua-backend.
  *
  *  A normal thread goes to the Node API (`mode: "auto"`, `stream: false`).
- *  Dua Agent ([AGENT_CHAT_ID]) goes to the Python engine (`mode: "agent"`,
- *  `stream: true`) with the enabled skill ids. The screen stays on the canned
- *  offline reply until a session token exists, unless a caller injects a source.
+ *  Dua Work ([AGENT_CHAT_ID] / [OFFICIAL_AGENT_ID]) goes to the Python engine
+ *  (`mode: "agent"`, `stream: true`) with the enabled skill ids. The screen
+ *  stays on the canned offline reply until a session token exists, unless a
+ *  caller injects a source.
  * ==========================================================================*/
 
 /**
  * Sends one user turn and returns the assistant text.
  *
- * @param skills the enabled Dua Agent skill ids. A normal thread ignores them.
+ * @param skills the enabled Dua Work skill ids. A normal thread ignores them.
  */
 interface ChatDataSource {
     suspend fun sendMessage(chatId: String, text: String, skills: Set<String>): String
@@ -194,7 +195,7 @@ class RemoteChatDataSource(
         text: String,
         skills: Set<String>,
     ): String = withContext(Dispatchers.IO) {
-        val isEngine = chatId == AGENT_CHAT_ID
+        val isEngine = isOfficialAgentThread(chatId)
         val url = if (isEngine) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
         val payload = buildChatPayload(chatId, text, skills, stream = isEngine)
         val body = client.requestOrThrow("POST", url, payload.toString(), label = "Chat request")
@@ -208,7 +209,7 @@ class RemoteChatDataSource(
         onChunk: (agentId: String?, agentName: String?, delta: String) -> Unit,
         onAgentDone: (agentId: String?, agentName: String?) -> Unit,
     ): String = withContext(Dispatchers.IO) {
-        val isEngine = chatId == AGENT_CHAT_ID
+        val isEngine = isOfficialAgentThread(chatId)
         val payload = buildChatPayload(chatId, text, skills, stream = true)
         val url = if (isEngine) ApiConfig.engineUrl("/api/chat") else ApiConfig.url("/api/chat")
 
@@ -268,7 +269,7 @@ class RemoteChatDataSource(
         skills: Set<String>,
         stream: Boolean,
     ): JSONObject {
-        val isEngine = chatId == AGENT_CHAT_ID
+        val isEngine = isOfficialAgentThread(chatId)
         val payload = JSONObject()
             .put("model", "Dua")
             .put("mode", if (isEngine) "agent" else "auto")
@@ -282,7 +283,7 @@ class RemoteChatDataSource(
                 ),
             )
 
-        if (!isEngine && chatId != PERSONAL_AGENT_CHAT_ID && !chatId.startsWith("chat_")) {
+        if (!isEngine && !chatId.startsWith("chat_")) {
             payload.put("conversation_id", chatId)
         }
 

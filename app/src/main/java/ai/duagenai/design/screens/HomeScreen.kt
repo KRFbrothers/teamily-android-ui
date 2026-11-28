@@ -159,7 +159,7 @@ import ai.duagenai.design.theme.MaxContentWidth
 /* ============================================================================
  *  Home — the two modes, per the confirmed product model
  *
- *  Dua Gen AI is one package: Dua AI, Dua Agent, and Dua Workspace.
+ *  Dua Gen AI is one package: Dua AI, Dua Work, and Dua Workspace.
  *  The Home UI has two modes:
  *
  *    DUA   = a chatbot. Simple chat, Q&A, no agent work.
@@ -185,10 +185,10 @@ import ai.duagenai.design.theme.MaxContentWidth
  *        badge + bold "Dua Gen AI" · 48dp circular plus (New chat). NO
  *        Dua | Agent toggle here: the drawer's "Dua" row switches back.
  *      • search row: 48dp circular filter button + full-width "Search" pill
- *      • ONE filled hero card: the user's personal agent (cardHeroColor);
- *        tapping it opens the Agent thread
- *      • canvas rows with no card boxes: "Pinned · 1" → Dua Agent ✓, a thin
- *        divider, then "Chats · 6"; both section headers collapse
+ *      • ONE filled hero card: Dua Work (cardHeroColor);
+ *        tapping it opens the Dua Work thread
+ *      • canvas rows with no card boxes: "Pinned · 1" → Dua Work ✓, a thin
+ *        divider, then "Chats · N"; both section headers collapse
  *      • bottom: floating 5-tab capsule dock (Chats · Agents · Discover ·
  *        Memory · Artifacts) drawn over the list, as in the reference.
  *
@@ -275,16 +275,10 @@ fun HomeScreen(
      */
     selectedTab: HomeTab = HomeTab.Chats,
     /**
-     * Opens the Personal Agent thread. The hero card is the entry point, and
-     * the host routes [PERSONAL_AGENT_CHAT_ID] through the same `chat/{chatId}`
-     * path every other thread uses.
+     * Opens Dua Work's thread. Both the hero card and the pinned "Dua Work" row
+     * route [AGENT_CHAT_ID] through the same `chat/{chatId}` path.
      */
-    onOpenPersonalAgentChat: () -> Unit = {},
-    /**
-     * Opens Dua Agent's thread. The pinned "Dua Agent" row is the entry point.
-     * The host routes [AGENT_CHAT_ID] through the same chat path.
-     */
-    onOpenDuaAgentChat: () -> Unit = {},
+    onOpenDuaWorkChat: () -> Unit = {},
     /**
      * Opens one of the chat rows. Each row already has a stable id; the
      * host uses the same chat route as the drawer history. No rows exist
@@ -499,9 +493,9 @@ fun HomeScreen(
                         bottom = 8.dp,
                     ),
                 )
-                // Personal Agent is FIXED: remains pinned at top during scroll
-                PersonalAgentHeroCard(
-                    onClick = onOpenPersonalAgentChat,
+                // Dua Work hero card is FIXED: remains pinned at top during scroll
+                DuaWorkHeroCard(
+                    onClick = onOpenDuaWorkChat,
                     // Same screen-edge inset as the top bar and the search row
                     // above it, so the card's left edge lines up with them.
                     modifier = Modifier.padding(
@@ -524,7 +518,7 @@ fun HomeScreen(
                             .testTag("home_pull_to_refresh"),
                     ) {
                         AgentHomeList(
-                            onOpenDuaAgentChat = onOpenDuaAgentChat,
+                            onOpenDuaWorkChat = onOpenDuaWorkChat,
                             conversations = conversations,
                             onOpenListedChat = onOpenListedChat,
                             modifier = Modifier.fillMaxSize(),
@@ -739,21 +733,17 @@ private fun ModeToggle(
  *  AGENT HOME — the Teamily chat-list layout (agent-home-reference.jpg)
  *
  *  Header (avatar · badge + "Dua Gen AI" · plus) → filter + Search pill →
- *  ONE filled hero card (the personal agent) → canvas rows with no card boxes
- *  (Pinned · 1 → Dua Agent ✓, divider, Chats · 6 → the listed chats) → floating
- *  5-tab dock drawn OVER the list, so the last row sits under it.
+ *  ONE filled hero card (Dua Work) → canvas rows with no card boxes
+ *  (Pinned · N → Dua Work ✓ + pinned chats, divider, Chats · N → listed chats) →
+ *  floating 5-tab dock drawn OVER the list, so the last row sits under it.
  * ==========================================================================*/
 
-/** Hero card title. The thread opened from the card uses the same string. */
-internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
-/** Honest hero subtitle — a description of what the card opens, not a fake chat line. */
-internal const val PERSONAL_AGENT_PREVIEW = "Your own assistant — tap to chat"
-
-/** The pinned official agent row. Matches Teamily AI mobile app parity. */
-internal const val DUA_AGENT_TITLE = "Dua Agent"
-internal const val DUA_AGENT_SUBTITLE = "I'm Dua Agent \u2014 the official agent of Dua Gen AI"
+/** Official pinned agent identity (Dua Work). Copy in UI reads from `strings.xml`. */
+internal const val DUA_WORK_TITLE = "Dua Work"
+internal const val DUA_WORK_HERO_SUBTITLE = "Your official agent \u2014 tap to chat"
+internal const val DUA_WORK_PINNED_SUBTITLE = "I'm Dua Work \u2014 the official agent of Dua Gen AI"
 /** Timestamp on the pinned row: "Mon" right-aligned matching Teamily parity. */
-internal const val DUA_AGENT_TIME = "Mon"
+internal const val DUA_WORK_TIME = "Mon"
 
 /** Header brand text. Matches Teamily AI mobile app parity. */
 internal const val APP_NAME = "Dua Gen AI"
@@ -1041,14 +1031,14 @@ private fun SearchRow(
 }
 
 /**
- * The ONE filled card on Agent home: the user's personal agent.
+ * The ONE filled card on Agent home: the official Dua Work agent.
  *
  * `cardHeroColor` fill, 12dp corners, a soft floating shadow and the 0.97 press
  * scale. Rendered height stays in 76–80dp (the reference's 95px card, not the
  * 129px overflow). The 46dp avatar is the panda mark.
  */
 @Composable
-internal fun PersonalAgentHeroCard(
+internal fun DuaWorkHeroCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1058,6 +1048,8 @@ internal fun PersonalAgentHeroCard(
     val haptic = LocalHapticFeedback.current
     val heroShape = TeamilyShapes.md
     val lightCard = palette.borderStrong != null
+    val heroTitle = stringResource(R.string.dua_work_title)
+    val heroSubtitle = stringResource(R.string.dua_work_hero_subtitle)
     // Light: soft 4dp shadow. Colors stay the palette's low-alpha tokens.
     // Dark keeps elevation 4dp and the reduced alphas already set below.
     val heroElevation = if (lightCard) palette.restingShadowElevation else 4.dp
@@ -1076,6 +1068,7 @@ internal fun PersonalAgentHeroCard(
             .fillMaxWidth()
             // Reference card is 95px (76–80dp). This stops the fill growing to 129px.
             .heightIn(min = 76.dp, max = 80.dp)
+            .testTag("home_hero_card")
             .teamilyPressScale(interactionSource, targetScale = 0.97f)
             .shadow(
                 elevation = heroElevation,
@@ -1095,7 +1088,7 @@ internal fun PersonalAgentHeroCard(
                 },
             )
             .semantics {
-                contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW"
+                contentDescription = "$heroTitle, $heroSubtitle"
             },
         shape = heroShape,
         color = palette.cardHeroColor,
@@ -1114,14 +1107,9 @@ internal fun PersonalAgentHeroCard(
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
-                // The card carries the title only. It used to have a trailing
-                // label on the right, but that slot held a hardcoded fake
-                // timestamp ("Mon") with no real source behind it, and it
-                // competed with the title for width. Removing it leaves the
-                // title the full content width, so it no longer ellipsizes
-                // against a label that said nothing true.
+                // The card carries the title only — no trailing label.
                 Text(
-                    text = PERSONAL_AGENT_TITLE,
+                    text = heroTitle,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.5.sp,
@@ -1130,10 +1118,11 @@ internal fun PersonalAgentHeroCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("home_hero_title"),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = PERSONAL_AGENT_PREVIEW,
+                    text = heroSubtitle,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Normal,
                         fontSize = 15.sp,
@@ -1180,8 +1169,7 @@ private fun ChatAvatar(
 }
 
 /**
- * Personal Agent avatar: the panda mark. Decorative: the row already names
- * the agent.
+ * Dua welcome avatar: the panda mark.
  */
 @Composable
 internal fun BotBadge(size: Dp) {
@@ -1189,7 +1177,7 @@ internal fun BotBadge(size: Dp) {
 }
 
 /**
- * Dua Agent's official row avatar: the panda mark, at [size]. The panda
+ * Dua Work's official row avatar: the panda mark, at [size]. The panda
  * already fills the circle, so this does not add a green disc behind it.
  */
 @Composable
@@ -1201,7 +1189,7 @@ internal fun SignalBotBadge(size: Dp = 46.dp) {
 /**
  * One canvas row — no card box: avatar · title (+ verified ✓) / 1-line
  * subtitle · right-aligned time. 20dp side padding to align 46dp avatar with
- * the Personal Agent hero card's 46dp avatar (10dp outer + 10dp inner).
+ * the Dua Work hero card's 46dp avatar (10dp outer + 10dp inner).
  */
 @Composable
 private fun CanvasChatRow(
@@ -1210,12 +1198,13 @@ private fun CanvasChatRow(
     time: String,
     verified: Boolean = false,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     avatar: @Composable () -> Unit,
 ) {
     val spacing = LocalDuaGenAISpacing.current
     val interactionSource = remember { MutableInteractionSource() }
     val haptic = LocalHapticFeedback.current
-    val rowModifier = Modifier
+    val rowModifier = modifier
         .fillMaxWidth()
         .teamilyPressScale(interactionSource, targetScale = 0.97f)
         .clickable(
@@ -1282,7 +1271,38 @@ private fun CanvasChatRow(
     }
 }
 
-/** The dark emerald green verified check with white tick next to "Dua Agent", matching Teamily AI. */
+@Composable
+private fun EmptyChatsMessage(modifier: Modifier = Modifier) {
+    // Tagged because the drawer renders the same "No conversations yet"
+    // string while closed, so a text lookup matches two nodes.
+    Column(
+        modifier
+            .fillMaxWidth()
+            .testTag("home_empty_chats_state"),
+    ) {
+        Text(
+            text = "No conversations yet",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.5.sp,
+                lineHeight = 20.sp,
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Chats you start will appear here.",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Normal,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The dark emerald green verified check with white tick next to "Dua Work", matching Teamily AI. */
 @Composable
 internal fun VerifiedCheck() {
     val palette = teamilyPalette()
@@ -1406,13 +1426,13 @@ private fun SectionHeader(
 }
 
 /**
- * Agent home's scrolling body: Pinned section (Teamily Agent) and Chats section
- * (Frontend Developer), matching the exact Teamily AI mobile app hierarchy.
- * Personal Agent hero card remains fixed at the top during scroll.
+ * Agent home's scrolling body: Pinned section (Dua Work + any pinned chats)
+ * and Chats section, matching the exact Teamily AI mobile app hierarchy.
+ * The Dua Work hero card remains fixed at the top during scroll.
  */
 @Composable
 private fun AgentHomeList(
-    onOpenDuaAgentChat: () -> Unit,
+    onOpenDuaWorkChat: () -> Unit,
     conversations: List<ConversationItem> = emptyList(),
     onOpenListedChat: (chatId: String, title: String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -1421,6 +1441,8 @@ private fun AgentHomeList(
     val palette = teamilyPalette()
     var pinnedExpanded by rememberSaveable { mutableStateOf(true) }
     var chatsExpanded by rememberSaveable { mutableStateOf(true) }
+    val pinnedChats = remember(conversations) { conversations.filter { it.pinned } }
+    val regularChats = remember(conversations) { conversations.filterNot { it.pinned } }
 
     if (conversations.isEmpty()) {
         // Nothing to scroll, so a plain Column is the right container: the empty
@@ -1431,10 +1453,12 @@ private fun AgentHomeList(
             AgentHomeHeaderBlock(
                 pinnedExpanded = pinnedExpanded,
                 chatsExpanded = chatsExpanded,
-                conversationCount = 0,
+                pinnedChats = emptyList(),
+                regularCount = 0,
                 onTogglePinned = { pinnedExpanded = !pinnedExpanded },
                 onToggleChats = { chatsExpanded = !chatsExpanded },
-                onOpenDuaAgentChat = onOpenDuaAgentChat,
+                onOpenDuaWorkChat = onOpenDuaWorkChat,
+                onOpenListedChat = onOpenListedChat,
             )
             if (chatsExpanded) {
                 Box(
@@ -1448,33 +1472,7 @@ private fun AgentHomeList(
                         .padding(bottom = 112.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    // Tagged because the drawer renders the same "No conversations
-                    // yet" string while closed, so a text lookup matches two nodes.
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .testTag("home_empty_chats_state"),
-                    ) {
-                        Text(
-                            text = "No conversations yet",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 14.5.sp,
-                                lineHeight = 20.sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Chats you start will appear here.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    EmptyChatsMessage()
                 }
             }
         }
@@ -1487,30 +1485,45 @@ private fun AgentHomeList(
                 AgentHomeHeaderBlock(
                     pinnedExpanded = pinnedExpanded,
                     chatsExpanded = chatsExpanded,
-                    conversationCount = conversations.size,
+                    pinnedChats = pinnedChats,
+                    regularCount = regularChats.size,
                     onTogglePinned = { pinnedExpanded = !pinnedExpanded },
                     onToggleChats = { chatsExpanded = !chatsExpanded },
-                    onOpenDuaAgentChat = onOpenDuaAgentChat,
+                    onOpenDuaWorkChat = onOpenDuaWorkChat,
+                    onOpenListedChat = onOpenListedChat,
                 )
             }
             if (chatsExpanded) {
-                items(conversations.size, key = { conversations[it].id }) { index ->
-                    val item = conversations[index]
-                    CanvasChatRow(
-                        title = item.title,
-                        subtitle = item.lastMessagePreview.ifBlank { "Tap to open chat" },
-                        time = item.lastMessageAt,
-                        onClick = { onOpenListedChat(item.id, item.title) },
-                    ) {
-                        ChatAvatar(
-                            ring = if (palette.borderStrong == null) palette.bgCanvas else TeamilyMarks.paper,
-                            miniBadge = false,
-                            size = 46.dp,
+                if (regularChats.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = spacing.gutter, vertical = spacing.xxl),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            PandaMark(
+                            EmptyChatsMessage()
+                        }
+                    }
+                } else {
+                    items(regularChats.size, key = { regularChats[it].id }) { index ->
+                        val item = regularChats[index]
+                        CanvasChatRow(
+                            title = item.title,
+                            subtitle = item.lastMessagePreview.ifBlank { "Tap to open chat" },
+                            time = item.lastMessageAt,
+                            onClick = { onOpenListedChat(item.id, item.title) },
+                        ) {
+                            ChatAvatar(
+                                ring = if (palette.borderStrong == null) palette.bgCanvas else TeamilyMarks.paper,
+                                miniBadge = false,
                                 size = 46.dp,
-                                contentDescription = item.title,
-                            )
+                            ) {
+                                PandaMark(
+                                    size = 46.dp,
+                                    contentDescription = item.title,
+                                )
+                            }
                         }
                     }
                 }
@@ -1520,38 +1533,44 @@ private fun AgentHomeList(
 }
 
 /**
- * The Pinned and Chats header block: "Pinned · 1" → the Dua Agent row → a thin
- * divider → "Chats · N". Shared by the scrolling list and the empty layout so
- * the two cannot drift apart.
+ * The Pinned and Chats header block: "Pinned · N" → the Dua Work row (+ pinned
+ * chats) → a thin divider → "Chats · N". Shared by the scrolling list and the
+ * empty layout so the two cannot drift apart.
  */
 @Composable
 private fun AgentHomeHeaderBlock(
     pinnedExpanded: Boolean,
     chatsExpanded: Boolean,
-    conversationCount: Int,
+    pinnedChats: List<ConversationItem>,
+    regularCount: Int,
     onTogglePinned: () -> Unit,
     onToggleChats: () -> Unit,
-    onOpenDuaAgentChat: () -> Unit,
+    onOpenDuaWorkChat: () -> Unit,
+    onOpenListedChat: (chatId: String, title: String) -> Unit,
 ) {
     val palette = teamilyPalette()
     val spacing = LocalDuaGenAISpacing.current
+    val duaWorkTitle = stringResource(R.string.dua_work_title)
+    val duaWorkSubtitle = stringResource(R.string.dua_work_pinned_subtitle)
+    val pinnedCount = 1 + pinnedChats.size
     // One root Column: a LazyColumn `item {}` places its content in a single
     // slot, so emitting three siblings here would stack them on top of each
     // other instead of one below the next.
     Column {
         SectionHeader(
             icon = SectionIcon.Pin,
-            label = "Pinned \u00b7 1",
+            label = "Pinned \u00b7 $pinnedCount",
             expanded = pinnedExpanded,
             onToggle = onTogglePinned,
         )
         if (pinnedExpanded) {
             CanvasChatRow(
-                title = DUA_AGENT_TITLE,
-                subtitle = DUA_AGENT_SUBTITLE,
-                time = DUA_AGENT_TIME,
+                title = duaWorkTitle,
+                subtitle = duaWorkSubtitle,
+                time = DUA_WORK_TIME,
                 verified = true,
-                onClick = onOpenDuaAgentChat,
+                onClick = onOpenDuaWorkChat,
+                modifier = Modifier.testTag("home_pinned_official_row"),
             ) {
                 ChatAvatar(
                     ring = if (palette.borderStrong == null) palette.bgCanvas else palette.bgSurface,
@@ -1559,6 +1578,25 @@ private fun AgentHomeHeaderBlock(
                     size = 46.dp,
                 ) {
                     SignalBotBadge(46.dp)
+                }
+            }
+            pinnedChats.forEach { item ->
+                CanvasChatRow(
+                    title = item.title,
+                    subtitle = item.lastMessagePreview.ifBlank { "Tap to open chat" },
+                    time = item.lastMessageAt,
+                    onClick = { onOpenListedChat(item.id, item.title) },
+                ) {
+                    ChatAvatar(
+                        ring = if (palette.borderStrong == null) palette.bgCanvas else TeamilyMarks.paper,
+                        miniBadge = false,
+                        size = 46.dp,
+                    ) {
+                        PandaMark(
+                            size = 46.dp,
+                            contentDescription = item.title,
+                        )
+                    }
                 }
             }
         }
@@ -1588,7 +1626,7 @@ private fun AgentHomeHeaderBlock(
         )
         SectionHeader(
             icon = SectionIcon.Chat,
-            label = "Chats \u00b7 $conversationCount",
+            label = "Chats \u00b7 $regularCount",
             expanded = chatsExpanded,
             onToggle = onToggleChats,
         )
