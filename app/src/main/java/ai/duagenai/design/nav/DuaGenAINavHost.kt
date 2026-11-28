@@ -40,7 +40,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ai.duagenai.design.cube.CreateAgentScreen
-import ai.duagenai.design.screens.DuaAgentDemoScreen
 import ai.duagenai.design.screens.AgentsScreen
 import ai.duagenai.design.screens.AppearanceScreen
 import ai.duagenai.design.screens.ArtifactsRepository
@@ -234,7 +233,6 @@ object DuaGenAIRoutes {
     }
     /** Create Agent: opened only from Agent home's plus menu. */
     const val CREATE_AGENT = "agent/create"
-    const val DUA_AGENT_DEMO = "agent/dua_demo"
 
     /**
      * `chat/{chatId}?title={title}&message={message}` — the title is optional
@@ -783,14 +781,6 @@ fun DuaGenAINavHost(
                         navController.navigate(DuaGenAIRoutes.create(kind))
                     },
                     onOpenVoiceLive = { navController.navigate(DuaGenAIRoutes.VOICE_LIVE) },
-                )
-            }
-
-            composable(DuaGenAIRoutes.DUA_AGENT_DEMO) {
-                DuaAgentDemoScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenWorkspace = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_WORKSPACE)) },
-                    onOpenProfile = { navController.navigate(DuaGenAIRoutes.agent(DuaGenAIRoutes.AGENT_PROFILE)) },
                 )
             }
 

@@ -1,6 +1,7 @@
 package ai.duagenai.design.screens
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -248,6 +249,11 @@ class RemoteChatDataSource(
                 }
             }
         } catch (e: Exception) {
+            // A cancelled stream is not a failed stream. Rethrow before the
+            // fallback below, or cancelling (screen left, scope cleared) would
+            // fire a second, non-streaming POST for a message the user already
+            // abandoned — a duplicate send they never asked for.
+            if (e is CancellationException) throw e
             if (!sawAnyChunk) {
                 val nonStreamPayload = buildChatPayload(chatId, text, skills, stream = false)
                 val body = client.requestOrThrow("POST", url, nonStreamPayload.toString(), label = "Chat request")

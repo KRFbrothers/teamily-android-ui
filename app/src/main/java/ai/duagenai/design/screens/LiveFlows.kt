@@ -79,6 +79,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -1135,6 +1137,48 @@ internal data class McpServerItem(
     val toolCount: Int,
 )
 
+/**
+ * [McpServerItem] is a plain data class, not `Parcelable`/`Serializable`, so
+ * `rememberSaveable` cannot put it in the saved-state `Bundle` — doing that
+ * throws inside `SaveableStateRegistry` on Activity recreation (rotation,
+ * process-death restore, dark-mode toggle).
+ *
+ * This saver flattens the list to primitives, which the registry can store.
+ * The alternative — plain `remember` — would stop the crash but silently drop
+ * the user's added/disabled MCP servers on every rotation, so the state is
+ * kept and only the encoding changes.
+ */
+internal val McpServerListSaver: Saver<List<McpServerItem>, Any> = listSaver(
+    save = { servers ->
+        servers.flatMap { server ->
+            listOf(
+                server.id,
+                server.name,
+                server.command,
+                server.transport,
+                server.enabled.toString(),
+                server.toolCount.toString(),
+            )
+        }
+    },
+    restore = { flat ->
+        flat.chunked(MCP_SERVER_FIELDS).mapNotNull { fields ->
+            if (fields.size != MCP_SERVER_FIELDS) return@mapNotNull null
+            McpServerItem(
+                id = fields[0],
+                name = fields[1],
+                command = fields[2],
+                transport = fields[3],
+                enabled = fields[4].toBooleanStrictOrNull() ?: true,
+                toolCount = fields[5].toIntOrNull() ?: 0,
+            )
+        }
+    },
+)
+
+/** Fields [McpServerListSaver] writes per server; restore chunks by this. */
+private const val MCP_SERVER_FIELDS = 6
+
 internal data class AdkBuiltInTool(
     val id: String,
     val name: String,
@@ -1170,7 +1214,9 @@ internal fun SkillConfigScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedCategory by rememberSaveable { mutableStateOf(0) } // 0: All, 1: Personas, 2: Built-in, 3: MCP
     var activeTools by rememberSaveable { mutableStateOf(DEFAULT_ADK_TOOLS.map { it.id }.toSet()) }
-    var mcpServers by rememberSaveable { mutableStateOf(DEFAULT_MCP_SERVERS) }
+    var mcpServers by rememberSaveable(stateSaver = McpServerListSaver) {
+        mutableStateOf(DEFAULT_MCP_SERVERS)
+    }
     var showAddMcpDialog by rememberSaveable { mutableStateOf(false) }
 
     val categories = listOf("All", "Personas (${DuaAgentSkills.all.size})", "Built-in (${DEFAULT_ADK_TOOLS.size})", "MCP Servers (${mcpServers.size})")

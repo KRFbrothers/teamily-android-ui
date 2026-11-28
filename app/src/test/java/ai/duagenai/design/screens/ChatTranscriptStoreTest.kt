@@ -4,6 +4,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import java.net.SocketTimeoutException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -127,5 +129,62 @@ class ChatTranscriptStoreTest {
 
         assertTrue(error.timedOut)
         assertEquals("Chat request: the response took too long.", error.userMessage)
+    }
+
+    /**
+     * Cancelling a stream must not send the message a second time.
+     *
+     * `streamMessage` falls back to a non-streaming POST when the stream fails
+     * before any chunk arrives. A `CancellationException` is not a failure — it
+     * means the caller went away (screen left, scope cleared) — so it has to be
+     * rethrown before that fallback. Without the guard the user's abandoned
+     * message was posted again, and the thread showed a duplicate reply.
+     */
+    @Test
+    fun `a cancelled stream is rethrown and never falls back to a second post`() {
+        var posts = 0
+        val cancelling = HttpTransport { _, _, _, _ ->
+            posts++
+            throw CancellationException("scope cleared")
+        }
+        val source = RemoteChatDataSource(
+            client = JsonHttpClient(transport = cancelling, label = "Chat request"),
+        )
+
+        val thrown = runCatching {
+            runBlocking {
+                source.streamMessage(chatId = "chat_1", text = "hello", skills = emptySet())
+            }
+        }.exceptionOrNull()
+
+        assertTrue(
+            "the CancellationException must reach the caller, got $thrown",
+            thrown is CancellationException,
+        )
+        assertEquals("exactly one POST — no fallback retry", 1, posts)
+    }
+
+    /**
+     * The same guard on the non-cancellation path: a real failure before any
+     * chunk still falls back, so the fix above did not disable the fallback.
+     */
+    @Test
+    fun `a genuine stream failure still falls back to one non-streaming post`() {
+        var posts = 0
+        val failing = HttpTransport { _, _, _, _ ->
+            posts++
+            if (posts == 1) throw java.io.IOException("stream broke")
+            "{\"text\":\"fallback answer\"}"
+        }
+        val source = RemoteChatDataSource(
+            client = JsonHttpClient(transport = failing, label = "Chat request"),
+        )
+
+        val reply = runBlocking {
+            source.streamMessage(chatId = "chat_1", text = "hello", skills = emptySet())
+        }
+
+        assertEquals("fallback answer", reply)
+        assertEquals("stream POST plus one fallback POST", 2, posts)
     }
 }
