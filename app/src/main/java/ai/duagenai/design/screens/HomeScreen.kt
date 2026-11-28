@@ -748,7 +748,6 @@ private fun ModeToggle(
 internal const val PERSONAL_AGENT_TITLE = "fareed's Personal Agent"
 /** Honest hero subtitle — a description of what the card opens, not a fake chat line. */
 internal const val PERSONAL_AGENT_PREVIEW = "Your own assistant — tap to chat"
-internal const val PERSONAL_AGENT_DATE = "Mon"
 
 /** The pinned official agent row. Matches Teamily AI mobile app parity. */
 internal const val DUA_AGENT_TITLE = "Dua Agent"
@@ -760,7 +759,7 @@ internal const val DUA_AGENT_TIME = "Mon"
 internal const val APP_NAME = "Dua Gen AI"
 
 /**
- * The section header's leading glyph. Named because the divider's start inset is
+ * The section header's leading glyph. Named because the divider's inset is
  * derived from it: the divider must begin on the header's TEXT edge, which is
  * `gutter + header inner padding + this + xs`. Keeping it a constant means the
  * two cannot drift apart.
@@ -768,8 +767,9 @@ internal const val APP_NAME = "Dua Gen AI"
 internal val SECTION_ICON_SIZE: Dp = 13.dp
 
 /**
- * `CanvasChatRow`'s horizontal padding. The divider's end inset uses it so the
- * rule stops where the row content stops instead of running to the screen edge.
+ * `CanvasChatRow`'s horizontal padding. The divider no longer uses it — the rule
+ * is inset symmetrically to the header text edge on both sides — but the chat
+ * rows still do, so it stays a named constant.
  */
 internal val CHAT_ROW_SIDE_PADDING: Dp = 20.dp
 
@@ -1095,7 +1095,7 @@ internal fun PersonalAgentHeroCard(
                 },
             )
             .semantics {
-                contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW, $PERSONAL_AGENT_DATE"
+                contentDescription = "$PERSONAL_AGENT_TITLE, $PERSONAL_AGENT_PREVIEW"
             },
         shape = heroShape,
         color = palette.cardHeroColor,
@@ -1114,44 +1114,23 @@ internal fun PersonalAgentHeroCard(
             }
             Spacer(Modifier.width(spacing.md))
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = PERSONAL_AGENT_TITLE,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 17.5.sp,
-                            lineHeight = 22.sp,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (PERSONAL_AGENT_DATE.isNotEmpty()) {
-                        Spacer(Modifier.width(spacing.sm))
-                        // The trailing label is a single-line slot pinned to the
-                        // card's content edge. Without `maxLines`/`softWrap` a
-                        // longer label wrapped to a second line, which pushed the
-                        // preview line past the card's 80dp `heightIn` max and got
-                        // clipped by `clip(heroShape)`. The title above carries
-                        // `weight(1f)`, so it ellipsizes and this label keeps its
-                        // intrinsic width instead of being squeezed.
-                        Text(
-                            text = PERSONAL_AGENT_DATE,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 12.5.sp,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            softWrap = false,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .align(Alignment.CenterVertically)
-                                .testTag("home_hero_trailing_label"),
-                        )
-                    }
-                }
+                // The card carries the title only. It used to have a trailing
+                // label on the right, but that slot held a hardcoded fake
+                // timestamp ("Mon") with no real source behind it, and it
+                // competed with the title for width. Removing it leaves the
+                // title the full content width, so it no longer ellipsizes
+                // against a label that said nothing true.
+                Text(
+                    text = PERSONAL_AGENT_TITLE,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.5.sp,
+                        lineHeight = 22.sp,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = PERSONAL_AGENT_PREVIEW,
@@ -1585,17 +1564,21 @@ private fun AgentHomeHeaderBlock(
         }
         // The divider used to be full-bleed: it ran the whole 390dp width while
         // every other element on the screen is inset, so it read as a line from a
-        // different layout system. It now starts on the section header's TEXT
-        // left edge and ends on the chat rows' content edge.
+        // different layout system. It is now inset symmetrically on both sides to
+        // the section header's TEXT edge, so the rule reads as belonging to the
+        // header block rather than to the chat rows below it.
         //
-        //   start = gutter (14) + header inner padding (6) + icon (13) + xs (4)
+        //   inset = gutter (14) + header inner padding (6) + icon (13) + xs (4)
         //         = 37dp  -> the "Pinned"/"Chats" label's left edge
-        //   end   = the 20dp side padding CanvasChatRow uses for its content
+        //
+        // Both sides use the same value: an asymmetric rule (37dp left, 20dp
+        // right) lined up with two different edges and looked off-centre.
+        val dividerInset = spacing.gutter + spacing.sm + SECTION_ICON_SIZE + spacing.xs
         HorizontalDivider(
             modifier = Modifier
                 .padding(
-                    start = spacing.gutter + spacing.sm + SECTION_ICON_SIZE + spacing.xs,
-                    end = CHAT_ROW_SIDE_PADDING,
+                    start = dividerInset,
+                    end = dividerInset,
                     top = 6.dp,
                     bottom = 2.dp,
                 )

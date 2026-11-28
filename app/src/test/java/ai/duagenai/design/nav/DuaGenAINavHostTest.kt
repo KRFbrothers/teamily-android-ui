@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.isNotSelected
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
@@ -1784,14 +1785,15 @@ class DuaGenAINavHostTest {
      * ran the whole 390dp screen width while every other element on Agent home is
      * inset. It read as a rule from a different layout system.
      *
-     * It now starts on the section header's TEXT left edge and ends on the chat
-     * rows' content edge:
+     * It is now inset symmetrically on both sides to the section header's TEXT
+     * left edge:
      *
-     *   start = gutter (14) + header inner padding (6) + icon (13) + xs (4) = 37dp
-     *   end   = CHAT_ROW_SIDE_PADDING (20dp) from the right screen edge
+     *   inset = gutter (14) + header inner padding (6) + icon (13) + xs (4) = 37dp
      *
-     * Both are derived from the same constants the composables use, so this test
-     * fails if either side drifts.
+     * Both sides use the same value. An earlier revision used 37dp on the left
+     * and 20dp on the right, which lined the rule up with two different edges and
+     * made it look off-centre. The inset is derived from the same constants the
+     * composables use, so this test fails if either side drifts.
      */
     @Test
     fun sectionDividerIsInsetToTheContentNotFullBleed() {
@@ -1804,9 +1806,10 @@ class DuaGenAINavHostTest {
             .onNodeWithTag("home_section_divider", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot
 
-        // 37dp: the "Pinned"/"Chats" label's left edge.
-        val expectedStart = (GUTTER_DP + 6f + 13f + 4f) * density
-        val expectedEnd = rootWidth - 20f * density
+        // 37dp: the "Pinned"/"Chats" label's left edge, used on BOTH sides.
+        val inset = (GUTTER_DP + 6f + 13f + 4f) * density
+        val expectedStart = inset
+        val expectedEnd = rootWidth - inset
         val tolerance = 1.5f * density
 
         assertTrue(
@@ -1815,9 +1818,18 @@ class DuaGenAINavHostTest {
             kotlin.math.abs(divider.left - expectedStart) <= tolerance,
         )
         assertTrue(
-            "divider must end on the row content edge (${expectedEnd / density}dp), " +
+            "divider must end symmetrically at ${expectedEnd / density}dp, " +
                 "was ${divider.right / density}dp",
             kotlin.math.abs(divider.right - expectedEnd) <= tolerance,
+        )
+        // Symmetry is the point: both insets must be equal, not merely close to
+        // their own expected values.
+        val leftInset = divider.left
+        val rightInset = rootWidth - divider.right
+        assertTrue(
+            "divider insets must be symmetric, left ${leftInset / density}dp vs " +
+                "right ${rightInset / density}dp",
+            kotlin.math.abs(leftInset - rightInset) <= tolerance,
         )
         // And it must NOT be full-bleed any more.
         assertTrue(
@@ -1828,16 +1840,15 @@ class DuaGenAINavHostTest {
     }
 
     /**
-     * The hero card's trailing label stays on one line and inside the card.
+     * The hero card carries its title only — no trailing label.
      *
-     * The label had no `maxLines`/`softWrap`, so a longer value wrapped to a
-     * second line. That pushed the preview line past the card's 80dp `heightIn`
-     * max, and `clip(heroShape)` cut it off. The label is now a single-line slot
-     * that ellipsizes instead of wrapping, and the title above it carries
-     * `weight(1f)` so it yields space rather than squeezing the label.
+     * The card used to render a right-aligned trailing label. That slot held a
+     * hardcoded fake timestamp ("Mon") with no real source behind it, and it
+     * competed with the title for width. It has been removed, so the title now
+     * owns the full content width and nothing sits on the card's right edge.
      */
     @Test
-    fun heroCardTrailingLabelStaysOnOneLineInsideTheCard() {
+    fun heroCardHasNoTrailingLabel() {
         launch()
         switchTo(HomeMode.Agent)
 
@@ -1845,30 +1856,34 @@ class DuaGenAINavHostTest {
         val card = compose
             .onNode(hasContentDescription(PERSONAL_AGENT_TITLE, substring = true) and hasClickAction())
             .fetchSemanticsNode().boundsInRoot
-        val label = compose
-            .onNodeWithTag("home_hero_trailing_label", useUnmergedTree = true)
-            .fetchSemanticsNode().boundsInRoot
 
-        // One line of 12.5sp text is ~17dp tall. Two lines would be ~34dp, so a
-        // 24dp ceiling catches a wrap without being brittle about font metrics.
-        assertTrue(
-            "hero trailing label must be a single line, was ${label.height / density}dp tall",
-            label.height <= 24f * density,
+        // The old trailing-label slot must be gone entirely.
+        assertEquals(
+            "hero card must not render a trailing label any more",
+            0,
+            compose.onAllNodesWithTag("home_hero_trailing_label", useUnmergedTree = true)
+                .fetchSemanticsNodes().size,
         )
-        // Inside the card's content box: the card has 10dp inner horizontal
-        // padding, so the label's right edge must not pass card.right - 10dp.
+
+        // The title must be the only text on the card's title line, and it must
+        // now be free to use the card's full content width: its right edge should
+        // reach past where the old 20dp-ish label slot began.
+        val title = compose
+            .onNodeWithText(PERSONAL_AGENT_TITLE, useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot
         assertTrue(
-            "hero trailing label must not overflow the card's content edge, " +
-                "label right ${label.right / density}dp vs card right ${card.right / density}dp",
-            label.right <= card.right - 10f * density + 1f * density,
+            "hero title must sit inside the card, title ${title.left / density}.." +
+                "${title.right / density}dp vs card ${card.left / density}.." +
+                "${card.right / density}dp",
+            title.left >= card.left - 1f * density && title.right <= card.right + 1f * density,
         )
-        // And it must be fully inside the card vertically — not clipped by
-        // `clip(heroShape)`.
+        // With no label competing for width the title is no longer squeezed into
+        // the left portion of the card.
+        val cardContentWidth = card.width - 20f * density // 10dp inner padding each side
         assertTrue(
-            "hero trailing label must sit inside the card vertically, " +
-                "label ${label.top / density}..${label.bottom / density}dp vs " +
-                "card ${card.top / density}..${card.bottom / density}dp",
-            label.top >= card.top - 1f * density && label.bottom <= card.bottom + 1f * density,
+            "hero title must be allowed the card's full content width, was " +
+                "${title.width / density}dp of ${cardContentWidth / density}dp",
+            title.width >= cardContentWidth * 0.5f,
         )
     }
 
